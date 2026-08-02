@@ -40,7 +40,7 @@
 //
 // # User IDs
 //
-// User IDs are opaque strings, at most 64 bytes of printable ASCII. They
+// User IDs are opaque strings, at most 64 bytes. They
 // are stored inside the authenticator and returned in every login, so
 // they MUST NOT contain personal information such as usernames or email
 // addresses, and they cannot be changed later. Generate them with
@@ -86,7 +86,11 @@
 // [passkey records]: https://c2sp.org/passkey-record
 package passkey
 
-import "time"
+import (
+	"errors"
+	"strings"
+	"time"
+)
 
 // Options configures a [RelyingParty].
 type Options struct {
@@ -156,10 +160,76 @@ type Options struct {
 //
 // Its methods are safe for concurrent use by multiple goroutines.
 type RelyingParty struct {
-	// contains filtered or unexported fields
+	rpID                    string
+	origin                  string
+	requireUserVerification bool
+	timeout                 time.Duration
 }
 
 // NewRelyingParty returns a RelyingParty configured with the given options.
 //
 // [Options.RPID] and [Options.Origin] must be set.
-func NewRelyingParty(opts *Options) (*RelyingParty, error)
+func NewRelyingParty(opts *Options) (*RelyingParty, error) {
+	if opts == nil {
+		return nil, errors.New("passkey: Options is nil")
+	}
+
+	if opts.RPID == "" {
+		return nil, errors.New("passkey: RP ID is empty")
+	}
+	if len(opts.RPID) > 255 {
+		return nil, errors.New("passkey: RP ID is too long")
+	}
+	for label := range strings.SplitSeq(opts.RPID, ".") {
+		if label == "" {
+			return nil, errors.New("passkey: invalid RP ID")
+		}
+		for _, c := range label {
+			switch {
+			case c >= 'a' && c <= 'z', c >= '0' && c <= '9', c == '-':
+			default:
+				return nil, errors.New("passkey: invalid RP ID; " +
+					"it must be a bare domain")
+			}
+		}
+	}
+
+	if opts.Origin == "" {
+		return nil, errors.New("passkey: Origin is empty")
+	}
+	if !strings.ContainsRune(opts.Origin, ':') {
+		return nil, errors.New("passkey: invalid Origin; it must include an origin")
+	}
+	if strings.ContainsRune(opts.Origin, '*') {
+		return nil, errors.New(`passkey: Origin contains "*": wildcard origins are not supported`)
+	}
+	if scheme, rest, ok := strings.Cut(opts.Origin, "://"); ok {
+		if scheme == "" || rest == "" {
+			return nil, errors.New("passkey: invalid Origin; " +
+				"it must be canonical, without path")
+		}
+		for _, c := range scheme + rest {
+			switch {
+			case c >= 'a' && c <= 'z', c >= '0' && c <= '9', c == '-':
+			default:
+				return nil, errors.New("passkey: invalid Origin; " +
+					"it must be canonical, without path")
+			}
+		}
+	}
+
+	timeout := opts.Timeout
+	switch {
+	case timeout < 0:
+		return nil, errors.New("passkey: Timeout is negative")
+	case timeout == 0:
+		timeout = 5 * time.Minute
+	}
+
+	return &RelyingParty{
+		rpID:                    opts.RPID,
+		origin:                  opts.Origin,
+		requireUserVerification: opts.RequireUserVerification,
+		timeout:                 timeout,
+	}, nil
+}

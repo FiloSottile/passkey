@@ -1,5 +1,14 @@
 package passkey
 
+import (
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"slices"
+)
+
 // User identifies the account a passkey is being registered for.
 type User struct {
 	// ID is the opaque user ID; see [User IDs].
@@ -13,6 +22,43 @@ type User struct {
 	// or used in the protocol. It is also sent as the WebAuthn
 	// displayName, which credential providers ignore in practice.
 	Name string
+}
+
+type pubKeyCredParam struct {
+	Type string `json:"type"`
+	Alg  int32  `json:"alg"`
+}
+
+// supportedAlgorithms is the pubKeyCredParams list, in order of preference.
+var supportedAlgorithms = []pubKeyCredParam{
+	{Type: "public-key", Alg: algMLDSA44},
+	{Type: "public-key", Alg: algES256},
+	{Type: "public-key", Alg: algRS256},
+}
+
+type creationOptions struct {
+	RP struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	} `json:"rp"`
+	User struct {
+		ID          string `json:"id"`
+		Name        string `json:"name"`
+		DisplayName string `json:"displayName"`
+	} `json:"user"`
+	Challenge              string                 `json:"challenge"`
+	PubKeyCredParams       []pubKeyCredParam      `json:"pubKeyCredParams"`
+	ExcludeCredentials     []credentialDescriptor `json:"excludeCredentials"`
+	AuthenticatorSelection struct {
+		ResidentKey        string `json:"residentKey"`
+		RequireResidentKey bool   `json:"requireResidentKey"`
+		UserVerification   string `json:"userVerification"`
+	} `json:"authenticatorSelection"`
+	Attestation string `json:"attestation"`
+	Extensions  struct {
+		CredProps bool `json:"credProps"`
+	} `json:"extensions"`
+	Timeout int64 `json:"timeout"`
 }
 
 // NewRegistration begins the registration of a new passkey for user.
@@ -32,7 +78,56 @@ type User struct {
 //
 // Registration is stateless for the server: there is no request value
 // to store, and the response is verified by [RelyingParty.Register].
-func (rp *RelyingParty) NewRegistration(user User, passkeys []string) (optionsJSON []byte, err error)
+func (rp *RelyingParty) NewRegistration(user User, passkeys []string) (optionsJSON []byte, err error) {
+	if len(user.ID) == 0 || len(user.ID) > 64 {
+		return nil, errors.New("passkey: invalid user ID")
+	}
+	exclude, err := credentialDescriptors(passkeys)
+	if err != nil {
+		return nil, err
+	}
+	var o creationOptions
+	o.RP.ID = rp.rpID
+	o.User.ID = base64.RawURLEncoding.EncodeToString([]byte(user.ID))
+	o.User.Name = user.Name
+	o.User.DisplayName = user.Name
+	o.Challenge = base64.RawURLEncoding.EncodeToString([]byte{0})
+	o.PubKeyCredParams = supportedAlgorithms
+	o.ExcludeCredentials = exclude
+	o.AuthenticatorSelection.ResidentKey = "required"
+	o.AuthenticatorSelection.RequireResidentKey = true
+	if rp.requireUserVerification {
+		o.AuthenticatorSelection.UserVerification = "required"
+	} else {
+		o.AuthenticatorSelection.UserVerification = "preferred"
+	}
+	o.Attestation = "none"
+	o.Extensions.CredProps = true
+	o.Timeout = rp.timeout.Milliseconds()
+	return json.Marshal(o)
+}
+
+// registrationResponse is the RegistrationResponseJSON of WebAuthn L3 §5.8,
+// as produced by PublicKeyCredential.toJSON().
+type registrationResponse struct {
+	Response struct {
+		ClientDataJSON    string   `json:"clientDataJSON"`
+		AuthenticatorData string   `json:"authenticatorData"`
+		Transports        []string `json:"transports"`
+	} `json:"response"`
+	ClientExtensionResults struct {
+		CredProps *struct {
+			RK *bool `json:"rk"`
+		} `json:"credProps"`
+	} `json:"clientExtensionResults"`
+}
+
+// clientData is the subset of the client data JSON this package checks.
+type clientData struct {
+	Type        string `json:"type"`
+	Origin      string `json:"origin"`
+	CrossOrigin *bool  `json:"crossOrigin"`
+}
 
 // Register verifies a registration response and, on success, returns
 // the new passkey record, to be stored for the signed-in user whose
@@ -58,4 +153,76 @@ func (rp *RelyingParty) NewRegistration(user User, passkeys []string) (optionsJS
 // "webauthn.create" and the expected origin, and that the authenticator
 // data carries the hash of the RP ID. The challenge is not verified;
 // see the Challenges section of the package documentation.
-func (rp *RelyingParty) Register(responseJSON []byte) (passkey string, err error)
+func (rp *RelyingParty) Register(responseJSON []byte) (passkey string, err error) {
+	var resp registrationResponse
+	// TODO: use json/v2 to reject duplicates and match case-sensitive.
+	if err := json.Unmarshal(responseJSON, &resp); err != nil {
+		return "", fmt.Errorf("passkey: malformed registration response: %w", err)
+	}
+
+	cd, err := base64.RawURLEncoding.Strict().DecodeString(resp.Response.ClientDataJSON)
+	if err != nil {
+		return "", fmt.Errorf("passkey: malformed client data encoding: %w", err)
+	}
+	var c clientData
+	if err := json.Unmarshal(cd, &c); err != nil {
+		return "", fmt.Errorf("passkey: malformed client data JSON: %w", err)
+	}
+	if c.Type != "webauthn.create" {
+		return "", fmt.Errorf("passkey: client data type is %q, expected %q", c.Type, "webauthn.create")
+	}
+	if c.Origin != rp.origin {
+		return "", fmt.Errorf("passkey: client data origin %q is not the expected one", c.Origin)
+	}
+	if c.CrossOrigin != nil && *c.CrossOrigin {
+		return "", errors.New("passkey: ceremony was performed in a cross-origin frame")
+	}
+
+	for _, t := range resp.Response.Transports {
+		if !validTransport(t) {
+			// Drop all transports if they can't be encoded.
+			resp.Response.Transports = nil
+			break
+		}
+	}
+	slices.Sort(resp.Response.Transports)
+	resp.Response.Transports = slices.Compact(resp.Response.Transports)
+
+	ad, err := base64.RawURLEncoding.Strict().DecodeString(resp.Response.AuthenticatorData)
+	if err != nil {
+		return "", fmt.Errorf("passkey: malformed authenticator data encoding: %w", err)
+	}
+	r := &record{}
+	if err := parseRegistrationAuthData(r, ad); err != nil {
+		return "", fmt.Errorf("passkey: malformed authenticator data: %w", err)
+	}
+	if r.rpIDHash != sha256.Sum256([]byte(rp.rpID)) {
+		return "", errors.New("passkey: registration for a different RP ID")
+	}
+	if r.flags&flagBE == 0 && r.flags&flagBS != 0 {
+		return "", errors.New("passkey: credential is backed up but not backup eligible")
+	}
+	// credProps reports whether the created credential is actually
+	// discoverable. Absence is accepted (Safari never reports it), but an
+	// explicit false contradicts residentKey: "required".
+	if cp := resp.ClientExtensionResults.CredProps; cp != nil && cp.RK != nil && !*cp.RK {
+		return "", errors.New("passkey: client reports the credential is not discoverable")
+	}
+
+	return encodeRecord(ad, r.transports), nil
+}
+
+// validTransport reports whether t matches [a-z0-9-]+.
+func validTransport(t string) bool {
+	if t == "" {
+		return false
+	}
+	for c := range t {
+		switch {
+		case c >= 'a' && c <= 'z', c >= '0' && c <= '9', c == '-':
+		default:
+			return false
+		}
+	}
+	return true
+}
