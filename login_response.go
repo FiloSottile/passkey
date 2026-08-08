@@ -1,5 +1,14 @@
 package passkey
 
+import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/json"
+	"errors"
+	"fmt"
+)
+
 // Response is a parsed PublicKeyCredential returned by
 // navigator.credentials.get().
 //
@@ -7,7 +16,31 @@ package passkey
 // succeeds. It is meant to be used for looking up the request and the user's
 // passkey records.
 type Response struct {
-	// contains filtered or unexported fields
+	credentialID []byte
+
+	clientDataHash [32]byte
+	challenge      [32]byte
+	origin         string
+
+	authData     []byte
+	rpIDHash     [32]byte
+	userVerified bool
+	backedUp     bool
+
+	signature []byte
+	userID    string
+}
+
+// authenticationResponse is the AuthenticationResponseJSON of WebAuthn L3
+// §5.1, as produced by PublicKeyCredential.toJSON().
+type authenticationResponse struct {
+	RawID    string `json:"rawId"`
+	Response struct {
+		ClientDataJSON    string  `json:"clientDataJSON"`
+		AuthenticatorData string  `json:"authenticatorData"`
+		Signature         string  `json:"signature"`
+		UserHandle        *string `json:"userHandle"`
+	} `json:"response"`
 }
 
 // ParseResponse parses a login response into a [Response].
@@ -17,17 +50,114 @@ type Response struct {
 //
 // It does not verify the response: use [RelyingParty.Login] to verify it
 // against the request and the user's passkey records.
-func ParseResponse(responseJSON []byte) (*Response, error)
+func ParseResponse(responseJSON []byte) (*Response, error) {
+	var r authenticationResponse
+	if err := json.Unmarshal(responseJSON, &r); err != nil {
+		return nil, fmt.Errorf("passkey: invalid response JSON: %w", err)
+	}
+	credID, err := base64.RawURLEncoding.Strict().DecodeString(r.RawID)
+	if err != nil {
+		return nil, fmt.Errorf("passkey: malformed credential ID: %w", err)
+	}
+
+	cd, err := base64.RawURLEncoding.Strict().DecodeString(r.Response.ClientDataJSON)
+	if err != nil {
+		return nil, fmt.Errorf("passkey: malformed client data encoding: %w", err)
+	}
+	var c clientData
+	if err := json.Unmarshal(cd, &c); err != nil {
+		return nil, fmt.Errorf("passkey: malformed client data JSON: %w", err)
+	}
+	if c.Type != "webauthn.get" {
+		return nil, fmt.Errorf("passkey: client data type is %q, expected %q", c.Type, "webauthn.get")
+	}
+	challenge, err := base64.RawURLEncoding.Strict().DecodeString(c.Challenge)
+	if err != nil {
+		return nil, fmt.Errorf("passkey: malformed client data encoding: %w", err)
+	}
+	if len(challenge) != 32 {
+		return nil, fmt.Errorf("passkey: malformed challenge")
+	}
+	if c.CrossOrigin != nil && *c.CrossOrigin {
+		return nil, errors.New("passkey: ceremony was performed in a cross-origin frame")
+	}
+
+	ad, err := base64.RawURLEncoding.Strict().DecodeString(r.Response.AuthenticatorData)
+	if err != nil {
+		return nil, fmt.Errorf("passkey: malformed authenticator data encoding: %w", err)
+	}
+	if len(ad) < 32+1+4 {
+		return nil, errors.New("passkey: malformed authenticator data")
+	}
+	rpIDHash := ad[:32]
+	flags := ad[32]
+	if flags&flagAT != 0 {
+		return nil, errors.New("passkey: authenticator data unexpectedly has attested data")
+	}
+	if flags&flagED != 0 {
+		if len(ad) == 32+1+4 {
+			return nil, errors.New("authenticator data claims extension data but has none")
+		}
+	} else {
+		if len(ad) != 32+1+4 {
+			return nil, fmt.Errorf("authenticator data has %d unexpected trailing bytes", len(ad))
+		}
+	}
+	if flags&flagUP == 0 {
+		return nil, errors.New("passkey: user presence flag not set")
+	}
+	userVerified := flags&flagUV != 0
+	if flags&flagBE == 0 && flags&flagBS != 0 {
+		return nil, errors.New("passkey: credential is backed up but not backup eligible")
+	}
+	backedUp := flags&flagBS != 0
+
+	sig, err := base64.RawURLEncoding.Strict().DecodeString(r.Response.Signature)
+	if err != nil {
+		return nil, fmt.Errorf("passkey: malformed signature: %w", err)
+	}
+	var userID string
+	if r.Response.UserHandle != nil {
+		u, err := base64.RawURLEncoding.Strict().DecodeString(*r.Response.UserHandle)
+		if err != nil {
+			return nil, fmt.Errorf("passkey: malformed user ID: %w", err)
+		}
+		if len(u) == 0 || len(u) > 64 {
+			return nil, errors.New("passkey: invalid user ID")
+		}
+		userID = string(u)
+	}
+
+	return &Response{
+		credentialID:   credID,
+		clientDataHash: sha256.Sum256([]byte(r.Response.ClientDataJSON)),
+		challenge:      [32]byte(challenge),
+		origin:         c.Origin,
+		authData:       ad,
+		rpIDHash:       [32]byte(rpIDHash),
+		userVerified:   userVerified,
+		backedUp:       backedUp,
+		signature:      sig,
+		userID:         userID,
+	}, nil
+}
 
 // BackedUp reports whether the credential asserts it is currently backed up,
 // according to the login response. It can be checked after a successful
 // [RelyingParty.Login] to inform account recovery decisions.
-func (r *Response) BackedUp() bool
+func (r *Response) BackedUp() bool {
+	return r.backedUp
+}
 
 // RequestID returns the unique identifier of the request this response
 // is for, as returned by [RequestID] when the request was created. It can
 // be used to look up the stored request.
-func (r *Response) RequestID() string
+func (r *Response) RequestID() string {
+	h := hmac.New(sha256.New, []byte("crypto/passkey request ID"))
+	h.Write(r.challenge[:])
+	id := h.Sum(make([]byte, 0, 32))
+	return base64.RawURLEncoding.EncodeToString(id)
+}
 
 // UnauthenticatedUserID returns the user ID asserted by this response.
 //
@@ -37,9 +167,13 @@ func (r *Response) RequestID() string
 //
 // The return value may be empty for responses to [RelyingParty.NewLoginForUser]
 // ceremonies, where the application already knows the user.
-func (r *Response) UnauthenticatedUserID() string
+func (r *Response) UnauthenticatedUserID() string {
+	return r.userID
+}
 
 // UserVerified reports whether user verification was performed,
 // according to a login response. It can be checked after a successful
 // [RelyingParty.Login] to gate sensitive operations.
-func (r *Response) UserVerified() bool
+func (r *Response) UserVerified() bool {
+	return r.userVerified
+}

@@ -125,6 +125,7 @@ type registrationResponse struct {
 // clientData is the subset of the client data JSON this package checks.
 type clientData struct {
 	Type        string `json:"type"`
+	Challenge   string `json:"challenge"`
 	Origin      string `json:"origin"`
 	CrossOrigin *bool  `json:"crossOrigin"`
 }
@@ -171,6 +172,9 @@ func (rp *RelyingParty) Register(responseJSON []byte) (passkey string, err error
 	if c.Type != "webauthn.create" {
 		return "", fmt.Errorf("passkey: client data type is %q, expected %q", c.Type, "webauthn.create")
 	}
+	// For registration, we don't check the challenge, because we don't do
+	// attestation and we don't keep state.
+	_ = c.Challenge
 	if c.Origin != rp.origin {
 		return "", fmt.Errorf("passkey: client data origin %q is not the expected one", c.Origin)
 	}
