@@ -204,7 +204,7 @@ func (rp *RelyingParty) Register(responseJSON []byte) (passkey string, err error
 	if r.rpIDHash != sha256.Sum256([]byte(rp.rpID)) {
 		return "", errors.New("passkey: registration for a different RP ID")
 	}
-	if r.flags&flagBE == 0 && r.flags&flagBS != 0 {
+	if r.flags.backupState() && !r.flags.backupEligible() {
 		return "", errors.New("passkey: credential is backed up but not backup eligible")
 	}
 	// credProps reports whether the created credential is actually

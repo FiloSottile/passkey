@@ -20,7 +20,7 @@ import (
 type record struct {
 	transports   []string
 	rpIDHash     [32]byte
-	flags        byte
+	flags        flags
 	aaguid       [16]byte
 	credentialID []byte
 	key          crypto.PublicKey
@@ -61,15 +61,15 @@ func parseRecord(r string) (*record, error) {
 	return rr, nil
 }
 
+type flags uint8
+
 // Authenticator data flags, from WebAuthn §6.1.
-const (
-	flagUP = 1 << 0 // user present
-	flagUV = 1 << 2 // user verified
-	flagBE = 1 << 3 // backup eligible
-	flagBS = 1 << 4 // backup state
-	flagAT = 1 << 6 // attested credential data included
-	flagED = 1 << 7 // extension data included
-)
+func (f flags) userPresent() bool    { return f&(1<<0) != 0 }
+func (f flags) userVerified() bool   { return f&(1<<2) != 0 }
+func (f flags) backupEligible() bool { return f&(1<<3) != 0 }
+func (f flags) backupState() bool    { return f&(1<<4) != 0 }
+func (f flags) attestedData() bool   { return f&(1<<6) != 0 }
+func (f flags) extensionData() bool  { return f&(1<<7) != 0 }
 
 func parseRegistrationAuthData(r *record, b []byte) error {
 	if len(b) < 55 {
@@ -79,8 +79,8 @@ func parseRegistrationAuthData(r *record, b []byte) error {
 	copy(r.rpIDHash[:], b[:32])
 	b = b[32:]
 
-	r.flags = b[0]
-	if r.flags&flagAT == 0 {
+	r.flags = flags(b[0])
+	if !r.flags.attestedData() {
 		return errors.New("authenticator data has no attested credential data")
 	}
 	b = b[1:]
@@ -109,7 +109,7 @@ func parseRegistrationAuthData(r *record, b []byte) error {
 	}
 	r.key = key
 
-	if r.flags&flagED != 0 {
+	if r.flags.extensionData() {
 		if len(b) == 0 {
 			return errors.New("authenticator data claims extension data but has none")
 		}
@@ -266,10 +266,10 @@ func BackedUp(passkey string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if r.flags&flagBE == 0 && r.flags&flagBS != 0 {
+	if r.flags.backupState() && !r.flags.backupEligible() {
 		return false, errors.New("passkey: credential is backed up but not backup eligible")
 	}
-	return r.flags&flagBS != 0, nil
+	return r.flags.backupState(), nil
 }
 
 // CredentialID returns the credential ID of a passkey record.

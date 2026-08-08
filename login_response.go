@@ -90,11 +90,11 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
 		return nil, errors.New("passkey: malformed authenticator data")
 	}
 	rpIDHash := ad[:32]
-	flags := ad[32]
-	if flags&flagAT != 0 {
+	flags := flags(ad[32])
+	if flags.attestedData() {
 		return nil, errors.New("passkey: authenticator data unexpectedly has attested data")
 	}
-	if flags&flagED != 0 {
+	if flags.extensionData() {
 		if len(ad) == 32+1+4 {
 			return nil, errors.New("authenticator data claims extension data but has none")
 		}
@@ -103,14 +103,12 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
 			return nil, fmt.Errorf("authenticator data has %d unexpected trailing bytes", len(ad))
 		}
 	}
-	if flags&flagUP == 0 {
+	if !flags.userPresent() {
 		return nil, errors.New("passkey: user presence flag not set")
 	}
-	userVerified := flags&flagUV != 0
-	if flags&flagBE == 0 && flags&flagBS != 0 {
+	if flags.backupState() && !flags.backupEligible() {
 		return nil, errors.New("passkey: credential is backed up but not backup eligible")
 	}
-	backedUp := flags&flagBS != 0
 
 	sig, err := base64RawURLDecodeString(r.Response.Signature)
 	if err != nil {
@@ -135,8 +133,8 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
 		origin:         c.Origin,
 		authData:       ad,
 		rpIDHash:       [32]byte(rpIDHash),
-		userVerified:   userVerified,
-		backedUp:       backedUp,
+		userVerified:   flags.userVerified(),
+		backedUp:       flags.backupState(),
 		signature:      sig,
 		userID:         userID,
 	}, nil
