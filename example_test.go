@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"time"
 
 	"filippo.io/passkey"
 )
@@ -153,4 +154,18 @@ out.textContent = "Signed in as " + await res.text() + "."
 		sessionSignIn(w, u.username)
 		io.WriteString(w, u.username)
 	})
+
+	// Evict expired pending requests to reclaim memory;
+	// a production KV store would rely on a TTL instead.
+	go func() {
+		for range time.Tick(time.Minute) {
+			requests.Range(func(key, value any) bool {
+				created := passkey.RequestCreation(value.([]byte))
+				if time.Since(created) > 5*time.Minute {
+					requests.Delete(key)
+				}
+				return true
+			})
+		}
+	}()
 }

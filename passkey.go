@@ -69,9 +69,9 @@
 //     authenticated cookie), as a forged request could defeat
 //     challenge freshness.
 //
-// Requests expire after [Options.Timeout], which the application can
-// also use as the lifetime of stored requests (e.g. as the KV TTL or
-// cookie Max-Age).
+// Requests expire [Options.Timeout] after creation (which [RequestCreation]
+// returns), and the application can use the same window as the lifetime of
+// stored requests (e.g. as the KV TTL or cookie Max-Age).
 //
 // Request values don't need to be kept secret: everything they contain
 // is also sent to the client as part of the ceremony options.
