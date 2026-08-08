@@ -55,12 +55,12 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
 	if err := json.Unmarshal(responseJSON, &r); err != nil {
 		return nil, fmt.Errorf("passkey: invalid response JSON: %w", err)
 	}
-	credID, err := base64.RawURLEncoding.Strict().DecodeString(r.RawID)
+	credID, err := base64RawURLDecodeString(r.RawID)
 	if err != nil {
 		return nil, fmt.Errorf("passkey: malformed credential ID: %w", err)
 	}
 
-	cd, err := base64.RawURLEncoding.Strict().DecodeString(r.Response.ClientDataJSON)
+	cd, err := base64RawURLDecodeString(r.Response.ClientDataJSON)
 	if err != nil {
 		return nil, fmt.Errorf("passkey: malformed client data encoding: %w", err)
 	}
@@ -71,7 +71,7 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
 	if c.Type != "webauthn.get" {
 		return nil, fmt.Errorf("passkey: client data type is %q, expected %q", c.Type, "webauthn.get")
 	}
-	challenge, err := base64.RawURLEncoding.Strict().DecodeString(c.Challenge)
+	challenge, err := base64RawURLDecodeString(c.Challenge)
 	if err != nil {
 		return nil, fmt.Errorf("passkey: malformed client data encoding: %w", err)
 	}
@@ -82,7 +82,7 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
 		return nil, errors.New("passkey: ceremony was performed in a cross-origin frame")
 	}
 
-	ad, err := base64.RawURLEncoding.Strict().DecodeString(r.Response.AuthenticatorData)
+	ad, err := base64RawURLDecodeString(r.Response.AuthenticatorData)
 	if err != nil {
 		return nil, fmt.Errorf("passkey: malformed authenticator data encoding: %w", err)
 	}
@@ -112,13 +112,13 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
 	}
 	backedUp := flags&flagBS != 0
 
-	sig, err := base64.RawURLEncoding.Strict().DecodeString(r.Response.Signature)
+	sig, err := base64RawURLDecodeString(r.Response.Signature)
 	if err != nil {
 		return nil, fmt.Errorf("passkey: malformed signature: %w", err)
 	}
 	var userID string
 	if r.Response.UserHandle != nil {
-		u, err := base64.RawURLEncoding.Strict().DecodeString(*r.Response.UserHandle)
+		u, err := base64RawURLDecodeString(*r.Response.UserHandle)
 		if err != nil {
 			return nil, fmt.Errorf("passkey: malformed user ID: %w", err)
 		}

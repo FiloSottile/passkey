@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 )
 
 // User identifies the account a passkey is being registered for.
@@ -161,7 +162,7 @@ func (rp *RelyingParty) Register(responseJSON []byte) (passkey string, err error
 		return "", fmt.Errorf("passkey: malformed registration response: %w", err)
 	}
 
-	cd, err := base64.RawURLEncoding.Strict().DecodeString(resp.Response.ClientDataJSON)
+	cd, err := base64RawURLDecodeString(resp.Response.ClientDataJSON)
 	if err != nil {
 		return "", fmt.Errorf("passkey: malformed client data encoding: %w", err)
 	}
@@ -192,7 +193,7 @@ func (rp *RelyingParty) Register(responseJSON []byte) (passkey string, err error
 	slices.Sort(resp.Response.Transports)
 	resp.Response.Transports = slices.Compact(resp.Response.Transports)
 
-	ad, err := base64.RawURLEncoding.Strict().DecodeString(resp.Response.AuthenticatorData)
+	ad, err := base64RawURLDecodeString(resp.Response.AuthenticatorData)
 	if err != nil {
 		return "", fmt.Errorf("passkey: malformed authenticator data encoding: %w", err)
 	}
@@ -229,4 +230,11 @@ func validTransport(t string) bool {
 		}
 	}
 	return true
+}
+
+func base64RawURLDecodeString(s string) ([]byte, error) {
+	if strings.ContainsAny(s, "\r\n") {
+		return nil, errors.New("invalid base64 encoding")
+	}
+	return base64.RawURLEncoding.Strict().DecodeString(s)
 }
