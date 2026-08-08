@@ -63,6 +63,8 @@ func (r *loginRequest) Bytes() []byte {
 	b = append(b, 1)
 	b = append(b, r.challenge[:]...)
 	b = binary.BigEndian.AppendUint64(b, uint64(r.created.Unix()))
+	b = append(b, byte(len(r.userID)))
+	b = append(b, r.userID...)
 	return b
 }
 

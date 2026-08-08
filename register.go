@@ -204,9 +204,6 @@ func (rp *RelyingParty) Register(responseJSON []byte) (passkey string, err error
 	if r.rpIDHash != sha256.Sum256([]byte(rp.rpID)) {
 		return "", errors.New("passkey: registration for a different RP ID")
 	}
-	if r.flags.backupState() && !r.flags.backupEligible() {
-		return "", errors.New("passkey: credential is backed up but not backup eligible")
-	}
 	// credProps reports whether the created credential is actually
 	// discoverable. Absence is accepted (Safari never reports it), but an
 	// explicit false contradicts residentKey: "required".
@@ -214,17 +211,18 @@ func (rp *RelyingParty) Register(responseJSON []byte) (passkey string, err error
 		return "", errors.New("passkey: client reports the credential is not discoverable")
 	}
 
-	return encodeRecord(ad, r.transports), nil
+	return encodeRecord(ad, resp.Response.Transports), nil
 }
 
-// validTransport reports whether t matches [a-z0-9-]+.
+// validTransport reports whether t matches [a-zA-Z0-9/.-]+.
 func validTransport(t string) bool {
 	if t == "" {
 		return false
 	}
-	for c := range t {
+	for _, c := range t {
 		switch {
-		case c >= 'a' && c <= 'z', c >= '0' && c <= '9', c == '-':
+		case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z', c >= '0' && c <= '9':
+		case c == '-', c == '.', c == '/':
 		default:
 			return false
 		}

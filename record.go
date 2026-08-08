@@ -32,7 +32,10 @@ func parseRecord(r string) (*record, error) {
 		return nil, errors.New("passkey: invalid record")
 	}
 	rr := &record{}
-	params, r, _ := strings.Cut(r, "$")
+	var params string
+	if p, rest, ok := strings.Cut(r, "$"); ok {
+		params, r = p, rest
+	}
 	for len(params) > 0 {
 		var kv string
 		kv, params, ok = strings.Cut(params, ",")
@@ -46,7 +49,18 @@ func parseRecord(r string) (*record, error) {
 		if k != "transports" {
 			continue
 		}
+		if rr.transports != nil {
+			return nil, errors.New("passkey: invalid record: duplicate transports parameter")
+		}
 		rr.transports = strings.Split(v, "+")
+		for i, t := range rr.transports {
+			if !validTransport(t) {
+				return nil, fmt.Errorf("passkey: invalid record: invalid transport %q", t)
+			}
+			if i > 0 && rr.transports[i-1] >= t {
+				return nil, errors.New("passkey: invalid record: transports are not sorted and deduplicated")
+			}
+		}
 	}
 	if strings.ContainsAny(r, "\r\n") {
 		return nil, errors.New("passkey: invalid record")
@@ -83,12 +97,15 @@ func parseRegistrationAuthData(r *record, b []byte) error {
 	if !r.flags.attestedData() {
 		return errors.New("authenticator data has no attested credential data")
 	}
+	if r.flags.backupState() && !r.flags.backupEligible() {
+		return errors.New("credential is backed up but not backup eligible")
+	}
 	b = b[1:]
 
 	b = b[4:] // sign count
 
 	copy(r.aaguid[:], b[:16])
-	b = b[1:]
+	b = b[16:]
 
 	length := binary.BigEndian.Uint16(b[:2])
 	if length < 16 || length > 1023 {
@@ -160,6 +177,9 @@ func parseCOSEKey(b []byte) (crypto.PublicKey, []byte, error) {
 	}
 	switch kty {
 	case coseKeyTypeEC2:
+		if pairs != 5 {
+			return nil, nil, errors.New("malformed COSE key: bad map length")
+		}
 		if alg != algES256 {
 			return nil, nil, fmt.Errorf("unsupported COSE algorithm %d for EC2 key", alg)
 		}
@@ -184,6 +204,9 @@ func parseCOSEKey(b []byte) (crypto.PublicKey, []byte, error) {
 		}
 		return key, []byte(s), nil
 	case coseKeyTypeRSA:
+		if pairs != 4 {
+			return nil, nil, errors.New("malformed COSE key: bad map length")
+		}
 		if alg != algRS256 {
 			return nil, nil, fmt.Errorf("unsupported COSE algorithm %d for RSA key", alg)
 		}
@@ -205,6 +228,9 @@ func parseCOSEKey(b []byte) (crypto.PublicKey, []byte, error) {
 		}
 		return &rsa.PublicKey{N: modulus, E: int(exponent)}, []byte(s), nil
 	case coseKeyTypeAKP:
+		if pairs != 3 {
+			return nil, nil, errors.New("malformed COSE key: bad map length")
+		}
 		var params *mldsa.Parameters
 		switch alg {
 		case algMLDSA44:
@@ -265,9 +291,6 @@ func BackedUp(passkey string) (bool, error) {
 	r, err := parseRecord(passkey)
 	if err != nil {
 		return false, err
-	}
-	if r.flags.backupState() && !r.flags.backupEligible() {
-		return false, errors.New("passkey: credential is backed up but not backup eligible")
 	}
 	return r.flags.backupState(), nil
 }

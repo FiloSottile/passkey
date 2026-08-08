@@ -33,12 +33,18 @@ func (s *String) readTypeAndArgument() (major uint8, arg uint16, ok bool) {
 			return
 		}
 		arg = uint16((*s)[1])
+		if arg <= 23 {
+			return
+		}
 		*s = (*s)[2:]
 	case minor == 25:
 		if len(*s) < 3 {
 			return
 		}
 		arg = binary.BigEndian.Uint16((*s)[1:])
+		if arg <= 0xff {
+			return
+		}
 		*s = (*s)[3:]
 	default:
 		return

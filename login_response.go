@@ -59,6 +59,9 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
 	if err != nil {
 		return nil, fmt.Errorf("passkey: malformed credential ID: %w", err)
 	}
+	if len(credID) == 0 {
+		return nil, errors.New("passkey: response has no credential ID")
+	}
 
 	cd, err := base64RawURLDecodeString(r.Response.ClientDataJSON)
 	if err != nil {
@@ -96,11 +99,12 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
 	}
 	if flags.extensionData() {
 		if len(ad) == 32+1+4 {
-			return nil, errors.New("authenticator data claims extension data but has none")
+			return nil, errors.New("passkey: authenticator data claims extension data but has none")
 		}
 	} else {
 		if len(ad) != 32+1+4 {
-			return nil, fmt.Errorf("authenticator data has %d unexpected trailing bytes", len(ad))
+			return nil, fmt.Errorf("passkey: authenticator data has %d unexpected trailing bytes",
+				len(ad)-(32+1+4))
 		}
 	}
 	if !flags.userPresent() {
@@ -128,7 +132,7 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
 
 	return &Response{
 		credentialID:   credID,
-		clientDataHash: sha256.Sum256([]byte(r.Response.ClientDataJSON)),
+		clientDataHash: sha256.Sum256(cd),
 		challenge:      [32]byte(challenge),
 		origin:         c.Origin,
 		authData:       ad,

@@ -45,6 +45,9 @@ func (rp *RelyingParty) NewLoginForUser(userID string, passkeys []string) (reque
 	if len(userID) == 0 || len(userID) > 64 {
 		return nil, nil, errors.New("passkey: invalid user ID")
 	}
+	if len(passkeys) == 0 {
+		return nil, nil, errors.New("passkey: no passkey records for a user-scoped login")
+	}
 	return rp.newLogin(userID, passkeys)
 }
 
@@ -165,6 +168,9 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
 	if response.rpIDHash != sha256.Sum256([]byte(rp.rpID)) {
 		return 0, errors.New("passkey: assertion for a different RP ID")
 	}
+	if req.userID == "" && response.userID == "" {
+		return 0, errors.New("passkey: assertion has no user handle")
+	}
 	if response.userID != "" && req.userID != "" && response.userID != req.userID {
 		return 0, errors.New("passkey: assertion is for a different user than the request")
 	}
@@ -175,7 +181,7 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
 		if err != nil {
 			return 0, fmt.Errorf("%w (record #%d)", err, i)
 		}
-		if bytes.Equal(r.credentialID, response.credentialID) {
+		if key == nil && bytes.Equal(r.credentialID, response.credentialID) {
 			key = r.key
 			matched = i
 		}
@@ -210,7 +216,7 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
 	if time.Since(req.created) > rp.timeout {
 		return 0, ErrRequestExpired
 	}
-	if rp.requireUserVerification && response.userVerified {
+	if rp.requireUserVerification && !response.userVerified {
 		return 0, ErrUserVerificationRequired
 	}
 

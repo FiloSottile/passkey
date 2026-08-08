@@ -210,7 +210,7 @@ func NewRelyingParty(opts *Options) (*RelyingParty, error) {
 		}
 		for _, c := range scheme + rest {
 			switch {
-			case c >= 'a' && c <= 'z', c >= '0' && c <= '9', c == '-':
+			case c >= 'a' && c <= 'z', c >= '0' && c <= '9', c == '-', c == '.', c == ':':
 			default:
 				return nil, errors.New("passkey: invalid Origin; " +
 					"it must be canonical, without path")
