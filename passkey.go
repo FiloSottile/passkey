@@ -73,8 +73,8 @@
 // returns), and the application can use the same window as the lifetime of
 // stored requests (e.g. as the KV TTL or cookie Max-Age).
 //
-// Request values don't need to be kept secret: everything they contain
-// is also sent to the client as part of the ceremony options.
+// Request values don't need to be kept secret but must be protected
+// from tampering.
 //
 // (Registration has no request value: with attestation "none", no part of a
 // registration response is signed by a party the server trusts, so a
@@ -88,6 +88,8 @@ package passkey
 
 import (
 	"errors"
+	"math"
+	"net"
 	"strings"
 	"time"
 )
@@ -107,9 +109,9 @@ type Options struct {
 	//
 	// It must match exactly the origin of the page that calls
 	// navigator.credentials.create() or navigator.credentials.get(), or the
-	// platform-specific equivalent. NewRelyingParty rejects values that could
-	// never match a serialized origin, such as entries that are not lowercase
-	// or that have a path.
+	// platform-specific equivalent. NewRelyingParty rejects many values that
+	// could never match a serialized origin, such as ones that are not
+	// lowercase or that have a path.
 	//
 	// Examples of valid origins are "https://accounts.example.com" and
 	// "https://example.com:8443" and "android:apk-key-hash:...".
@@ -193,6 +195,10 @@ func NewRelyingParty(opts *Options) (*RelyingParty, error) {
 			}
 		}
 	}
+	if net.ParseIP(opts.RPID) != nil {
+		return nil, errors.New("passkey: invalid RP ID; " +
+			"it must be a domain, not an IP address")
+	}
 
 	if opts.Origin == "" {
 		return nil, errors.New("passkey: Origin is empty")
@@ -222,6 +228,9 @@ func NewRelyingParty(opts *Options) (*RelyingParty, error) {
 	switch {
 	case timeout < 0:
 		return nil, errors.New("passkey: Timeout is negative")
+	case timeout.Milliseconds() > math.MaxUint32:
+		// Clients coerce the timeout hint to a WebIDL unsigned long.
+		return nil, errors.New("passkey: Timeout is too large")
 	case timeout == 0:
 		timeout = 5 * time.Minute
 	}

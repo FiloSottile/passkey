@@ -43,7 +43,7 @@ func parseRecord(r string) (*record, error) {
 			return nil, errors.New("passkey: invalid record: invalid parameters")
 		}
 		k, v, ok := strings.Cut(kv, "=")
-		if !ok {
+		if !ok || k == "" || v == "" {
 			return nil, errors.New("passkey: invalid record: invalid parameters")
 		}
 		if k != "transports" {
@@ -53,6 +53,9 @@ func parseRecord(r string) (*record, error) {
 			return nil, errors.New("passkey: invalid record: duplicate transports parameter")
 		}
 		rr.transports = strings.Split(v, "+")
+		if len(rr.transports) > 32 {
+			return nil, errors.New("passkey: invalid record: too many transports")
+		}
 		for i, t := range rr.transports {
 			if !validTransport(t) {
 				return nil, fmt.Errorf("passkey: invalid record: invalid transport %q", t)
@@ -88,6 +91,9 @@ func (f flags) extensionData() bool  { return f&(1<<7) != 0 }
 func parseRegistrationAuthData(r *record, b []byte) error {
 	if len(b) < 55 {
 		return fmt.Errorf("authenticator data is %d bytes, expected at least 55", len(b))
+	}
+	if len(b) > 8192 {
+		return fmt.Errorf("authenticator data is %d bytes, expected at most 8192", len(b))
 	}
 
 	copy(r.rpIDHash[:], b[:32])
@@ -159,8 +165,6 @@ const (
 	coseCurveP256 = 1
 	algRS256      = -257
 	algMLDSA44    = -48
-	algMLDSA65    = -49
-	algMLDSA87    = -50
 )
 
 func parseCOSEKey(b []byte) (crypto.PublicKey, []byte, error) {
@@ -242,10 +246,6 @@ func parseCOSEKey(b []byte) (crypto.PublicKey, []byte, error) {
 		switch alg {
 		case algMLDSA44:
 			params = mldsa.MLDSA44()
-		case algMLDSA65:
-			params = mldsa.MLDSA65()
-		case algMLDSA87:
-			params = mldsa.MLDSA87()
 		default:
 			return nil, nil, fmt.Errorf("%w (COSE algorithm %d for AKP key)", ErrUnsupportedAlgorithm, alg)
 		}
@@ -328,10 +328,11 @@ type credentialDescriptor struct {
 // failing if any record is malformed.
 func credentialDescriptors(passkeys []string) ([]credentialDescriptor, error) {
 	out := make([]credentialDescriptor, 0, len(passkeys))
-	for i, p := range passkeys {
+	for _, p := range passkeys {
 		r, err := parseRecord(p)
 		if err != nil {
-			return nil, fmt.Errorf("passkey record %d: %w", i, err)
+			// For excludeCredentials/allowCredentials it's ok to drop malformed records.
+			continue
 		}
 		out = append(out, credentialDescriptor{
 			Type:       "public-key",

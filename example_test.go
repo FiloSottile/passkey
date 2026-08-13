@@ -168,4 +168,10 @@ out.textContent = "Signed in as " + await res.text() + "."
 			})
 		}
 	}()
+
+	// CSRF protection is critical to avoid POST /add-passkey
+	// being abused to add a passkey to another user's account.
+	handler := http.NewCrossOriginProtection().Handler(mux)
+
+	log.Fatal(http.ListenAndServe("localhost:8080", handler))
 }

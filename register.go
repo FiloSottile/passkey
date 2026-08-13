@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"unicode"
 )
 
 // User identifies the account a passkey is being registered for.
@@ -73,8 +74,7 @@ type creationOptions struct {
 // optionsJSON is a PublicKeyCredentialCreationOptions object to be
 // passed to navigator.credentials.create() as the publicKey field,
 // requesting a discoverable credential (residentKey: "required") with
-// attestation "none" and the credProps extension (which reports back
-// whether the created credential is actually discoverable). The requested
+// attestation "none" and the credProps extension. The requested
 // algorithms are, in order of preference, ML-DSA-44, ES256, and RS256.
 //
 // Registration is stateless for the server: there is no request value
@@ -82,6 +82,9 @@ type creationOptions struct {
 func (rp *RelyingParty) NewRegistration(user User, passkeys []string) (optionsJSON []byte, err error) {
 	if len(user.ID) == 0 || len(user.ID) > 64 {
 		return nil, errors.New("passkey: invalid user ID")
+	}
+	if strings.ContainsFunc(user.Name, disallowedNameRune) {
+		return nil, errors.New("passkey: user name contains disallowed characters")
 	}
 	exclude, err := credentialDescriptors(passkeys)
 	if err != nil {
@@ -108,7 +111,7 @@ func (rp *RelyingParty) NewRegistration(user User, passkeys []string) (optionsJS
 	return json.Marshal(o)
 }
 
-// registrationResponse is the RegistrationResponseJSON of WebAuthn L3 §5.8,
+// registrationResponse is the RegistrationResponseJSON of WebAuthn L3 §5.1,
 // as produced by PublicKeyCredential.toJSON().
 type registrationResponse struct {
 	Response struct {
@@ -125,10 +128,11 @@ type registrationResponse struct {
 
 // clientData is the subset of the client data JSON this package checks.
 type clientData struct {
-	Type        string `json:"type"`
-	Challenge   string `json:"challenge"`
-	Origin      string `json:"origin"`
-	CrossOrigin *bool  `json:"crossOrigin"`
+	Type        string  `json:"type"`
+	Challenge   string  `json:"challenge"`
+	Origin      string  `json:"origin"`
+	CrossOrigin *bool   `json:"crossOrigin"`
+	TopOrigin   *string `json:"topOrigin"`
 }
 
 // Register verifies a registration response and, on success, returns
@@ -182,6 +186,11 @@ func (rp *RelyingParty) Register(responseJSON []byte) (passkey string, err error
 	if c.CrossOrigin != nil && *c.CrossOrigin {
 		return "", errors.New("passkey: ceremony was performed in a cross-origin frame")
 	}
+	// topOrigin is only present for a ceremony performed in a cross-origin
+	// frame, which this package does not accept.
+	if c.TopOrigin != nil {
+		return "", errors.New("passkey: ceremony was performed in a cross-origin frame")
+	}
 
 	for _, t := range resp.Response.Transports {
 		if !validTransport(t) {
@@ -192,6 +201,10 @@ func (rp *RelyingParty) Register(responseJSON []byte) (passkey string, err error
 	}
 	slices.Sort(resp.Response.Transports)
 	resp.Response.Transports = slices.Compact(resp.Response.Transports)
+	if len(resp.Response.Transports) > 32 {
+		// Drop all transports if there are too many to store.
+		resp.Response.Transports = nil
+	}
 
 	ad, err := base64RawURLDecodeString(resp.Response.AuthenticatorData)
 	if err != nil {
@@ -214,9 +227,17 @@ func (rp *RelyingParty) Register(responseJSON []byte) (passkey string, err error
 	return encodeRecord(ad, resp.Response.Transports), nil
 }
 
-// validTransport reports whether t matches [a-zA-Z0-9/.-]+.
+// disallowedNameRune reports whether r may not appear in a [User.Name]: control
+// characters and bidirectional formatting characters. See RFC 8265 and RFC 8266.
+func disallowedNameRune(r rune) bool {
+	return unicode.IsControl(r) ||
+		(r >= 0x202A && r <= 0x202E) || // LRE, RLE, PDF, LRO, RLO
+		(r >= 0x2066 && r <= 0x2069) // LRI, RLI, FSI, PDI
+}
+
+// validTransport reports whether t matches [a-zA-Z0-9/.-]+ and is at most 32 bytes.
 func validTransport(t string) bool {
-	if t == "" {
+	if t == "" || len(t) > 32 {
 		return false
 	}
 	for _, c := range t {

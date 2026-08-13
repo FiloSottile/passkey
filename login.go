@@ -39,14 +39,15 @@ func (rp *RelyingParty) NewLogin() (request, optionsJSON []byte, err error) {
 // The user's passkey records are communicated to the client as
 // allowCredentials, so the client offers only that user's credentials
 // instead of an account picker. The response is verified with
-// [RelyingParty.Login], passing the same records; Login fails if the
+// [RelyingParty.Login], passing the user's records; Login fails if the
 // response asserts a user handle other than userID.
+//
+// allowCredentials discloses the user's credential IDs to whoever receives
+// optionsJSON, so passkeys should be nil if NewLoginForUser is being used to
+// answer an unauthenticated username.
 func (rp *RelyingParty) NewLoginForUser(userID string, passkeys []string) (request, optionsJSON []byte, err error) {
 	if len(userID) == 0 || len(userID) > 64 {
 		return nil, nil, errors.New("passkey: invalid user ID")
-	}
-	if len(passkeys) == 0 {
-		return nil, nil, errors.New("passkey: no passkey records for a user-scoped login")
 	}
 	return rp.newLogin(userID, passkeys)
 }
@@ -86,6 +87,8 @@ func (rp *RelyingParty) newLogin(userID string, passkeys []string) (request, opt
 // response is valid but the request was created more than
 // [Options.Timeout] ago. Applications should discard the request and
 // retry the ceremony with a fresh one.
+//
+// It is always wrapped, so callers must use [errors.Is].
 var ErrRequestExpired = errors.New("passkey: login request expired")
 
 // ErrUnknownCredential is returned by [RelyingParty.Login] when the
@@ -94,8 +97,10 @@ var ErrRequestExpired = errors.New("passkey: login request expired")
 // from the account".
 //
 // It is necessarily reported before signature verification, so exposing
-// it to clients reveals whether a credential ID is registered for the
-// asserted user.
+// it to clients reveals whether a given credential ID is registered for
+// the asserted user ID.
+//
+// It is always wrapped, so callers must use [errors.Is].
 var ErrUnknownCredential = errors.New("passkey: credential not registered for this user")
 
 // ErrUserVerificationRequired is returned by [RelyingParty.Login] when
@@ -107,6 +112,8 @@ var ErrUnknownCredential = errors.New("passkey: credential not registered for th
 // that want to accept such logins with reduced trust should leave
 // RequireUserVerification unset and check [Response.UserVerified]
 // instead.
+//
+// It is always wrapped, so callers must use [errors.Is].
 var ErrUserVerificationRequired = errors.New("passkey: user verification required but not performed")
 
 // Login verifies a login response against the request returned by

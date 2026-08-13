@@ -84,6 +84,9 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
 	if c.CrossOrigin != nil && *c.CrossOrigin {
 		return nil, errors.New("passkey: ceremony was performed in a cross-origin frame")
 	}
+	if c.TopOrigin != nil {
+		return nil, errors.New("passkey: ceremony was performed in a cross-origin frame")
+	}
 
 	ad, err := base64RawURLDecodeString(r.Response.AuthenticatorData)
 	if err != nil {

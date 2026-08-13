@@ -1,5 +1,5 @@
 // Package ctap2cbor implements a tiny subset of CTAP2's subset of CBOR,
-// sufficient to parse COSE keys and attestation objects.
+// sufficient to parse COSE keys within authenticator data.
 //
 // Only major types 0 (unsigned integer), 1 (negative integer), 2 (byte
 // strings), and 5 (maps) are supported. Arguments are limited to 16-bit values.
@@ -13,10 +13,6 @@ import (
 )
 
 type String []byte
-
-func (s String) Empty() bool {
-	return len(s) == 0
-}
 
 func (s *String) readTypeAndArgument() (major uint8, arg uint16, ok bool) {
 	if len(*s) < 1 {
