@@ -295,20 +295,6 @@ func BackedUp(passkey string) (bool, error) {
 	return r.flags.backupState(), nil
 }
 
-// CredentialID returns the credential ID of a passkey record.
-//
-// It is not needed for the flows implemented by this package, and is
-// provided for interoperability: exporting credentials, importing them
-// into systems that look credentials up by ID, and building UIs that
-// need a stable per-credential identifier.
-func CredentialID(passkey string) ([]byte, error) {
-	r, err := parseRecord(passkey)
-	if err != nil {
-		return nil, err
-	}
-	return r.credentialID, nil
-}
-
 // Transports returns the transport hints recorded at registration
 // (e.g. "internal", "hybrid", "usb"). They are used to populate the
 // credential descriptors sent to clients by
