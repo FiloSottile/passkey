@@ -175,50 +175,67 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
 		return 0, errors.New("passkey: assertion is for a different user than the request")
 	}
 
-	var key crypto.PublicKey
-	for i, p := range passkeys {
-		r, err := parseRecord(p)
-		if err != nil {
-			return 0, fmt.Errorf("%w (record #%d)", err, i)
-		}
-		if key == nil && bytes.Equal(r.credentialID, response.credentialID) {
-			key = r.key
-			matched = i
-		}
-		// Continue iterating over passkeys, to report an error if any are invalid.
-	}
-	if key == nil {
-		return 0, ErrUnknownCredential
-	}
-
 	message := make([]byte, 0, len(response.authData)+len(response.clientDataHash))
 	message = append(message, response.authData...)
 	message = append(message, response.clientDataHash[:]...)
-	switch key := key.(type) {
-	case *ecdsa.PublicKey:
-		digest := sha256.Sum256(message)
-		if !ecdsa.VerifyASN1(key, digest[:], response.signature) {
-			return 0, errors.New("passkey: ECDSA signature verification failed")
+
+	matched = -1
+	var parseErrors, signatureErrors []error
+	for i, p := range passkeys {
+		r, err := parseRecord(p)
+		if err != nil {
+			// Continue iterating, to avoid locking out an account
+			// due to a single bad record.
+			parseErrors = append(parseErrors, fmt.Errorf("%w (record #%d)", err, i))
+			continue
 		}
-	case *rsa.PublicKey:
-		digest := sha256.Sum256(message)
-		if err := rsa.VerifyPKCS1v15(key, crypto.SHA256, digest[:], response.signature); err != nil {
-			return 0, errors.New("passkey: RSA signature verification failed")
+		if !bytes.Equal(r.credentialID, response.credentialID) {
+			continue
 		}
-	case *mldsa.PublicKey:
-		if err := mldsa.Verify(key, message, response.signature, nil); err != nil {
-			return 0, errors.New("passkey: ML-DSA signature verification failed")
+		if verifySignature(r.key, message, response.signature) {
+			matched = i
+			break
 		}
-	default:
-		return 0, errors.New("passkey: internal error: unsupported public key type")
+		// Continue iterating, in case two records have the same
+		// credential ID but different keys, and the one that actually
+		// signed the assertion is later in the list.
+		signatureErrors = append(signatureErrors,
+			fmt.Errorf("signature verification failed (record #%d)", i))
+	}
+	if matched == -1 {
+		switch {
+		case len(signatureErrors) == 1:
+			return 0, fmt.Errorf("passkey: %v", signatureErrors[0])
+		case len(signatureErrors) > 1:
+			return 0, fmt.Errorf("passkey: multiple records matched the credential ID but none verified the signature: %v", signatureErrors)
+		case len(parseErrors) > 0:
+			return 0, fmt.Errorf("%w, and some records could not be parsed: %v", ErrUnknownCredential, parseErrors)
+		default:
+			return 0, fmt.Errorf("%w", ErrUnknownCredential)
+		}
 	}
 
 	if time.Since(req.created) > rp.timeout {
-		return 0, ErrRequestExpired
+		return 0, fmt.Errorf("%w: request created at %v", ErrRequestExpired, req.created)
 	}
 	if rp.requireUserVerification && !response.userVerified {
-		return 0, ErrUserVerificationRequired
+		return 0, fmt.Errorf("%w", ErrUserVerificationRequired)
 	}
 
 	return matched, nil
+}
+
+func verifySignature(key crypto.PublicKey, message, sig []byte) bool {
+	switch key := key.(type) {
+	case *ecdsa.PublicKey:
+		digest := sha256.Sum256(message)
+		return ecdsa.VerifyASN1(key, digest[:], sig)
+	case *rsa.PublicKey:
+		digest := sha256.Sum256(message)
+		return rsa.VerifyPKCS1v15(key, crypto.SHA256, digest[:], sig) == nil
+	case *mldsa.PublicKey:
+		return mldsa.Verify(key, message, sig, nil) == nil
+	default:
+		return false
+	}
 }
