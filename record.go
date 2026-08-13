@@ -139,6 +139,13 @@ func parseRegistrationAuthData(r *record, b []byte) error {
 	return nil
 }
 
+// ErrUnsupportedAlgorithm is returned by [RelyingParty.Register] and by
+// [AAGUID], [BackedUp], and [Transports] when a passkey record has a credential
+// public key type that this package does not support.
+//
+// It is always wrapped, so callers must use [errors.Is].
+var ErrUnsupportedAlgorithm = errors.New("unsupported credential public key algorithm")
+
 // COSE key types, from the IANA COSE Key Types registry.
 const (
 	coseKeyTypeEC2 = 2
@@ -181,7 +188,7 @@ func parseCOSEKey(b []byte) (crypto.PublicKey, []byte, error) {
 			return nil, nil, errors.New("malformed COSE key: bad map length")
 		}
 		if alg != algES256 {
-			return nil, nil, fmt.Errorf("unsupported COSE algorithm %d for EC2 key", alg)
+			return nil, nil, fmt.Errorf("%w (COSE algorithm %d for EC2 key)", ErrUnsupportedAlgorithm, alg)
 		}
 		var crv int16
 		if !s.ReadInt(&label) || label != -1 || !s.ReadInt(&crv) || crv != coseCurveP256 {
@@ -208,7 +215,7 @@ func parseCOSEKey(b []byte) (crypto.PublicKey, []byte, error) {
 			return nil, nil, errors.New("malformed COSE key: bad map length")
 		}
 		if alg != algRS256 {
-			return nil, nil, fmt.Errorf("unsupported COSE algorithm %d for RSA key", alg)
+			return nil, nil, fmt.Errorf("%w (COSE algorithm %d for RSA key)", ErrUnsupportedAlgorithm, alg)
 		}
 		var n []byte
 		if !s.ReadInt(&label) || label != -1 || !s.ReadBytes(&n) || len(n) == 0 || n[0] == 0 {
@@ -240,7 +247,7 @@ func parseCOSEKey(b []byte) (crypto.PublicKey, []byte, error) {
 		case algMLDSA87:
 			params = mldsa.MLDSA87()
 		default:
-			return nil, nil, fmt.Errorf("unsupported COSE algorithm %d for AKP key", alg)
+			return nil, nil, fmt.Errorf("%w (COSE algorithm %d for AKP key)", ErrUnsupportedAlgorithm, alg)
 		}
 		var pub []byte
 		if !s.ReadInt(&label) || label != -1 || !s.ReadBytes(&pub) {
@@ -256,7 +263,7 @@ func parseCOSEKey(b []byte) (crypto.PublicKey, []byte, error) {
 		}
 		return key, []byte(s), nil
 	default:
-		return nil, nil, fmt.Errorf("unsupported COSE key type %d", kty)
+		return nil, nil, fmt.Errorf("%w (COSE key type %d)", ErrUnsupportedAlgorithm, kty)
 	}
 }
 
