@@ -1,0 +1,20 @@
+record parameter names not restricted to the PHC alphabet
+
+diff --git a/record.go b/record.go
+index 6db7f15..5d92c99 100644
+--- a/record.go
++++ b/record.go
+@@ -85,13 +85,6 @@ func validParamName(k string) bool {
+ 	if k == "" || len(k) > 32 || k == "v" {
+ 		return false
+ 	}
+-	for _, c := range k {
+-		switch {
+-		case c >= 'a' && c <= 'z', c >= '0' && c <= '9', c == '-':
+-		default:
+-			return false
+-		}
+-	}
+ 	return true
+ }
+ 

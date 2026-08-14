@@ -61,10 +61,7 @@ type requestOptions struct {
 }
 
 func (rp *RelyingParty) newLogin(userID string, passkeys []string) (request, optionsJSON []byte, err error) {
-	allowed, err := credentialDescriptors(passkeys)
-	if err != nil {
-		return nil, nil, fmt.Errorf("passkey: invalid passkey record: %w", err)
-	}
+	allowed := credentialDescriptors(passkeys)
 	r := newLoginRequest(userID)
 	uv := "preferred"
 	if rp.requireUserVerification {

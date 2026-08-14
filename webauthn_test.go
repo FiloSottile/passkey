@@ -94,10 +94,9 @@ func webauthnVectorOutcome(v webauthnVector) (registerErr, parseErr string) {
 	return registerErr, parseErr
 }
 
-// TestWebAuthnVectors replays the §16 ceremonies: registrations must
-// produce records carrying the vector's values, and the assertions,
-// signed by the same credentials, must verify against those records.
-func TestWebAuthnVectors(t *testing.T) {
+// loadWebAuthnVectors reads the testdata/webauthn.json vectors.
+func loadWebAuthnVectors(t testing.TB) webauthnVectorFile {
+	t.Helper()
 	data, err := os.ReadFile("testdata/webauthn.json")
 	if err != nil {
 		t.Fatal(err)
@@ -106,6 +105,14 @@ func TestWebAuthnVectors(t *testing.T) {
 	if err := json.Unmarshal(data, &f); err != nil {
 		t.Fatal(err)
 	}
+	return f
+}
+
+// TestWebAuthnVectors replays the §16 ceremonies: registrations must
+// produce records carrying the vector's values, and the assertions,
+// signed by the same credentials, must verify against those records.
+func TestWebAuthnVectors(t *testing.T) {
+	f := loadWebAuthnVectors(t)
 	rp, err := NewRelyingParty(&Options{RPID: f.RPID, Origin: f.Origin})
 	if err != nil {
 		t.Fatal(err)

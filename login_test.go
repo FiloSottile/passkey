@@ -106,9 +106,20 @@ func impostorResponse(t *testing.T, env *loginEnv) []byte {
 
 var sentinelErrors = []error{ErrRequestExpired, ErrUnknownCredential, ErrUserVerificationRequired, ErrUnsupportedAlgorithm}
 
+// checkWrapped asserts that err is not a bare sentinel: they are
+// documented as always wrapped.
+func checkWrapped(t *testing.T, err error) {
+	t.Helper()
+	for _, sentinel := range sentinelErrors {
+		if err == sentinel {
+			t.Errorf("error is the bare %v sentinel, want it wrapped", sentinel)
+		}
+	}
+}
+
 // checkError asserts that err matches the wantIs sentinel (if any) and
-// no other sentinel, that it is never a bare sentinel (they are
-// documented as always wrapped), and that it contains wantHas.
+// no other sentinel, that it is never a bare sentinel, and that it
+// contains wantHas.
 func checkError(t *testing.T, err error, wantIs error, wantHas string) {
 	t.Helper()
 	if err == nil {
@@ -117,10 +128,8 @@ func checkError(t *testing.T, err error, wantIs error, wantHas string) {
 	if wantIs != nil && !errors.Is(err, wantIs) {
 		t.Errorf("error = %v, want errors.Is(err, %v)", err, wantIs)
 	}
+	checkWrapped(t, err)
 	for _, sentinel := range sentinelErrors {
-		if err == sentinel {
-			t.Errorf("error is the bare %v sentinel, want it wrapped", sentinel)
-		}
 		if sentinel != wantIs && errors.Is(err, sentinel) {
 			t.Errorf("error = %v, unexpectedly matches sentinel %v", err, sentinel)
 		}

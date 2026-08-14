@@ -1,0 +1,15 @@
+record parameter names of any length accepted
+
+diff --git a/record.go b/record.go
+index 6db7f15..be20508 100644
+--- a/record.go
++++ b/record.go
+@@ -82,7 +82,7 @@ func parseRecord(r string) (*record, error) {
+ // [a-z0-9-]{1,32}, excluding "v" which is reserved for the version field.
+ // See https://c2sp.org/phc-strings.
+ func validParamName(k string) bool {
+-	if k == "" || len(k) > 32 || k == "v" {
++	if k == "" || k == "v" {
+ 		return false
+ 	}
+ 	for _, c := range k {

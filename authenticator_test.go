@@ -11,6 +11,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"maps"
+	"math/big"
 	"sync"
 	"testing"
 
@@ -94,22 +95,7 @@ func newAuthenticator(t testing.TB, alg int32) *authenticator {
 		if err != nil {
 			t.Fatal(err)
 		}
-		point, err := key.PublicKey.Bytes()
-		if err != nil {
-			t.Fatal(err)
-		}
-		x, y := point[1:33], point[33:65]
-		a.coseKey = cborAppendMapHeader(nil, 5)
-		a.coseKey = cborAppendInt(a.coseKey, 1)
-		a.coseKey = cborAppendInt(a.coseKey, coseKeyTypeEC2)
-		a.coseKey = cborAppendInt(a.coseKey, 3)
-		a.coseKey = cborAppendInt(a.coseKey, algES256)
-		a.coseKey = cborAppendInt(a.coseKey, -1)
-		a.coseKey = cborAppendInt(a.coseKey, coseCurveP256)
-		a.coseKey = cborAppendInt(a.coseKey, -2)
-		a.coseKey = cborAppendBytes(a.coseKey, x)
-		a.coseKey = cborAppendInt(a.coseKey, -3)
-		a.coseKey = cborAppendBytes(a.coseKey, y)
+		a.coseKey = encodeCOSEKey(t, key.Public())
 		a.sign = func(message []byte) ([]byte, error) {
 			digest := sha256.Sum256(message)
 			return ecdsa.SignASN1(rand.Reader, key, digest[:])
@@ -117,19 +103,7 @@ func newAuthenticator(t testing.TB, alg int32) *authenticator {
 
 	case algRS256:
 		key := rsaKey()
-		e := binary.BigEndian.AppendUint32(nil, uint32(key.E))
-		for len(e) > 1 && e[0] == 0 {
-			e = e[1:]
-		}
-		a.coseKey = cborAppendMapHeader(nil, 4)
-		a.coseKey = cborAppendInt(a.coseKey, 1)
-		a.coseKey = cborAppendInt(a.coseKey, coseKeyTypeRSA)
-		a.coseKey = cborAppendInt(a.coseKey, 3)
-		a.coseKey = cborAppendInt(a.coseKey, algRS256)
-		a.coseKey = cborAppendInt(a.coseKey, -1)
-		a.coseKey = cborAppendBytes(a.coseKey, key.N.Bytes())
-		a.coseKey = cborAppendInt(a.coseKey, -2)
-		a.coseKey = cborAppendBytes(a.coseKey, e)
+		a.coseKey = encodeCOSEKey(t, key.Public())
 		a.sign = func(message []byte) ([]byte, error) {
 			digest := sha256.Sum256(message)
 			return rsa.SignPKCS1v15(rand.Reader, key, crypto.SHA256, digest[:])
@@ -143,13 +117,7 @@ func newAuthenticator(t testing.TB, alg int32) *authenticator {
 		if err != nil {
 			t.Fatal(err)
 		}
-		a.coseKey = cborAppendMapHeader(nil, 3)
-		a.coseKey = cborAppendInt(a.coseKey, 1)
-		a.coseKey = cborAppendInt(a.coseKey, coseKeyTypeAKP)
-		a.coseKey = cborAppendInt(a.coseKey, 3)
-		a.coseKey = cborAppendInt(a.coseKey, alg)
-		a.coseKey = cborAppendInt(a.coseKey, -1)
-		a.coseKey = cborAppendBytes(a.coseKey, key.PublicKey().Bytes())
+		a.coseKey = encodeCOSEKey(t, key.PublicKey())
 		a.sign = func(message []byte) ([]byte, error) {
 			// Pure ML-DSA, empty context, no prehashing.
 			return key.Sign(rand.Reader, message, nil)
@@ -297,6 +265,62 @@ func challengeOf(t testing.TB, optionsJSON []byte) string {
 		t.Fatal(err)
 	}
 	return o.Challenge
+}
+
+// encodeCOSEKey encodes a public key as a COSE_Key, the encoding
+// counterpart of parseCOSEKey.
+func encodeCOSEKey(t testing.TB, pub crypto.PublicKey) []byte {
+	t.Helper()
+	switch pub := pub.(type) {
+	case *ecdsa.PublicKey:
+		point, err := pub.Bytes()
+		if err != nil {
+			t.Fatal(err)
+		}
+		b := cborAppendMapHeader(nil, 5)
+		b = cborAppendInt(b, 1)
+		b = cborAppendInt(b, coseKeyTypeEC2)
+		b = cborAppendInt(b, 3)
+		b = cborAppendInt(b, algES256)
+		b = cborAppendInt(b, -1)
+		b = cborAppendInt(b, coseCurveP256)
+		b = cborAppendInt(b, -2)
+		b = cborAppendBytes(b, point[1:33])
+		b = cborAppendInt(b, -3)
+		return cborAppendBytes(b, point[33:65])
+	case *rsa.PublicKey:
+		b := cborAppendMapHeader(nil, 4)
+		b = cborAppendInt(b, 1)
+		b = cborAppendInt(b, coseKeyTypeRSA)
+		b = cborAppendInt(b, 3)
+		b = cborAppendInt(b, algRS256)
+		b = cborAppendInt(b, -1)
+		b = cborAppendBytes(b, pub.N.Bytes())
+		b = cborAppendInt(b, -2)
+		return cborAppendBytes(b, big.NewInt(int64(pub.E)).Bytes())
+	case *mldsa.PublicKey:
+		var alg int32
+		switch params := pub.Parameters(); params {
+		case mldsa.MLDSA44():
+			alg = algMLDSA44
+		case mldsa.MLDSA65():
+			alg = algMLDSA65
+		case mldsa.MLDSA87():
+			alg = algMLDSA87
+		default:
+			t.Fatalf("unexpected parameter set %s", params)
+		}
+		b := cborAppendMapHeader(nil, 3)
+		b = cborAppendInt(b, 1)
+		b = cborAppendInt(b, coseKeyTypeAKP)
+		b = cborAppendInt(b, 3)
+		b = cborAppendInt(b, alg)
+		b = cborAppendInt(b, -1)
+		return cborAppendBytes(b, pub.Bytes())
+	default:
+		t.Fatalf("unexpected key type %T", pub)
+		return nil
+	}
 }
 
 // The cborAppend functions encode CTAP2 canonical CBOR, the encoding

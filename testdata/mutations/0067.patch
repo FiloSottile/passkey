@@ -1,16 +1,16 @@
-malformed record fails credential descriptor generation
+malformed record drops every credential descriptor
 
 diff --git a/record.go b/record.go
 index ce23fff..a9d56f6 100644
 --- a/record.go
 +++ b/record.go
-@@ -331,8 +331,7 @@ func credentialDescriptors(passkeys []string) ([]credentialDescriptor, error) {
+@@ -331,8 +331,7 @@ func credentialDescriptors(passkeys []string) []credentialDescriptor {
  	for _, p := range passkeys {
  		r, err := parseRecord(p)
  		if err != nil {
 -			// For excludeCredentials/allowCredentials it's ok to drop malformed records.
 -			continue
-+			return nil, err
++			return nil
  		}
  		out = append(out, credentialDescriptor{
  			Type:       "public-key",

@@ -1,0 +1,21 @@
+record parameter values not restricted to the PHC alphabet
+
+diff --git a/record.go b/record.go
+index 6db7f15..01b5629 100644
+--- a/record.go
++++ b/record.go
+@@ -98,14 +98,6 @@ func validParamName(k string) bool {
+ // validParamValue reports whether v is a PHC String parameter value:
+ // [a-zA-Z0-9/+.-]*. See https://c2sp.org/phc-strings.
+ func validParamValue(v string) bool {
+-	for _, c := range v {
+-		switch {
+-		case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z', c >= '0' && c <= '9':
+-		case c == '+', c == '-', c == '.', c == '/':
+-		default:
+-			return false
+-		}
+-	}
+ 	return true
+ }
+ 

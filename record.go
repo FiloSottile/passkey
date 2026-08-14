@@ -43,7 +43,7 @@ func parseRecord(r string) (*record, error) {
 			return nil, errors.New("passkey: invalid record: invalid parameters")
 		}
 		k, v, ok := strings.Cut(kv, "=")
-		if !ok || k == "" || v == "" {
+		if !ok || !validParamName(k) || !validParamValue(v) {
 			return nil, errors.New("passkey: invalid record: invalid parameters")
 		}
 		if k != "transports" {
@@ -76,6 +76,37 @@ func parseRecord(r string) (*record, error) {
 		return nil, fmt.Errorf("passkey: invalid record: %w", err)
 	}
 	return rr, nil
+}
+
+// validParamName reports whether k is a PHC String parameter name:
+// [a-z0-9-]{1,32}, excluding "v" which is reserved for the version field.
+// See https://c2sp.org/phc-strings.
+func validParamName(k string) bool {
+	if k == "" || len(k) > 32 || k == "v" {
+		return false
+	}
+	for _, c := range k {
+		switch {
+		case c >= 'a' && c <= 'z', c >= '0' && c <= '9', c == '-':
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+// validParamValue reports whether v is a PHC String parameter value:
+// [a-zA-Z0-9/+.-]*. See https://c2sp.org/phc-strings.
+func validParamValue(v string) bool {
+	for _, c := range v {
+		switch {
+		case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z', c >= '0' && c <= '9':
+		case c == '+', c == '-', c == '.', c == '/':
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 type flags uint8
@@ -324,9 +355,8 @@ type credentialDescriptor struct {
 	Transports []string `json:"transports,omitempty"`
 }
 
-// credentialDescriptors converts passkey records into credential descriptors,
-// failing if any record is malformed.
-func credentialDescriptors(passkeys []string) ([]credentialDescriptor, error) {
+// credentialDescriptors converts passkey records into credential descriptors..
+func credentialDescriptors(passkeys []string) []credentialDescriptor {
 	out := make([]credentialDescriptor, 0, len(passkeys))
 	for _, p := range passkeys {
 		r, err := parseRecord(p)
@@ -340,5 +370,5 @@ func credentialDescriptors(passkeys []string) ([]credentialDescriptor, error) {
 			Transports: r.transports,
 		})
 	}
-	return out, nil
+	return out
 }

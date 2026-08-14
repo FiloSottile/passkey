@@ -77,6 +77,20 @@ var recordVectorErrors = map[string]string{
 	"unsupported-rsa-modulus-size":     "unsupported RSA modulus size",
 }
 
+// loadRecordVectors reads the testdata/records.json vectors.
+func loadRecordVectors(t testing.TB) []recordVector {
+	t.Helper()
+	data, err := os.ReadFile("testdata/records.json")
+	if err != nil {
+		t.Fatalf("%v (regenerate with -update)", err)
+	}
+	var vectors []recordVector
+	if err := json.Unmarshal(data, &vectors); err != nil {
+		t.Fatal(err)
+	}
+	return vectors
+}
+
 // TestRecordVectors runs the testdata/records.json vectors: the record
 // grammar (prefix, version, parameters, transports, base64 field), the
 // authenticator data constraints, and the COSE key grammar, all through
@@ -89,15 +103,7 @@ func TestRecordVectors(t *testing.T) {
 	if *updateFlag {
 		writeRecordVectors(t)
 	}
-	data, err := os.ReadFile("testdata/records.json")
-	if err != nil {
-		t.Fatalf("%v (regenerate with -update)", err)
-	}
-	var vectors []recordVector
-	if err := json.Unmarshal(data, &vectors); err != nil {
-		t.Fatal(err)
-	}
-	for _, v := range vectors {
+	for _, v := range loadRecordVectors(t) {
 		t.Run(v.Name, func(t *testing.T) {
 			aaguid, err := AAGUID(v.Record)
 			if v.Error != "" {
@@ -466,6 +472,16 @@ func writeRecordVectors(t *testing.T) {
 			Flags:        flagsOf(baseFlags),
 		},
 		{
+			Name:         "empty-unknown-parameter-value",
+			Record:       "$webauthn$v=1$foo=$" + baseB64,
+			Algorithm:    algES256,
+			Canonical:    "$webauthn$v=1$" + baseB64,
+			AAGUID:       aaguidHex,
+			CredentialID: credentialIDHex,
+			Transports:   transportsPtr(),
+			Flags:        flagsOf(baseFlags),
+		},
+		{
 			Name:         "minimum-credential-id",
 			Record:       encodeRecord(authData(baseFlags, minID, es256, nil), nil),
 			Algorithm:    algES256,
@@ -492,13 +508,23 @@ func writeRecordVectors(t *testing.T) {
 		invalid("base64-carriage-return", "$webauthn$v=1$"+baseB64[:10]+"\r"+baseB64[10:], "bad-base64", algES256),
 		invalid("base64-url-alphabet", strings.Replace(slashes, "/", "_", 1), "bad-base64", algES256),
 		invalid("base64-non-canonical-bits", "$webauthn$v=1$"+nonCanonicalBase64(baseB64), "bad-base64", algES256),
-		invalid("empty-parameter-value", "$webauthn$v=1$transports=$"+baseB64, "bad-parameter", algES256),
 		invalid("parameter-without-value", "$webauthn$v=1$transports$"+baseB64, "bad-parameter", algES256),
 		invalid("trailing-parameter-comma", "$webauthn$v=1$transports=usb,$"+baseB64, "bad-parameter", algES256),
 		invalid("leading-parameter-comma", "$webauthn$v=1$,transports=usb$"+baseB64, "bad-parameter", algES256),
+		invalid("parameter-empty-name", "$webauthn$v=1$=bar$"+baseB64, "bad-parameter", algES256),
+		invalid("parameter-name-uppercase", "$webauthn$v=1$Foo=bar$"+baseB64, "bad-parameter", algES256),
+		invalid("parameter-name-too-long", "$webauthn$v=1$"+strings.Repeat("f", 33)+"=bar$"+baseB64, "bad-parameter", algES256),
+		invalid("parameter-name-version", "$webauthn$v=1$v=2$"+baseB64, "bad-parameter", algES256),
+		invalid("parameter-value-newline", "$webauthn$v=1$foo=b\nar$"+baseB64, "bad-parameter", algES256),
+		invalid("parameter-value-non-ascii", "$webauthn$v=1$foo=bé$"+baseB64, "bad-parameter", algES256),
+		// A transport character outside the transports alphabet is also
+		// outside the PHC parameter value alphabet, so it is rejected as
+		// a parameter before it is read as a transports list.
+		invalid("transport-invalid-character", "$webauthn$v=1$transports=a b$"+baseB64, "bad-parameter", algES256),
 		invalid("duplicate-transports-parameter", "$webauthn$v=1$transports=a,transports=b$"+baseB64, "duplicate-transports-parameter", algES256),
-		invalid("transport-invalid-character", "$webauthn$v=1$transports=a b$"+baseB64, "invalid-transport", algES256),
+		invalid("empty-transports-value", "$webauthn$v=1$transports=$"+baseB64, "invalid-transport", algES256),
 		invalid("transport-empty", "$webauthn$v=1$transports=a+$"+baseB64, "invalid-transport", algES256),
+		invalid("transport-too-long", "$webauthn$v=1$transports="+strings.Repeat("t", 33)+"$"+baseB64, "invalid-transport", algES256),
 		invalid("transports-unsorted", "$webauthn$v=1$transports=usb+internal$"+baseB64, "transports-not-sorted", algES256),
 		invalid("transports-duplicated", "$webauthn$v=1$transports=usb+usb$"+baseB64, "transports-not-sorted", algES256),
 		invalid("too-many-transports", "$webauthn$v=1$transports="+strings.Join(manyTransports, "+")+"$"+baseB64, "too-many-transports", algES256),

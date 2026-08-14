@@ -86,10 +86,7 @@ func (rp *RelyingParty) NewRegistration(user User, passkeys []string) (optionsJS
 	if strings.ContainsFunc(user.Name, disallowedNameRune) {
 		return nil, errors.New("passkey: user name contains disallowed characters")
 	}
-	exclude, err := credentialDescriptors(passkeys)
-	if err != nil {
-		return nil, err
-	}
+	exclude := credentialDescriptors(passkeys)
 	var o creationOptions
 	o.RP.ID = rp.rpID
 	o.User.ID = base64.RawURLEncoding.EncodeToString([]byte(user.ID))
