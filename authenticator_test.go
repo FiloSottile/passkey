@@ -28,7 +28,7 @@ const (
 )
 
 // AKP COSE algorithms that newAuthenticator can generate credentials for
-// but this package does not support, from draft-ietf-cose-dilithium.
+// but this package does not support, from RFC 9964.
 const (
 	algMLDSA65 = -49
 	algMLDSA87 = -50
