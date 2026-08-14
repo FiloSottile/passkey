@@ -1,0 +1,17 @@
+ReadMapHeader accepts any major type
+
+diff --git a/internal/ctap2cbor/cbor.go b/internal/ctap2cbor/cbor.go
+index 2811a50..0da43fe 100644
+--- a/internal/ctap2cbor/cbor.go
++++ b/internal/ctap2cbor/cbor.go
+@@ -85,8 +85,8 @@ func (s *String) ReadBytes(out *[]byte) bool {
+ }
+ 
+ func (s *String) ReadMapHeader(out *uint16) bool {
+-	major, arg, ok := s.readTypeAndArgument()
+-	if !ok || major != 5 {
++	_, arg, ok := s.readTypeAndArgument()
++	if !ok {
+ 		return false
+ 	}
+ 	*out = arg

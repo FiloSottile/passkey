@@ -1,0 +1,15 @@
+decode 16-bit CBOR arguments little-endian
+
+diff --git a/internal/ctap2cbor/cbor.go b/internal/ctap2cbor/cbor.go
+index 2811a50..3afe785 100644
+--- a/internal/ctap2cbor/cbor.go
++++ b/internal/ctap2cbor/cbor.go
+@@ -37,7 +37,7 @@ func (s *String) readTypeAndArgument() (major uint8, arg uint16, ok bool) {
+ 		if len(*s) < 3 {
+ 			return
+ 		}
+-		arg = binary.BigEndian.Uint16((*s)[1:])
++		arg = binary.LittleEndian.Uint16((*s)[1:])
+ 		if arg <= 0xff {
+ 			return
+ 		}

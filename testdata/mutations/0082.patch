@@ -1,0 +1,14 @@
+leave the cursor on the head byte of a single-byte CBOR argument
+
+diff --git a/internal/ctap2cbor/cbor.go b/internal/ctap2cbor/cbor.go
+index 2811a50..bd1c898 100644
+--- a/internal/ctap2cbor/cbor.go
++++ b/internal/ctap2cbor/cbor.go
+@@ -23,7 +23,6 @@ func (s *String) readTypeAndArgument() (major uint8, arg uint16, ok bool) {
+ 	switch {
+ 	case minor <= 23:
+ 		arg = uint16(minor)
+-		*s = (*s)[1:]
+ 	case minor == 24:
+ 		if len(*s) < 2 {
+ 			return

@@ -1,0 +1,15 @@
+ReadInt accepts simple values and floats as unsigned integers
+
+diff --git a/internal/ctap2cbor/cbor.go b/internal/ctap2cbor/cbor.go
+index 2811a50..dbfe906 100644
+--- a/internal/ctap2cbor/cbor.go
++++ b/internal/ctap2cbor/cbor.go
+@@ -55,7 +55,7 @@ func (s *String) ReadInt(out *int16) bool {
+ 		return false
+ 	}
+ 	switch major {
+-	case 0:
++	case 0, 7:
+ 		if arg > math.MaxInt16 {
+ 			return false
+ 		}

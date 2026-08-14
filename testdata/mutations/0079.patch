@@ -1,0 +1,16 @@
+read the indefinite-length marker as argument 31
+
+diff --git a/internal/ctap2cbor/cbor.go b/internal/ctap2cbor/cbor.go
+index 2811a50..c61e320 100644
+--- a/internal/ctap2cbor/cbor.go
++++ b/internal/ctap2cbor/cbor.go
+@@ -42,6 +42,9 @@ func (s *String) readTypeAndArgument() (major uint8, arg uint16, ok bool) {
+ 			return
+ 		}
+ 		*s = (*s)[3:]
++	case minor == 31:
++		arg = uint16(minor)
++		*s = (*s)[1:]
+ 	default:
+ 		return
+ 	}
