@@ -1,0 +1,15 @@
+accept even RSA public exponent
+
+diff --git a/record.go b/record.go
+index ce23fff..71190d7 100644
+--- a/record.go
++++ b/record.go
+@@ -234,7 +234,7 @@ func parseCOSEKey(b []byte) (crypto.PublicKey, []byte, error) {
+ 			return nil, nil, errors.New("malformed COSE key: bad RSA exponent")
+ 		}
+ 		exponent := new(big.Int).SetBytes(e).Int64()
+-		if exponent < 3 || exponent > math.MaxInt32 || exponent%2 == 0 {
++		if exponent < 3 || exponent > math.MaxInt32 {
+ 			return nil, nil, errors.New("malformed COSE key: invalid RSA public exponent")
+ 		}
+ 		return &rsa.PublicKey{N: modulus, E: int(exponent)}, []byte(s), nil

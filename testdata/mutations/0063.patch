@@ -1,0 +1,16 @@
+accept non-minimal two-byte CBOR arguments
+
+diff --git a/internal/ctap2cbor/cbor.go b/internal/ctap2cbor/cbor.go
+index 2811a50..fd6a96a 100644
+--- a/internal/ctap2cbor/cbor.go
++++ b/internal/ctap2cbor/cbor.go
+@@ -38,9 +38,6 @@ func (s *String) readTypeAndArgument() (major uint8, arg uint16, ok bool) {
+ 			return
+ 		}
+ 		arg = binary.BigEndian.Uint16((*s)[1:])
+-		if arg <= 0xff {
+-			return
+-		}
+ 		*s = (*s)[3:]
+ 	default:
+ 		return

@@ -1,0 +1,15 @@
+zero Timeout not defaulted to five minutes
+
+diff --git a/passkey.go b/passkey.go
+index 270e175..e888063 100644
+--- a/passkey.go
++++ b/passkey.go
+@@ -231,8 +231,6 @@ func NewRelyingParty(opts *Options) (*RelyingParty, error) {
+ 	case timeout.Milliseconds() > math.MaxUint32:
+ 		// Clients coerce the timeout hint to a WebIDL unsigned long.
+ 		return nil, errors.New("passkey: Timeout is too large")
+-	case timeout == 0:
+-		timeout = 5 * time.Minute
+ 	}
+ 
+ 	return &RelyingParty{

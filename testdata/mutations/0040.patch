@@ -1,0 +1,15 @@
+accept credential ID shorter than 16 bytes
+
+diff --git a/record.go b/record.go
+index ce23fff..edb6d10 100644
+--- a/record.go
++++ b/record.go
+@@ -114,7 +114,7 @@ func parseRegistrationAuthData(r *record, b []byte) error {
+ 	b = b[16:]
+ 
+ 	length := binary.BigEndian.Uint16(b[:2])
+-	if length < 16 || length > 1023 {
++	if length > 1023 {
+ 		return fmt.Errorf("credential ID is %d bytes, expected between %d and %d", length, 16, 1023)
+ 	}
+ 	b = b[2:]

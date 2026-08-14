@@ -15,6 +15,16 @@ const (
 	testOrigin = "https://example.com"
 )
 
+// lookalikeOrigins are origins that would be accepted by loose comparison.
+var lookalikeOrigins = []string{
+	"https://example.com.attacker.example",
+	"https://accounts.example.com",
+	"https://EXAMPLE.com",
+	"http://example.com",
+	"https://example.com:443",
+	"https://example.com/",
+}
+
 func TestE2E(t *testing.T) {
 	t.Run("ES256", func(t *testing.T) { testE2E(t, algES256) })
 	t.Run("RS256", func(t *testing.T) { testE2E(t, algRS256) })

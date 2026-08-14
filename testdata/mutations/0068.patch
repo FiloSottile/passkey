@@ -1,0 +1,15 @@
+accept present but empty user handle
+
+diff --git a/login_response.go b/login_response.go
+index afd1659..ce5e31f 100644
+--- a/login_response.go
++++ b/login_response.go
+@@ -127,7 +127,7 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
+ 		if err != nil {
+ 			return nil, fmt.Errorf("passkey: malformed user ID: %w", err)
+ 		}
+-		if len(u) == 0 || len(u) > 64 {
++		if len(u) > 64 {
+ 			return nil, errors.New("passkey: invalid user ID")
+ 		}
+ 		userID = string(u)

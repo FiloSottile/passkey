@@ -1,0 +1,16 @@
+skip origin check in Login
+
+diff --git a/login.go b/login.go
+index 9c4298c..5aea2dc 100644
+--- a/login.go
++++ b/login.go
+@@ -169,9 +169,6 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
+ 	if response.challenge != req.challenge {
+ 		return 0, errors.New("passkey: client data challenge does not match the request")
+ 	}
+-	if response.origin != rp.origin {
+-		return 0, fmt.Errorf("passkey: origin %q is not the expected value %q", response.origin, rp.origin)
+-	}
+ 	if response.rpIDHash != sha256.Sum256([]byte(rp.rpID)) {
+ 		return 0, errors.New("passkey: assertion for a different RP ID")
+ 	}

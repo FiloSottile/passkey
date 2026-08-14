@@ -1,0 +1,15 @@
+ReadBytes accepts CBOR text strings
+
+diff --git a/internal/ctap2cbor/cbor.go b/internal/ctap2cbor/cbor.go
+index 2811a50..3545b42 100644
+--- a/internal/ctap2cbor/cbor.go
++++ b/internal/ctap2cbor/cbor.go
+@@ -73,7 +73,7 @@ func (s *String) ReadInt(out *int16) bool {
+ 
+ func (s *String) ReadBytes(out *[]byte) bool {
+ 	major, arg, ok := s.readTypeAndArgument()
+-	if !ok || major != 2 {
++	if !ok || (major != 2 && major != 3) {
+ 		return false
+ 	}
+ 	if len(*s) < int(arg) {

@@ -1,0 +1,16 @@
+accept credProps reporting a non-discoverable credential
+
+diff --git a/register.go b/register.go
+index 4f3b674..b2bb09b 100644
+--- a/register.go
++++ b/register.go
+@@ -220,9 +220,6 @@ func (rp *RelyingParty) Register(responseJSON []byte) (passkey string, err error
+ 	// credProps reports whether the created credential is actually
+ 	// discoverable. Absence is accepted (Safari never reports it), but an
+ 	// explicit false contradicts residentKey: "required".
+-	if cp := resp.ClientExtensionResults.CredProps; cp != nil && cp.RK != nil && !*cp.RK {
+-		return "", errors.New("passkey: client reports the credential is not discoverable")
+-	}
+ 
+ 	return encodeRecord(ad, resp.Response.Transports), nil
+ }

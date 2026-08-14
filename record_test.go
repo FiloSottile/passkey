@@ -378,6 +378,30 @@ func writeRecordVectors(t *testing.T) {
 		maxID[i] = byte(i)
 	}
 
+	// nonCanonicalBase64 sets the unused trailing bits of the last
+	// character, which decode to the same bytes but are rejected by a
+	// strict decoder.
+	nonCanonicalBase64 := func(b64 string) string {
+		const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+		v := strings.IndexByte(alphabet, b64[len(b64)-1])
+		switch len(b64) % 4 {
+		case 2: // the last character carries four unused bits
+			v |= 0b1111
+		case 3: // the last character carries two unused bits
+			v |= 0b11
+		default:
+			t.Fatal("base64 length leaves no trailing bits to set")
+		}
+		out := b64[:len(b64)-1] + string(alphabet[v])
+		if _, err := base64.RawStdEncoding.Strict().DecodeString(out); err == nil {
+			t.Fatal("strict decoder accepted non-canonical base64")
+		}
+		if _, err := base64.RawStdEncoding.DecodeString(out); err != nil {
+			t.Fatal("lenient decoder rejected non-canonical base64")
+		}
+		return out
+	}
+
 	// A record whose base64 is guaranteed to contain the '/' character,
 	// to derive the URL-alphabet vector from.
 	slashes := encodeRecord(authData(flagUP|flagAT|flagED, credentialID, es256, []byte{0xff, 0xff, 0xff}), nil)
@@ -467,6 +491,7 @@ func writeRecordVectors(t *testing.T) {
 		invalid("base64-newline", "$webauthn$v=1$"+baseB64[:10]+"\n"+baseB64[10:], "bad-base64", algES256),
 		invalid("base64-carriage-return", "$webauthn$v=1$"+baseB64[:10]+"\r"+baseB64[10:], "bad-base64", algES256),
 		invalid("base64-url-alphabet", strings.Replace(slashes, "/", "_", 1), "bad-base64", algES256),
+		invalid("base64-non-canonical-bits", "$webauthn$v=1$"+nonCanonicalBase64(baseB64), "bad-base64", algES256),
 		invalid("empty-parameter-value", "$webauthn$v=1$transports=$"+baseB64, "bad-parameter", algES256),
 		invalid("parameter-without-value", "$webauthn$v=1$transports$"+baseB64, "bad-parameter", algES256),
 		invalid("trailing-parameter-comma", "$webauthn$v=1$transports=usb,$"+baseB64, "bad-parameter", algES256),
@@ -496,6 +521,11 @@ func writeRecordVectors(t *testing.T) {
 		invalid("cose-unknown-label", withKey(ec2Key(algES256, coseCurveP256, gx, gy, -4)), "bad-cose-key", algES256),
 		invalid("cose-ec2-wrong-curve", withKey(ec2Key(algES256, 2, gx, gy, -3)), "bad-cose-key", algES256),
 		invalid("cose-ec2-short-coordinate", withKey(ec2Key(algES256, coseCurveP256, gx[:31], gy, -3)), "bad-cose-key", algES256),
+		// x and y are 33 and 31 bytes, but their concatenation is the
+		// same valid point: only the coordinate length checks reject it.
+		invalid("cose-ec2-coordinate-length-confusion",
+			withKey(ec2Key(algES256, coseCurveP256, append(slices.Clone(gx), gy[0]), gy[1:], -3)),
+			"bad-cose-key", algES256),
 		invalid("cose-ec2-invalid-point", withKey(ec2Key(algES256, coseCurveP256, make([]byte, 32), make([]byte, 32), -3)), "bad-cose-key", algES256),
 		invalid("cose-ec2-es384", withKey(ec2Key(-35, coseCurveP256, gx, gy, -3)), "unsupported-algorithm", -35),
 		invalid("cose-okp-key-type", withKey(okp), "unsupported-algorithm", -8),

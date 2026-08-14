@@ -1,0 +1,16 @@
+skip ReadBytes bounds check
+
+diff --git a/internal/ctap2cbor/cbor.go b/internal/ctap2cbor/cbor.go
+index 2811a50..070e1b6 100644
+--- a/internal/ctap2cbor/cbor.go
++++ b/internal/ctap2cbor/cbor.go
+@@ -76,9 +76,6 @@ func (s *String) ReadBytes(out *[]byte) bool {
+ 	if !ok || major != 2 {
+ 		return false
+ 	}
+-	if len(*s) < int(arg) {
+-		return false
+-	}
+ 	*out = (*s)[:arg]
+ 	*s = (*s)[arg:]
+ 	return true

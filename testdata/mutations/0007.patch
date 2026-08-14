@@ -1,0 +1,16 @@
+unscoped login accepts absent user handle
+
+diff --git a/login.go b/login.go
+index 9c4298c..620a57c 100644
+--- a/login.go
++++ b/login.go
+@@ -175,9 +175,6 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
+ 	if response.rpIDHash != sha256.Sum256([]byte(rp.rpID)) {
+ 		return 0, errors.New("passkey: assertion for a different RP ID")
+ 	}
+-	if req.userID == "" && response.userID == "" {
+-		return 0, errors.New("passkey: assertion has no user handle")
+-	}
+ 	if response.userID != "" && req.userID != "" && response.userID != req.userID {
+ 		return 0, errors.New("passkey: assertion is for a different user than the request")
+ 	}

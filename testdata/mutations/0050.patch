@@ -1,0 +1,15 @@
+validTransport ranges over byte offsets instead of characters
+
+diff --git a/register.go b/register.go
+index 4f3b674..50b3930 100644
+--- a/register.go
++++ b/register.go
+@@ -240,7 +240,7 @@ func validTransport(t string) bool {
+ 	if t == "" || len(t) > 32 {
+ 		return false
+ 	}
+-	for _, c := range t {
++	for c := range t {
+ 		switch {
+ 		case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z', c >= '0' && c <= '9':
+ 		case c == '-', c == '.', c == '/':

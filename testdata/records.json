@@ -328,6 +328,12 @@
 		"error": "bad-base64"
 	},
 	{
+		"name": "base64-non-canonical-bits",
+		"record": "$webauthn$v=1$o3mm9u6vuaVeN4wRgDTidR5oL6ufLTCrE9ISVYbOGUdBAAAAAAABAgMEBQYHCAkKCwwNDg8AIBAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vpQECAyYgASFYIGsX0fLhLEJH+Lzm5WOkQPJ3A32BLeszoPShOUXYmMKWIlggT+NC4v4af5uO5+tKfA+eFivOM1drMV7Oy7ZAaDe/UfX",
+		"algorithm": -7,
+		"error": "bad-base64"
+	},
+	{
 		"name": "empty-parameter-value",
 		"record": "$webauthn$v=1$transports=$o3mm9u6vuaVeN4wRgDTidR5oL6ufLTCrE9ISVYbOGUdBAAAAAAABAgMEBQYHCAkKCwwNDg8AIBAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vpQECAyYgASFYIGsX0fLhLEJH+Lzm5WOkQPJ3A32BLeszoPShOUXYmMKWIlggT+NC4v4af5uO5+tKfA+eFivOM1drMV7Oy7ZAaDe/UfU",
 		"algorithm": -7,
@@ -488,6 +494,12 @@
 	{
 		"name": "cose-ec2-short-coordinate",
 		"record": "$webauthn$v=1$o3mm9u6vuaVeN4wRgDTidR5oL6ufLTCrE9ISVYbOGUdBAAAAAAABAgMEBQYHCAkKCwwNDg8AIBAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vpQECAyYgASFYH2sX0fLhLEJH+Lzm5WOkQPJ3A32BLeszoPShOUXYmMIiWCBP40Li/hp/m47n60p8D54WK84zV2sxXs7LtkBoN79R9Q",
+		"algorithm": -7,
+		"error": "bad-cose-key"
+	},
+	{
+		"name": "cose-ec2-coordinate-length-confusion",
+		"record": "$webauthn$v=1$o3mm9u6vuaVeN4wRgDTidR5oL6ufLTCrE9ISVYbOGUdBAAAAAAABAgMEBQYHCAkKCwwNDg8AIBAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vpQECAyYgASFYIWsX0fLhLEJH+Lzm5WOkQPJ3A32BLeszoPShOUXYmMKWTyJYH+NC4v4af5uO5+tKfA+eFivOM1drMV7Oy7ZAaDe/UfU",
 		"algorithm": -7,
 		"error": "bad-cose-key"
 	},

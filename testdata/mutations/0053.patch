@@ -1,0 +1,22 @@
+drop only invalid transports instead of the whole list
+
+diff --git a/register.go b/register.go
+index 4f3b674..00d7295 100644
+--- a/register.go
++++ b/register.go
+@@ -192,13 +192,8 @@ func (rp *RelyingParty) Register(responseJSON []byte) (passkey string, err error
+ 		return "", errors.New("passkey: ceremony was performed in a cross-origin frame")
+ 	}
+ 
+-	for _, t := range resp.Response.Transports {
+-		if !validTransport(t) {
+-			// Drop all transports if they can't be encoded.
+-			resp.Response.Transports = nil
+-			break
+-		}
+-	}
++	resp.Response.Transports = slices.DeleteFunc(resp.Response.Transports,
++		func(t string) bool { return !validTransport(t) })
+ 	slices.Sort(resp.Response.Transports)
+ 	resp.Response.Transports = slices.Compact(resp.Response.Transports)
+ 	if len(resp.Response.Transports) > 32 {

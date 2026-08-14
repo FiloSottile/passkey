@@ -1,0 +1,16 @@
+accept attested credential data in an assertion
+
+diff --git a/login_response.go b/login_response.go
+index afd1659..c4c130e 100644
+--- a/login_response.go
++++ b/login_response.go
+@@ -97,9 +97,6 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
+ 	}
+ 	rpIDHash := ad[:32]
+ 	flags := flags(ad[32])
+-	if flags.attestedData() {
+-		return nil, errors.New("passkey: authenticator data unexpectedly has attested data")
+-	}
+ 	if flags.extensionData() {
+ 		if len(ad) == 32+1+4 {
+ 			return nil, errors.New("passkey: authenticator data claims extension data but has none")

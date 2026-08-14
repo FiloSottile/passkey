@@ -1,0 +1,16 @@
+accept empty credential ID
+
+diff --git a/login_response.go b/login_response.go
+index afd1659..9b3113f 100644
+--- a/login_response.go
++++ b/login_response.go
+@@ -59,9 +59,6 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
+ 	if err != nil {
+ 		return nil, fmt.Errorf("passkey: malformed credential ID: %w", err)
+ 	}
+-	if len(credID) == 0 {
+-		return nil, errors.New("passkey: response has no credential ID")
+-	}
+ 
+ 	cd, err := base64RawURLDecodeString(r.Response.ClientDataJSON)
+ 	if err != nil {

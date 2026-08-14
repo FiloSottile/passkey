@@ -1,0 +1,16 @@
+malformed record aborts Login instead of being skipped
+
+diff --git a/login.go b/login.go
+index 9c4298c..43dc550 100644
+--- a/login.go
++++ b/login.go
+@@ -193,8 +193,7 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
+ 		if err != nil {
+ 			// Continue iterating, to avoid locking out an account
+ 			// due to a single bad record.
+-			parseErrors = append(parseErrors, fmt.Errorf("%w (record #%d)", err, i))
+-			continue
++			return 0, fmt.Errorf("%w (record #%d)", err, i)
+ 		}
+ 		if !bytes.Equal(r.credentialID, response.credentialID) {
+ 			continue

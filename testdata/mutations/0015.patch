@@ -1,0 +1,16 @@
+skip client data type check in ParseResponse
+
+diff --git a/login_response.go b/login_response.go
+index afd1659..58c3c62 100644
+--- a/login_response.go
++++ b/login_response.go
+@@ -71,9 +71,6 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
+ 	if err := json.Unmarshal(cd, &c); err != nil {
+ 		return nil, fmt.Errorf("passkey: malformed client data JSON: %w", err)
+ 	}
+-	if c.Type != "webauthn.get" {
+-		return nil, fmt.Errorf("passkey: client data type is %q, expected %q", c.Type, "webauthn.get")
+-	}
+ 	challenge, err := base64RawURLDecodeString(c.Challenge)
+ 	if err != nil {
+ 		return nil, fmt.Errorf("passkey: malformed client data encoding: %w", err)

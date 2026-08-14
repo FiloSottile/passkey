@@ -1,0 +1,15 @@
+request ID HMAC key differs from the response one
+
+diff --git a/login_request.go b/login_request.go
+index ccaf636..1e9a79a 100644
+--- a/login_request.go
++++ b/login_request.go
+@@ -93,7 +93,7 @@ func RequestID(request []byte) string {
+ 	if err != nil {
+ 		return ""
+ 	}
+-	h := hmac.New(sha256.New, []byte("crypto/passkey request ID"))
++	h := hmac.New(sha256.New, []byte("crypto/passkey request id"))
+ 	h.Write(r.challenge[:])
+ 	id := h.Sum(make([]byte, 0, 32))
+ 	return base64.RawURLEncoding.EncodeToString(id)

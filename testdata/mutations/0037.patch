@@ -1,0 +1,15 @@
+accept record parameters with empty key or value
+
+diff --git a/record.go b/record.go
+index ce23fff..f14f377 100644
+--- a/record.go
++++ b/record.go
+@@ -43,7 +43,7 @@ func parseRecord(r string) (*record, error) {
+ 			return nil, errors.New("passkey: invalid record: invalid parameters")
+ 		}
+ 		k, v, ok := strings.Cut(kv, "=")
+-		if !ok || k == "" || v == "" {
++		if !ok {
+ 			return nil, errors.New("passkey: invalid record: invalid parameters")
+ 		}
+ 		if k != "transports" {

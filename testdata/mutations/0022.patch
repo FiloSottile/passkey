@@ -1,0 +1,17 @@
+accept trailing bytes without the extension data flag
+
+diff --git a/login_response.go b/login_response.go
+index afd1659..5e49d1d 100644
+--- a/login_response.go
++++ b/login_response.go
+@@ -105,10 +105,6 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
+ 			return nil, errors.New("passkey: authenticator data claims extension data but has none")
+ 		}
+ 	} else {
+-		if len(ad) != 32+1+4 {
+-			return nil, fmt.Errorf("passkey: authenticator data has %d unexpected trailing bytes",
+-				len(ad)-(32+1+4))
+-		}
+ 	}
+ 	if !flags.userPresent() {
+ 		return nil, errors.New("passkey: user presence flag not set")

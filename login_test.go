@@ -417,6 +417,19 @@ func TestLogin(t *testing.T) {
 			checkError(t, err, tt.errIs, tt.errHas)
 		})
 	}
+
+	for _, origin := range lookalikeOrigins {
+		t.Run("lookalike origin "+origin, func(t *testing.T) {
+			env := newLoginEnv(t)
+			m := env.auth.loginResponse(t, testRPID, origin, env.challenge, env.user.ID, flagUP|flagUV)
+			resp, err := ParseResponse(mustJSON(t, m))
+			if err != nil {
+				t.Fatalf("ParseResponse() = %v", err)
+			}
+			_, err = env.rp.Login(resp, env.request, env.records)
+			checkError(t, err, nil, "is not the expected value")
+		})
+	}
 }
 
 func TestLoginNilResponse(t *testing.T) {
@@ -563,12 +576,31 @@ func TestParseResponse(t *testing.T) {
 			errHas: "malformed client data encoding",
 		},
 		{
-			name: "challenge length",
+			name: "short challenge",
 			resp: func(t *testing.T, a *authenticator) []byte {
 				short := base64.RawURLEncoding.EncodeToString(bytes.Repeat([]byte{0x42}, 31))
 				return mustJSON(t, a.loginResponse(t, testRPID, testOrigin, short, "user-id", flagUP|flagUV))
 			},
 			errHas: "malformed challenge",
+		},
+		{
+			name: "long challenge",
+			resp: func(t *testing.T, a *authenticator) []byte {
+				long := base64.RawURLEncoding.EncodeToString(bytes.Repeat([]byte{0x42}, 33))
+				return mustJSON(t, a.loginResponse(t, testRPID, testOrigin, long, "user-id", flagUP|flagUV))
+			},
+			errHas: "malformed challenge",
+		},
+		{
+			// "AB" decodes to one byte with non-zero trailing bits,
+			// which only the strict decoder rejects.
+			name: "credential ID with non-canonical padding bits",
+			resp: func(t *testing.T, a *authenticator) []byte {
+				m := valid(t, a)
+				m["rawId"] = "AB"
+				return mustJSON(t, m)
+			},
+			errHas: "malformed credential ID",
 		},
 		{
 			name: "cross-origin",

@@ -1,0 +1,19 @@
+accept record extension data flag with no extension bytes
+
+diff --git a/record.go b/record.go
+index ce23fff..b311ef4 100644
+--- a/record.go
++++ b/record.go
+@@ -132,11 +132,7 @@ func parseRegistrationAuthData(r *record, b []byte) error {
+ 	}
+ 	r.key = key
+ 
+-	if r.flags.extensionData() {
+-		if len(b) == 0 {
+-			return errors.New("authenticator data claims extension data but has none")
+-		}
+-	} else {
++	if !r.flags.extensionData() {
+ 		if len(b) != 0 {
+ 			return fmt.Errorf("authenticator data has %d unexpected trailing bytes", len(b))
+ 		}

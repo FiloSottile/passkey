@@ -1,0 +1,16 @@
+skip user presence flag check
+
+diff --git a/login_response.go b/login_response.go
+index afd1659..1a097e6 100644
+--- a/login_response.go
++++ b/login_response.go
+@@ -110,9 +110,6 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
+ 				len(ad)-(32+1+4))
+ 		}
+ 	}
+-	if !flags.userPresent() {
+-		return nil, errors.New("passkey: user presence flag not set")
+-	}
+ 	if flags.backupState() && !flags.backupEligible() {
+ 		return nil, errors.New("passkey: credential is backed up but not backup eligible")
+ 	}

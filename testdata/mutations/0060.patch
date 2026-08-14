@@ -1,0 +1,15 @@
+origin charset rejects dots and colons
+
+diff --git a/passkey.go b/passkey.go
+index 270e175..aa05196 100644
+--- a/passkey.go
++++ b/passkey.go
+@@ -216,7 +216,7 @@ func NewRelyingParty(opts *Options) (*RelyingParty, error) {
+ 		}
+ 		for _, c := range scheme + rest {
+ 			switch {
+-			case c >= 'a' && c <= 'z', c >= '0' && c <= '9', c == '-', c == '.', c == ':':
++			case c >= 'a' && c <= 'z', c >= '0' && c <= '9', c == '-':
+ 			default:
+ 				return nil, errors.New("passkey: invalid Origin; " +
+ 					"it must be canonical, without path")

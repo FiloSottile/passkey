@@ -1,0 +1,15 @@
+record base64 not strict about trailing bits
+
+diff --git a/record.go b/record.go
+index ce23fff..acd17c3 100644
+--- a/record.go
++++ b/record.go
+@@ -68,7 +68,7 @@ func parseRecord(r string) (*record, error) {
+ 	if strings.ContainsAny(r, "\r\n") {
+ 		return nil, errors.New("passkey: invalid record")
+ 	}
+-	ad, err := base64.RawStdEncoding.Strict().DecodeString(r)
++	ad, err := base64.RawStdEncoding.DecodeString(r)
+ 	if err != nil {
+ 		return nil, fmt.Errorf("passkey: invalid record: %w", err)
+ 	}

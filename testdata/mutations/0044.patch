@@ -1,0 +1,16 @@
+skip COSE map pair count check for EC2 keys
+
+diff --git a/record.go b/record.go
+index ce23fff..84e76f9 100644
+--- a/record.go
++++ b/record.go
+@@ -188,9 +188,6 @@ func parseCOSEKey(b []byte) (crypto.PublicKey, []byte, error) {
+ 	}
+ 	switch kty {
+ 	case coseKeyTypeEC2:
+-		if pairs != 5 {
+-			return nil, nil, errors.New("malformed COSE key: bad map length")
+-		}
+ 		if alg != algES256 {
+ 			return nil, nil, fmt.Errorf("%w (COSE algorithm %d for EC2 key)", ErrUnsupportedAlgorithm, alg)
+ 		}

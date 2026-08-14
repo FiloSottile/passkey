@@ -1,0 +1,17 @@
+accept ML-DSA-65 and ML-DSA-87 credential keys
+
+diff --git a/record.go b/record.go
+index ce23fff..0864466 100644
+--- a/record.go
++++ b/record.go
+@@ -246,6 +246,10 @@ func parseCOSEKey(b []byte) (crypto.PublicKey, []byte, error) {
+ 		switch alg {
+ 		case algMLDSA44:
+ 			params = mldsa.MLDSA44()
++		case -49:
++			params = mldsa.MLDSA65()
++		case -50:
++			params = mldsa.MLDSA87()
+ 		default:
+ 			return nil, nil, fmt.Errorf("%w (COSE algorithm %d for AKP key)", ErrUnsupportedAlgorithm, alg)
+ 		}

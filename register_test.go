@@ -350,6 +350,15 @@ func TestRegister(t *testing.T) {
 			checkError(t, err, tt.errIs, tt.errHas)
 		})
 	}
+
+	for _, origin := range lookalikeOrigins {
+		t.Run("lookalike origin "+origin, func(t *testing.T) {
+			rp := newTestRP(t, Options{})
+			a := newAuthenticator(t, algES256)
+			_, err := rp.Register(mustJSON(t, a.registrationResponse(t, testRPID, origin, "AA", flagUP|flagUV)))
+			checkError(t, err, nil, "is not the expected one")
+		})
+	}
 }
 
 // TestValidTransport checks the transport grammar, the C2SP draft's

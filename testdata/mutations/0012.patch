@@ -1,0 +1,16 @@
+signature message halves swapped
+
+diff --git a/login.go b/login.go
+index 9c4298c..b6a38c2 100644
+--- a/login.go
++++ b/login.go
+@@ -183,8 +183,8 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
+ 	}
+ 
+ 	message := make([]byte, 0, len(response.authData)+len(response.clientDataHash))
+-	message = append(message, response.authData...)
+ 	message = append(message, response.clientDataHash[:]...)
++	message = append(message, response.authData...)
+ 
+ 	matched = -1
+ 	var parseErrors, signatureErrors []error

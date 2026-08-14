@@ -1,0 +1,15 @@
+skip CR LF rejection in base64url decoding
+
+diff --git a/register.go b/register.go
+index 4f3b674..042d96c 100644
+--- a/register.go
++++ b/register.go
+@@ -252,8 +252,5 @@ func validTransport(t string) bool {
+ }
+ 
+ func base64RawURLDecodeString(s string) ([]byte, error) {
+-	if strings.ContainsAny(s, "\r\n") {
+-		return nil, errors.New("invalid base64 encoding")
+-	}
+ 	return base64.RawURLEncoding.Strict().DecodeString(s)
+ }

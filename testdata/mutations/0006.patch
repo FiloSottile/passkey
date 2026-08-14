@@ -1,0 +1,16 @@
+skip RP ID hash check in Login
+
+diff --git a/login.go b/login.go
+index 9c4298c..0317e4e 100644
+--- a/login.go
++++ b/login.go
+@@ -172,9 +172,6 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
+ 	if response.origin != rp.origin {
+ 		return 0, fmt.Errorf("passkey: origin %q is not the expected value %q", response.origin, rp.origin)
+ 	}
+-	if response.rpIDHash != sha256.Sum256([]byte(rp.rpID)) {
+-		return 0, errors.New("passkey: assertion for a different RP ID")
+-	}
+ 	if req.userID == "" && response.userID == "" {
+ 		return 0, errors.New("passkey: assertion has no user handle")
+ 	}

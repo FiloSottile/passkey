@@ -1,0 +1,16 @@
+accept duplicate transports parameter
+
+diff --git a/record.go b/record.go
+index ce23fff..bffd8d2 100644
+--- a/record.go
++++ b/record.go
+@@ -49,9 +49,6 @@ func parseRecord(r string) (*record, error) {
+ 		if k != "transports" {
+ 			continue
+ 		}
+-		if rr.transports != nil {
+-			return nil, errors.New("passkey: invalid record: duplicate transports parameter")
+-		}
+ 		rr.transports = strings.Split(v, "+")
+ 		if len(rr.transports) > 32 {
+ 			return nil, errors.New("passkey: invalid record: too many transports")

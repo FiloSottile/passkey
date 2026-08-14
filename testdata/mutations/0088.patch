@@ -1,0 +1,15 @@
+Register compares the origin by suffix of the host
+
+diff --git a/register.go b/register.go
+index 339386e..6fbcbda 100644
+--- a/register.go
++++ b/register.go
+@@ -177,7 +177,7 @@ func (rp *RelyingParty) Register(responseJSON []byte) (passkey string, err error
+ 	// For registration, we don't check the challenge, because we don't do
+ 	// attestation and we don't keep state.
+ 	_ = c.Challenge
+-	if c.Origin != rp.origin {
++	if !strings.HasSuffix(c.Origin, strings.TrimPrefix(rp.origin, "https://")) {
+ 		return "", fmt.Errorf("passkey: client data origin %q is not the expected one", c.Origin)
+ 	}
+ 	if c.CrossOrigin != nil && *c.CrossOrigin {

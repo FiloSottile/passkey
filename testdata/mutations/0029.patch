@@ -1,0 +1,15 @@
+AAGUID cursor advances 15 bytes instead of 16
+
+diff --git a/record.go b/record.go
+index ce23fff..90eebf6 100644
+--- a/record.go
++++ b/record.go
+@@ -111,7 +111,7 @@ func parseRegistrationAuthData(r *record, b []byte) error {
+ 	b = b[4:] // sign count
+ 
+ 	copy(r.aaguid[:], b[:16])
+-	b = b[16:]
++	b = b[15:]
+ 
+ 	length := binary.BigEndian.Uint16(b[:2])
+ 	if length < 16 || length > 1023 {

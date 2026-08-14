@@ -1,0 +1,15 @@
+record base64 tolerates padding
+
+diff --git a/record.go b/record.go
+index ce23fff..4a68d3a 100644
+--- a/record.go
++++ b/record.go
+@@ -68,7 +68,7 @@ func parseRecord(r string) (*record, error) {
+ 	if strings.ContainsAny(r, "\r\n") {
+ 		return nil, errors.New("passkey: invalid record")
+ 	}
+-	ad, err := base64.RawStdEncoding.Strict().DecodeString(r)
++	ad, err := base64.RawStdEncoding.Strict().DecodeString(strings.TrimRight(r, "="))
+ 	if err != nil {
+ 		return nil, fmt.Errorf("passkey: invalid record: %w", err)
+ 	}

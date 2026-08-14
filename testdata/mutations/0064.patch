@@ -1,0 +1,15 @@
+negative CBOR integers off by one
+
+diff --git a/internal/ctap2cbor/cbor.go b/internal/ctap2cbor/cbor.go
+index 2811a50..411ded1 100644
+--- a/internal/ctap2cbor/cbor.go
++++ b/internal/ctap2cbor/cbor.go
+@@ -64,7 +64,7 @@ func (s *String) ReadInt(out *int16) bool {
+ 		if arg > -math.MinInt16-1 {
+ 			return false
+ 		}
+-		*out = -int16(arg) - 1
++		*out = -int16(arg)
+ 	default:
+ 		return false
+ 	}

@@ -1,0 +1,16 @@
+skip transport grammar check when parsing a record
+
+diff --git a/record.go b/record.go
+index ce23fff..4b4d9c7 100644
+--- a/record.go
++++ b/record.go
+@@ -57,9 +57,6 @@ func parseRecord(r string) (*record, error) {
+ 			return nil, errors.New("passkey: invalid record: too many transports")
+ 		}
+ 		for i, t := range rr.transports {
+-			if !validTransport(t) {
+-				return nil, fmt.Errorf("passkey: invalid record: invalid transport %q", t)
+-			}
+ 			if i > 0 && rr.transports[i-1] >= t {
+ 				return nil, errors.New("passkey: invalid record: transports are not sorted and deduplicated")
+ 			}

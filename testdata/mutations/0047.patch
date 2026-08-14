@@ -1,0 +1,15 @@
+accept RSA modulus smaller than 2048 bits
+
+diff --git a/record.go b/record.go
+index ce23fff..ced774c 100644
+--- a/record.go
++++ b/record.go
+@@ -226,7 +226,7 @@ func parseCOSEKey(b []byte) (crypto.PublicKey, []byte, error) {
+ 			return nil, nil, errors.New("malformed COSE key: bad RSA modulus")
+ 		}
+ 		modulus := new(big.Int).SetBytes(n)
+-		if bits := modulus.BitLen(); bits < 2048 || bits > 4096 {
++		if bits := modulus.BitLen(); bits > 4096 {
+ 			return nil, nil, fmt.Errorf("unsupported RSA modulus size: %d bits", bits)
+ 		}
+ 		var e []byte

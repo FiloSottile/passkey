@@ -1,0 +1,16 @@
+accept assertion with topOrigin
+
+diff --git a/login_response.go b/login_response.go
+index afd1659..6101580 100644
+--- a/login_response.go
++++ b/login_response.go
+@@ -84,9 +84,6 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
+ 	if c.CrossOrigin != nil && *c.CrossOrigin {
+ 		return nil, errors.New("passkey: ceremony was performed in a cross-origin frame")
+ 	}
+-	if c.TopOrigin != nil {
+-		return nil, errors.New("passkey: ceremony was performed in a cross-origin frame")
+-	}
+ 
+ 	ad, err := base64RawURLDecodeString(r.Response.AuthenticatorData)
+ 	if err != nil {

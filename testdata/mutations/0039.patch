@@ -1,0 +1,16 @@
+skip authenticator data maximum length check
+
+diff --git a/record.go b/record.go
+index ce23fff..d61e1d2 100644
+--- a/record.go
++++ b/record.go
+@@ -92,9 +92,6 @@ func parseRegistrationAuthData(r *record, b []byte) error {
+ 	if len(b) < 55 {
+ 		return fmt.Errorf("authenticator data is %d bytes, expected at least 55", len(b))
+ 	}
+-	if len(b) > 8192 {
+-		return fmt.Errorf("authenticator data is %d bytes, expected at most 8192", len(b))
+-	}
+ 
+ 	copy(r.rpIDHash[:], b[:32])
+ 	b = b[32:]

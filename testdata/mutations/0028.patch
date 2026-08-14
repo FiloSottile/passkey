@@ -1,0 +1,13 @@
+base64url decoding not strict about padding bits
+
+diff --git a/register.go b/register.go
+index 4f3b674..c0d44f1 100644
+--- a/register.go
++++ b/register.go
+@@ -255,5 +255,5 @@ func base64RawURLDecodeString(s string) ([]byte, error) {
+ 	if strings.ContainsAny(s, "\r\n") {
+ 		return nil, errors.New("invalid base64 encoding")
+ 	}
+-	return base64.RawURLEncoding.Strict().DecodeString(s)
++	return base64.RawURLEncoding.DecodeString(s)
+ }

@@ -1,0 +1,19 @@
+skip EC2 coordinate length checks
+
+diff --git a/record.go b/record.go
+index ce23fff..c49ce8c 100644
+--- a/record.go
++++ b/record.go
+@@ -199,10 +199,10 @@ func parseCOSEKey(b []byte) (crypto.PublicKey, []byte, error) {
+ 			return nil, nil, errors.New("malformed COSE key: bad crv")
+ 		}
+ 		var x, y []byte
+-		if !s.ReadInt(&label) || label != -2 || !s.ReadBytes(&x) || len(x) != 32 {
++		if !s.ReadInt(&label) || label != -2 || !s.ReadBytes(&x) {
+ 			return nil, nil, errors.New("malformed COSE key: bad x")
+ 		}
+-		if !s.ReadInt(&label) || label != -3 || !s.ReadBytes(&y) || len(y) != 32 {
++		if !s.ReadInt(&label) || label != -3 || !s.ReadBytes(&y) {
+ 			return nil, nil, errors.New("malformed COSE key: bad y")
+ 		}
+ 		point := make([]byte, 0, 65)

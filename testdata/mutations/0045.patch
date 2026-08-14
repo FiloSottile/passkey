@@ -1,0 +1,15 @@
+accept EC2 keys on curves other than P-256
+
+diff --git a/record.go b/record.go
+index ce23fff..dcf2bb4 100644
+--- a/record.go
++++ b/record.go
+@@ -195,7 +195,7 @@ func parseCOSEKey(b []byte) (crypto.PublicKey, []byte, error) {
+ 			return nil, nil, fmt.Errorf("%w (COSE algorithm %d for EC2 key)", ErrUnsupportedAlgorithm, alg)
+ 		}
+ 		var crv int16
+-		if !s.ReadInt(&label) || label != -1 || !s.ReadInt(&crv) || crv != coseCurveP256 {
++		if !s.ReadInt(&label) || label != -1 || !s.ReadInt(&crv) {
+ 			return nil, nil, errors.New("malformed COSE key: bad crv")
+ 		}
+ 		var x, y []byte

@@ -1,0 +1,16 @@
+accept backup state without eligibility in a record
+
+diff --git a/record.go b/record.go
+index ce23fff..20a998c 100644
+--- a/record.go
++++ b/record.go
+@@ -103,9 +103,6 @@ func parseRegistrationAuthData(r *record, b []byte) error {
+ 	if !r.flags.attestedData() {
+ 		return errors.New("authenticator data has no attested credential data")
+ 	}
+-	if r.flags.backupState() && !r.flags.backupEligible() {
+-		return errors.New("credential is backed up but not backup eligible")
+-	}
+ 	b = b[1:]
+ 
+ 	b = b[4:] // sign count

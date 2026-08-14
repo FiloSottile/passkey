@@ -1,0 +1,16 @@
+skip user verification requirement check
+
+diff --git a/login.go b/login.go
+index 9c4298c..c6a0a13 100644
+--- a/login.go
++++ b/login.go
+@@ -225,9 +225,6 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
+ 	if time.Since(req.created) > rp.timeout {
+ 		return 0, fmt.Errorf("%w: request created at %v", ErrRequestExpired, req.created)
+ 	}
+-	if rp.requireUserVerification && !response.userVerified {
+-		return 0, fmt.Errorf("%w", ErrUserVerificationRequired)
+-	}
+ 
+ 	return matched, nil
+ }

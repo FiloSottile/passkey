@@ -1,0 +1,15 @@
+record transports allow duplicates
+
+diff --git a/record.go b/record.go
+index ce23fff..4338585 100644
+--- a/record.go
++++ b/record.go
+@@ -60,7 +60,7 @@ func parseRecord(r string) (*record, error) {
+ 			if !validTransport(t) {
+ 				return nil, fmt.Errorf("passkey: invalid record: invalid transport %q", t)
+ 			}
+-			if i > 0 && rr.transports[i-1] >= t {
++			if i > 0 && rr.transports[i-1] > t {
+ 				return nil, errors.New("passkey: invalid record: transports are not sorted and deduplicated")
+ 			}
+ 		}

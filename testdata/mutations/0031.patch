@@ -1,0 +1,16 @@
+accept registration authenticator data without attested credential data
+
+diff --git a/record.go b/record.go
+index ce23fff..b69258a 100644
+--- a/record.go
++++ b/record.go
+@@ -100,9 +100,6 @@ func parseRegistrationAuthData(r *record, b []byte) error {
+ 	b = b[32:]
+ 
+ 	r.flags = flags(b[0])
+-	if !r.flags.attestedData() {
+-		return errors.New("authenticator data has no attested credential data")
+-	}
+ 	if r.flags.backupState() && !r.flags.backupEligible() {
+ 		return errors.New("credential is backed up but not backup eligible")
+ 	}

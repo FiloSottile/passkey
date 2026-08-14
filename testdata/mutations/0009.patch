@@ -1,0 +1,14 @@
+stop at first credential ID match instead of trying all
+
+diff --git a/login.go b/login.go
+index 9c4298c..29ac1e6 100644
+--- a/login.go
++++ b/login.go
+@@ -208,6 +208,7 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
+ 		// signed the assertion is later in the list.
+ 		signatureErrors = append(signatureErrors,
+ 			fmt.Errorf("signature verification failed (record #%d)", i))
++		break
+ 	}
+ 	if matched == -1 {
+ 		switch {

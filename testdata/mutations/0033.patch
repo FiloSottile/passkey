@@ -1,0 +1,16 @@
+skip CR LF rejection in record parsing
+
+diff --git a/record.go b/record.go
+index ce23fff..65814ae 100644
+--- a/record.go
++++ b/record.go
+@@ -65,9 +65,6 @@ func parseRecord(r string) (*record, error) {
+ 			}
+ 		}
+ 	}
+-	if strings.ContainsAny(r, "\r\n") {
+-		return nil, errors.New("passkey: invalid record")
+-	}
+ 	ad, err := base64.RawStdEncoding.Strict().DecodeString(r)
+ 	if err != nil {
+ 		return nil, fmt.Errorf("passkey: invalid record: %w", err)
