@@ -1,0 +1,772 @@
+{
+	"browser": "Chrome/151.0.7922.138",
+	"rpId": "localhost",
+	"origin": "http://localhost:64180",
+	"userId": "J3LCEHYN7A4LPFIP2GZBENY2CE",
+	"recordings": [
+		{
+			"name": "platform",
+			"description": "A CTAP2.1 platform authenticator with user verification, whose credentials are not backup eligible; the last login is user-scoped.",
+			"aaguid": "01020304050607080102030405060708",
+			"credentialId": "fe463100f6542e39e56d24a1c1ae37c874f173e9c92a1d4f49c22e5ea0329b52",
+			"transports": [
+				"internal"
+			],
+			"backedUp": false,
+			"registration": {
+				"options": {
+					"rp": {
+						"id": "localhost",
+						"name": ""
+					},
+					"user": {
+						"id": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U",
+						"name": "user@example.com",
+						"displayName": "user@example.com"
+					},
+					"challenge": "AA",
+					"pubKeyCredParams": [
+						{
+							"type": "public-key",
+							"alg": -48
+						},
+						{
+							"type": "public-key",
+							"alg": -7
+						},
+						{
+							"type": "public-key",
+							"alg": -257
+						}
+					],
+					"excludeCredentials": [],
+					"authenticatorSelection": {
+						"residentKey": "required",
+						"requireResidentKey": true,
+						"userVerification": "preferred"
+					},
+					"attestation": "none",
+					"extensions": {
+						"credProps": true
+					},
+					"timeout": 300000
+				},
+				"response": {
+					"authenticatorAttachment": "platform",
+					"clientExtensionResults": {
+						"credProps": {
+							"rk": true
+						}
+					},
+					"id": "_kYxAPZULjnlbSShwa43yHTxc-nJKh1PScIuXqAym1I",
+					"rawId": "_kYxAPZULjnlbSShwa43yHTxc-nJKh1PScIuXqAym1I",
+					"response": {
+						"attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAQECAwQFBgcIAQIDBAUGBwgAIP5GMQD2VC455W0kocGuN8h08XPpySodT0nCLl6gMptSpQECAyYgASFYIGkQgnsSlZXHVSQz0xOEIw5a21KI_hzibJ4XEkI85UB2IlggmN5MHPpoDEi5zg2cHhSh2aiWxqfdg0sVKQmWcdVxPzU",
+						"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAQECAwQFBgcIAQIDBAUGBwgAIP5GMQD2VC455W0kocGuN8h08XPpySodT0nCLl6gMptSpQECAyYgASFYIGkQgnsSlZXHVSQz0xOEIw5a21KI_hzibJ4XEkI85UB2IlggmN5MHPpoDEi5zg2cHhSh2aiWxqfdg0sVKQmWcdVxPzU",
+						"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiQUEiLCJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjY0MTgwIiwiY3Jvc3NPcmlnaW4iOmZhbHNlfQ",
+						"publicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEaRCCexKVlcdVJDPTE4QjDlrbUoj-HOJsnhcSQjzlQHaY3kwc-mgMSLnODZweFKHZqJbGp92DSxUpCZZx1XE_NQ",
+						"publicKeyAlgorithm": -7,
+						"transports": [
+							"internal"
+						]
+					},
+					"type": "public-key"
+				}
+			},
+			"logins": [
+				{
+					"request": "014ff3782278be6aaa8e28bb16e236ffce7e53121c63a07db153e2b5f2b6f40e08000000006a80f0a100",
+					"options": {
+						"challenge": "T_N4Ini-aqqOKLsW4jb_zn5TEhxjoH2xU-K18rb0Dgg",
+						"rpId": "localhost",
+						"allowCredentials": [],
+						"userVerification": "preferred",
+						"timeout": 300000
+					},
+					"response": {
+						"authenticatorAttachment": "platform",
+						"clientExtensionResults": {},
+						"id": "_kYxAPZULjnlbSShwa43yHTxc-nJKh1PScIuXqAym1I",
+						"rawId": "_kYxAPZULjnlbSShwa43yHTxc-nJKh1PScIuXqAym1I",
+						"response": {
+							"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MFAAAAAg",
+							"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiVF9ONEluaS1hcXFPS0xzVzRqYl96bjVURWh4am9IMnhVLUsxOHJiMERnZyIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NjQxODAiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
+							"signature": "MEUCIQDXpLEBvm0UZ-NS7blnZG1Yu8yelc8jvYtV5AQqbpjv9QIgCV-VMmuybu58Eao_AqOep_Vz-8xRVxzIcfuOY9T7QEE",
+							"userHandle": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U"
+						},
+						"type": "public-key"
+					},
+					"userVerified": true,
+					"backedUp": false
+				},
+				{
+					"request": "0199e86d3aab0c363a4e94c127b8e49daeecac27e7389068bcb05d081968372b6a000000006a80f0a100",
+					"options": {
+						"challenge": "mehtOqsMNjpOlMEnuOSdruysJ-c4kGi8sF0IGWg3K2o",
+						"rpId": "localhost",
+						"allowCredentials": [],
+						"userVerification": "preferred",
+						"timeout": 300000
+					},
+					"response": {
+						"authenticatorAttachment": "platform",
+						"clientExtensionResults": {},
+						"id": "_kYxAPZULjnlbSShwa43yHTxc-nJKh1PScIuXqAym1I",
+						"rawId": "_kYxAPZULjnlbSShwa43yHTxc-nJKh1PScIuXqAym1I",
+						"response": {
+							"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MFAAAAAw",
+							"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoibWVodE9xc01OanBPbE1FbnVPU2RydXlzSi1jNGtHaThzRjBJR1dnM0sybyIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NjQxODAiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
+							"signature": "MEYCIQD3nc4fmHgY3mKCsEJMc1Gcs1EwVP9TY7KSNS1Qoa6UoQIhAN1UrsvceddugVNO7caJuBJU7XI9OkJS6ilfEwx4js8P",
+							"userHandle": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U"
+						},
+						"type": "public-key"
+					},
+					"userVerified": true,
+					"backedUp": false
+				},
+				{
+					"request": "0158c99e68e64dec2b7fd4a4f88f7c71723e586939ab3312f4588f8a474990696f000000006a80f0a11a4a334c434548594e3741344c5046495032475a42454e59324345",
+					"options": {
+						"challenge": "WMmeaOZN7Ct_1KT4j3xxcj5YaTmrMxL0WI-KR0mQaW8",
+						"rpId": "localhost",
+						"allowCredentials": [
+							{
+								"type": "public-key",
+								"id": "_kYxAPZULjnlbSShwa43yHTxc-nJKh1PScIuXqAym1I",
+								"transports": [
+									"internal"
+								]
+							}
+						],
+						"userVerification": "preferred",
+						"timeout": 300000
+					},
+					"response": {
+						"authenticatorAttachment": "platform",
+						"clientExtensionResults": {},
+						"id": "_kYxAPZULjnlbSShwa43yHTxc-nJKh1PScIuXqAym1I",
+						"rawId": "_kYxAPZULjnlbSShwa43yHTxc-nJKh1PScIuXqAym1I",
+						"response": {
+							"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MFAAAABA",
+							"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiV01tZWFPWk43Q3RfMUtUNGozeHhjajVZYVRtck14TDBXSS1LUjBtUWFXOCIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NjQxODAiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
+							"signature": "MEYCIQDLLtnS-Ryfc_QTWk5GAKZsnt5n6LDt7rvCPnbtA9W0dAIhAOIA8mzt7EX9rZxTF7e2H3JZM9K73At_FvauAUK0SbfN",
+							"userHandle": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U"
+						},
+						"type": "public-key"
+					},
+					"userVerified": true,
+					"backedUp": false
+				}
+			]
+		},
+		{
+			"name": "synced",
+			"description": "A CTAP2.1 platform authenticator whose credentials are backup eligible and backed up.",
+			"aaguid": "01020304050607080102030405060708",
+			"credentialId": "b5de0e2089cbe62d30c27dbf622d0ac48863627c9c99e9dbcfae0545b76482ca",
+			"transports": [
+				"internal"
+			],
+			"backedUp": true,
+			"registration": {
+				"options": {
+					"rp": {
+						"id": "localhost",
+						"name": ""
+					},
+					"user": {
+						"id": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U",
+						"name": "user@example.com",
+						"displayName": "user@example.com"
+					},
+					"challenge": "AA",
+					"pubKeyCredParams": [
+						{
+							"type": "public-key",
+							"alg": -48
+						},
+						{
+							"type": "public-key",
+							"alg": -7
+						},
+						{
+							"type": "public-key",
+							"alg": -257
+						}
+					],
+					"excludeCredentials": [],
+					"authenticatorSelection": {
+						"residentKey": "required",
+						"requireResidentKey": true,
+						"userVerification": "preferred"
+					},
+					"attestation": "none",
+					"extensions": {
+						"credProps": true
+					},
+					"timeout": 300000
+				},
+				"response": {
+					"authenticatorAttachment": "platform",
+					"clientExtensionResults": {
+						"credProps": {
+							"rk": true
+						}
+					},
+					"id": "td4OIInL5i0wwn2_Yi0KxIhjYnycmenbz64FRbdkgso",
+					"rawId": "td4OIInL5i0wwn2_Yi0KxIhjYnycmenbz64FRbdkgso",
+					"response": {
+						"attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NdAAAAAQECAwQFBgcIAQIDBAUGBwgAILXeDiCJy-YtMMJ9v2ItCsSIY2J8nJnp28-uBUW3ZILKpQECAyYgASFYIHc7EozRD1lCtPmUjhludABy35OBAW0goE9fxtS5WQsHIlggVqFki7JHSZFnmCaFIqoDTVguZItIQkyzc6zX4i85rew",
+						"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NdAAAAAQECAwQFBgcIAQIDBAUGBwgAILXeDiCJy-YtMMJ9v2ItCsSIY2J8nJnp28-uBUW3ZILKpQECAyYgASFYIHc7EozRD1lCtPmUjhludABy35OBAW0goE9fxtS5WQsHIlggVqFki7JHSZFnmCaFIqoDTVguZItIQkyzc6zX4i85rew",
+						"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiQUEiLCJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjY0MTgwIiwiY3Jvc3NPcmlnaW4iOmZhbHNlfQ",
+						"publicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEdzsSjNEPWUK0-ZSOGW50AHLfk4EBbSCgT1_G1LlZCwdWoWSLskdJkWeYJoUiqgNNWC5ki0hCTLNzrNfiLzmt7A",
+						"publicKeyAlgorithm": -7,
+						"transports": [
+							"internal"
+						]
+					},
+					"type": "public-key"
+				}
+			},
+			"logins": [
+				{
+					"request": "012667d2a14ca15a5a0d858045439532743e10d303e6260a8cc752b3061919502c000000006a80f0a100",
+					"options": {
+						"challenge": "JmfSoUyhWloNhYBFQ5UydD4Q0wPmJgqMx1KzBhkZUCw",
+						"rpId": "localhost",
+						"allowCredentials": [],
+						"userVerification": "preferred",
+						"timeout": 300000
+					},
+					"response": {
+						"authenticatorAttachment": "platform",
+						"clientExtensionResults": {},
+						"id": "td4OIInL5i0wwn2_Yi0KxIhjYnycmenbz64FRbdkgso",
+						"rawId": "td4OIInL5i0wwn2_Yi0KxIhjYnycmenbz64FRbdkgso",
+						"response": {
+							"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MdAAAAAg",
+							"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiSm1mU29VeWhXbG9OaFlCRlE1VXlkRDRRMHdQbUpncU14MUt6QmhrWlVDdyIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NjQxODAiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
+							"signature": "MEUCIGAR8SGoWooe_30p_WK-kr0wSTZ9VMuladkozA2QikRWAiEAiY7Ul2WlBu0HcYozzsX8k-gcQcQC0U65Xr2WhVtkxR4",
+							"userHandle": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U"
+						},
+						"type": "public-key"
+					},
+					"userVerified": true,
+					"backedUp": true
+				}
+			]
+		},
+		{
+			"name": "backup-eligible",
+			"description": "A CTAP2.1 platform authenticator whose credentials are backup eligible but not backed up; the credential is backed up between the first and the second login.",
+			"aaguid": "01020304050607080102030405060708",
+			"credentialId": "ba9e18f59bb66263fdc04a4f40a7b227d3de60c4b072ec73b7fe6430ae65508a",
+			"transports": [
+				"internal"
+			],
+			"backedUp": false,
+			"registration": {
+				"options": {
+					"rp": {
+						"id": "localhost",
+						"name": ""
+					},
+					"user": {
+						"id": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U",
+						"name": "user@example.com",
+						"displayName": "user@example.com"
+					},
+					"challenge": "AA",
+					"pubKeyCredParams": [
+						{
+							"type": "public-key",
+							"alg": -48
+						},
+						{
+							"type": "public-key",
+							"alg": -7
+						},
+						{
+							"type": "public-key",
+							"alg": -257
+						}
+					],
+					"excludeCredentials": [],
+					"authenticatorSelection": {
+						"residentKey": "required",
+						"requireResidentKey": true,
+						"userVerification": "preferred"
+					},
+					"attestation": "none",
+					"extensions": {
+						"credProps": true
+					},
+					"timeout": 300000
+				},
+				"response": {
+					"authenticatorAttachment": "platform",
+					"clientExtensionResults": {
+						"credProps": {
+							"rk": true
+						}
+					},
+					"id": "up4Y9Zu2YmP9wEpPQKeyJ9PeYMSwcuxzt_5kMK5lUIo",
+					"rawId": "up4Y9Zu2YmP9wEpPQKeyJ9PeYMSwcuxzt_5kMK5lUIo",
+					"response": {
+						"attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NNAAAAAQECAwQFBgcIAQIDBAUGBwgAILqeGPWbtmJj_cBKT0CnsifT3mDEsHLsc7f-ZDCuZVCKpQECAyYgASFYIM0MF-1d3qcwYmy9-GSGoVvkRUHlW9ez9jMH7ZGmCK5VIlggtAiE6tAfy9L9Yo0ELYsN5cjgYub4gX60BSqe8uvHOro",
+						"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NNAAAAAQECAwQFBgcIAQIDBAUGBwgAILqeGPWbtmJj_cBKT0CnsifT3mDEsHLsc7f-ZDCuZVCKpQECAyYgASFYIM0MF-1d3qcwYmy9-GSGoVvkRUHlW9ez9jMH7ZGmCK5VIlggtAiE6tAfy9L9Yo0ELYsN5cjgYub4gX60BSqe8uvHOro",
+						"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiQUEiLCJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjY0MTgwIiwiY3Jvc3NPcmlnaW4iOmZhbHNlfQ",
+						"publicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEzQwX7V3epzBibL34ZIahW-RFQeVb17P2MwftkaYIrlW0CITq0B_L0v1ijQQtiw3lyOBi5viBfrQFKp7y68c6ug",
+						"publicKeyAlgorithm": -7,
+						"transports": [
+							"internal"
+						]
+					},
+					"type": "public-key"
+				}
+			},
+			"logins": [
+				{
+					"request": "01ce62537da562f043c18d1dfa65f2d1271e222f5aeaf825af24f26c018e5d7a99000000006a80f0a100",
+					"options": {
+						"challenge": "zmJTfaVi8EPBjR36ZfLRJx4iL1rq-CWvJPJsAY5depk",
+						"rpId": "localhost",
+						"allowCredentials": [],
+						"userVerification": "preferred",
+						"timeout": 300000
+					},
+					"response": {
+						"authenticatorAttachment": "platform",
+						"clientExtensionResults": {},
+						"id": "up4Y9Zu2YmP9wEpPQKeyJ9PeYMSwcuxzt_5kMK5lUIo",
+						"rawId": "up4Y9Zu2YmP9wEpPQKeyJ9PeYMSwcuxzt_5kMK5lUIo",
+						"response": {
+							"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MNAAAAAg",
+							"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiem1KVGZhVmk4RVBCalIzNlpmTFJKeDRpTDFycS1DV3ZKUEpzQVk1ZGVwayIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NjQxODAiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
+							"signature": "MEUCIBRd3GMDDaSZ8oJtGVLuPzXQEeSvpLfxSAGc2qDUSDEQAiEA7zzr56UZqdAGAstxCYIX1-NJ9yWGwnAz3nYwTNzOPtY",
+							"userHandle": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U"
+						},
+						"type": "public-key"
+					},
+					"userVerified": true,
+					"backedUp": false
+				},
+				{
+					"request": "01347402fc3291e41842378604a2e5437bbed8b134735d3e36ecbe46728571d062000000006a80f0a100",
+					"options": {
+						"challenge": "NHQC_DKR5BhCN4YEouVDe77YsTRzXT427L5GcoVx0GI",
+						"rpId": "localhost",
+						"allowCredentials": [],
+						"userVerification": "preferred",
+						"timeout": 300000
+					},
+					"response": {
+						"authenticatorAttachment": "platform",
+						"clientExtensionResults": {},
+						"id": "up4Y9Zu2YmP9wEpPQKeyJ9PeYMSwcuxzt_5kMK5lUIo",
+						"rawId": "up4Y9Zu2YmP9wEpPQKeyJ9PeYMSwcuxzt_5kMK5lUIo",
+						"response": {
+							"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MdAAAAAw",
+							"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiTkhRQ19ES1I1QmhDTjRZRW91VkRlNzdZc1RSelhUNDI3TDVHY29WeDBHSSIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NjQxODAiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
+							"signature": "MEUCIQCuyiHKEvywhYql7Ce7k9z5XjcXcKz4-9unNGZR9Da8EQIgMconuveu5SIBvviInLbjZFgIHdlWL1J93E87epMGdJM",
+							"userHandle": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U"
+						},
+						"type": "public-key"
+					},
+					"userVerified": true,
+					"backedUp": true
+				}
+			]
+		},
+		{
+			"name": "security-key",
+			"description": "A CTAP2.1 USB authenticator with user verification.",
+			"aaguid": "00000000000000000000000000000000",
+			"credentialId": "ba232ee271d38f35b0ce4cb8e3ca0369daf83ddf62d5867e9a4c1d33294b56b3",
+			"transports": [
+				"usb"
+			],
+			"backedUp": false,
+			"registration": {
+				"options": {
+					"rp": {
+						"id": "localhost",
+						"name": ""
+					},
+					"user": {
+						"id": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U",
+						"name": "user@example.com",
+						"displayName": "user@example.com"
+					},
+					"challenge": "AA",
+					"pubKeyCredParams": [
+						{
+							"type": "public-key",
+							"alg": -48
+						},
+						{
+							"type": "public-key",
+							"alg": -7
+						},
+						{
+							"type": "public-key",
+							"alg": -257
+						}
+					],
+					"excludeCredentials": [],
+					"authenticatorSelection": {
+						"residentKey": "required",
+						"requireResidentKey": true,
+						"userVerification": "preferred"
+					},
+					"attestation": "none",
+					"extensions": {
+						"credProps": true
+					},
+					"timeout": 300000
+				},
+				"response": {
+					"authenticatorAttachment": "cross-platform",
+					"clientExtensionResults": {
+						"credProps": {
+							"rk": true
+						}
+					},
+					"id": "uiMu4nHTjzWwzky448oDadr4Pd9i1YZ-mkwdMylLVrM",
+					"rawId": "uiMu4nHTjzWwzky448oDadr4Pd9i1YZ-mkwdMylLVrM",
+					"response": {
+						"attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAQAAAAAAAAAAAAAAAAAAAAAAILojLuJx0481sM5MuOPKA2na-D3fYtWGfppMHTMpS1azpQECAyYgASFYIKf3iUUVSScRPAqbP5IsTJa-GC1eiZKCi9APEIFG-Y7gIlggmcTO0iv5RPZ9BfQYWTQGzwQiR_9TENoKfb8Ch8jzEwE",
+						"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAQAAAAAAAAAAAAAAAAAAAAAAILojLuJx0481sM5MuOPKA2na-D3fYtWGfppMHTMpS1azpQECAyYgASFYIKf3iUUVSScRPAqbP5IsTJa-GC1eiZKCi9APEIFG-Y7gIlggmcTO0iv5RPZ9BfQYWTQGzwQiR_9TENoKfb8Ch8jzEwE",
+						"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiQUEiLCJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjY0MTgwIiwiY3Jvc3NPcmlnaW4iOmZhbHNlLCJvdGhlcl9rZXlzX2Nhbl9iZV9hZGRlZF9oZXJlIjoiZG8gbm90IGNvbXBhcmUgY2xpZW50RGF0YUpTT04gYWdhaW5zdCBhIHRlbXBsYXRlLiBTZWUgaHR0cHM6Ly9nb28uZ2wveWFiUGV4In0",
+						"publicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEp_eJRRVJJxE8Cps_kixMlr4YLV6JkoKL0A8QgUb5juCZxM7SK_lE9n0F9BhZNAbPBCJH_1MQ2gp9vwKHyPMTAQ",
+						"publicKeyAlgorithm": -7,
+						"transports": [
+							"usb"
+						]
+					},
+					"type": "public-key"
+				}
+			},
+			"logins": [
+				{
+					"request": "013af22e3258ee53624dd1d6c63e92a88a9743cacbc674f92ffe32e3b784766488000000006a80f0a200",
+					"options": {
+						"challenge": "OvIuMljuU2JN0dbGPpKoipdDysvGdPkv_jLjt4R2ZIg",
+						"rpId": "localhost",
+						"allowCredentials": [],
+						"userVerification": "preferred",
+						"timeout": 300000
+					},
+					"response": {
+						"authenticatorAttachment": "cross-platform",
+						"clientExtensionResults": {},
+						"id": "uiMu4nHTjzWwzky448oDadr4Pd9i1YZ-mkwdMylLVrM",
+						"rawId": "uiMu4nHTjzWwzky448oDadr4Pd9i1YZ-mkwdMylLVrM",
+						"response": {
+							"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MFAAAAAg",
+							"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiT3ZJdU1sanVVMkpOMGRiR1BwS29pcGREeXN2R2RQa3ZfakxqdDRSMlpJZyIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NjQxODAiLCJjcm9zc09yaWdpbiI6ZmFsc2UsIm90aGVyX2tleXNfY2FuX2JlX2FkZGVkX2hlcmUiOiJkbyBub3QgY29tcGFyZSBjbGllbnREYXRhSlNPTiBhZ2FpbnN0IGEgdGVtcGxhdGUuIFNlZSBodHRwczovL2dvby5nbC95YWJQZXgifQ",
+							"signature": "MEQCIEoxVqa35UZIuHXc-izdnoZleqqNVw0P3CFinPUnwYT6AiAS0CGD6EfxN0ErP_s1rhI3iaI6mJHuFlyp1yWbDyV_4Q",
+							"userHandle": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U"
+						},
+						"type": "public-key"
+					},
+					"userVerified": true,
+					"backedUp": false
+				}
+			]
+		},
+		{
+			"name": "no-user-verification",
+			"description": "A CTAP2.1 platform authenticator that clears the user verification flag in every response.",
+			"aaguid": "01020304050607080102030405060708",
+			"credentialId": "3d5e51ed8d19accdfa46cad032ab1996c8bd48f59bacf4b9c03436a4e3a620c6",
+			"transports": [
+				"internal"
+			],
+			"backedUp": false,
+			"registration": {
+				"options": {
+					"rp": {
+						"id": "localhost",
+						"name": ""
+					},
+					"user": {
+						"id": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U",
+						"name": "user@example.com",
+						"displayName": "user@example.com"
+					},
+					"challenge": "AA",
+					"pubKeyCredParams": [
+						{
+							"type": "public-key",
+							"alg": -48
+						},
+						{
+							"type": "public-key",
+							"alg": -7
+						},
+						{
+							"type": "public-key",
+							"alg": -257
+						}
+					],
+					"excludeCredentials": [],
+					"authenticatorSelection": {
+						"residentKey": "required",
+						"requireResidentKey": true,
+						"userVerification": "preferred"
+					},
+					"attestation": "none",
+					"extensions": {
+						"credProps": true
+					},
+					"timeout": 300000
+				},
+				"response": {
+					"authenticatorAttachment": "platform",
+					"clientExtensionResults": {
+						"credProps": {
+							"rk": true
+						}
+					},
+					"id": "PV5R7Y0ZrM36RsrQMqsZlsi9SPWbrPS5wDQ2pOOmIMY",
+					"rawId": "PV5R7Y0ZrM36RsrQMqsZlsi9SPWbrPS5wDQ2pOOmIMY",
+					"response": {
+						"attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NBAAAAAQECAwQFBgcIAQIDBAUGBwgAID1eUe2NGazN-kbK0DKrGZbIvUj1m6z0ucA0NqTjpiDGpQECAyYgASFYIF8i7oqRaHNGUciVCyk4ZuXA_hX2rDS5Ek3J1wNur8UrIlggNR43StiJip_9wNyv-64DT4Z9oyfb19dBOzYPOHM_vZo",
+						"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NBAAAAAQECAwQFBgcIAQIDBAUGBwgAID1eUe2NGazN-kbK0DKrGZbIvUj1m6z0ucA0NqTjpiDGpQECAyYgASFYIF8i7oqRaHNGUciVCyk4ZuXA_hX2rDS5Ek3J1wNur8UrIlggNR43StiJip_9wNyv-64DT4Z9oyfb19dBOzYPOHM_vZo",
+						"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiQUEiLCJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjY0MTgwIiwiY3Jvc3NPcmlnaW4iOmZhbHNlfQ",
+						"publicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEXyLuipFoc0ZRyJULKThm5cD-FfasNLkSTcnXA26vxSs1HjdK2ImKn_3A3K_7rgNPhn2jJ9vX10E7Ng84cz-9mg",
+						"publicKeyAlgorithm": -7,
+						"transports": [
+							"internal"
+						]
+					},
+					"type": "public-key"
+				}
+			},
+			"logins": [
+				{
+					"request": "01bd57f6259ddc6f4f8f324815c2a89c3e18a76644ad562cad2bcbe0a4bf45517d000000006a80f0a200",
+					"options": {
+						"challenge": "vVf2JZ3cb0-PMkgVwqicPhinZkStViytK8vgpL9FUX0",
+						"rpId": "localhost",
+						"allowCredentials": [],
+						"userVerification": "preferred",
+						"timeout": 300000
+					},
+					"response": {
+						"authenticatorAttachment": "platform",
+						"clientExtensionResults": {},
+						"id": "PV5R7Y0ZrM36RsrQMqsZlsi9SPWbrPS5wDQ2pOOmIMY",
+						"rawId": "PV5R7Y0ZrM36RsrQMqsZlsi9SPWbrPS5wDQ2pOOmIMY",
+						"response": {
+							"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MBAAAAAg",
+							"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoidlZmMkpaM2NiMC1QTWtnVndxaWNQaGluWmtTdFZpeXRLOHZncEw5RlVYMCIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NjQxODAiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
+							"signature": "MEQCIEmpp-krwSnkgJLHSFOF4hUB1jUbHCC8ucA_3gRzBTZKAiBeP09g2vNX_IYNLuYHRQ5pCVmATL3yBlfLvnAyok3XCA",
+							"userHandle": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U"
+						},
+						"type": "public-key"
+					},
+					"userVerified": false,
+					"backedUp": false
+				}
+			]
+		},
+		{
+			"name": "no-user-presence",
+			"description": "A CTAP2.1 platform authenticator that clears the user presence flag in every response.",
+			"aaguid": "01020304050607080102030405060708",
+			"credentialId": "f4961993e9e8acb765d1f6a77db79c074127d9df3c6583e413516806ff2bb131",
+			"transports": [
+				"internal"
+			],
+			"backedUp": false,
+			"registration": {
+				"options": {
+					"rp": {
+						"id": "localhost",
+						"name": ""
+					},
+					"user": {
+						"id": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U",
+						"name": "user@example.com",
+						"displayName": "user@example.com"
+					},
+					"challenge": "AA",
+					"pubKeyCredParams": [
+						{
+							"type": "public-key",
+							"alg": -48
+						},
+						{
+							"type": "public-key",
+							"alg": -7
+						},
+						{
+							"type": "public-key",
+							"alg": -257
+						}
+					],
+					"excludeCredentials": [],
+					"authenticatorSelection": {
+						"residentKey": "required",
+						"requireResidentKey": true,
+						"userVerification": "preferred"
+					},
+					"attestation": "none",
+					"extensions": {
+						"credProps": true
+					},
+					"timeout": 300000
+				},
+				"response": {
+					"authenticatorAttachment": "platform",
+					"clientExtensionResults": {
+						"credProps": {
+							"rk": true
+						}
+					},
+					"id": "9JYZk-norLdl0fanfbecB0En2d88ZYPkE1FoBv8rsTE",
+					"rawId": "9JYZk-norLdl0fanfbecB0En2d88ZYPkE1FoBv8rsTE",
+					"response": {
+						"attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NEAAAAAQECAwQFBgcIAQIDBAUGBwgAIPSWGZPp6Ky3ZdH2p323nAdBJ9nfPGWD5BNRaAb_K7ExpQECAyYgASFYIFWNtEXA9QFuR920xZYcgil3KG2_LDgC3WU32XVK_nHxIlggVXd8lS9aC3Pz6ypXQ5TXonyOF1TfbXdu6sVEizGfOfw",
+						"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NEAAAAAQECAwQFBgcIAQIDBAUGBwgAIPSWGZPp6Ky3ZdH2p323nAdBJ9nfPGWD5BNRaAb_K7ExpQECAyYgASFYIFWNtEXA9QFuR920xZYcgil3KG2_LDgC3WU32XVK_nHxIlggVXd8lS9aC3Pz6ypXQ5TXonyOF1TfbXdu6sVEizGfOfw",
+						"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiQUEiLCJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjY0MTgwIiwiY3Jvc3NPcmlnaW4iOmZhbHNlLCJvdGhlcl9rZXlzX2Nhbl9iZV9hZGRlZF9oZXJlIjoiZG8gbm90IGNvbXBhcmUgY2xpZW50RGF0YUpTT04gYWdhaW5zdCBhIHRlbXBsYXRlLiBTZWUgaHR0cHM6Ly9nb28uZ2wveWFiUGV4In0",
+						"publicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEVY20RcD1AW5H3bTFlhyCKXcobb8sOALdZTfZdUr-cfFVd3yVL1oLc_PrKldDlNeifI4XVN9td27qxUSLMZ85_A",
+						"publicKeyAlgorithm": -7,
+						"transports": [
+							"internal"
+						]
+					},
+					"type": "public-key"
+				}
+			},
+			"logins": [
+				{
+					"request": "0108a0c965d7da9c4af883fd2de96b212a6c15d03e24bbd39913e2a49b89628acd000000006a80f0a200",
+					"options": {
+						"challenge": "CKDJZdfanEr4g_0t6WshKmwV0D4ku9OZE-Kkm4liis0",
+						"rpId": "localhost",
+						"allowCredentials": [],
+						"userVerification": "preferred",
+						"timeout": 300000
+					},
+					"response": {
+						"authenticatorAttachment": "platform",
+						"clientExtensionResults": {},
+						"id": "9JYZk-norLdl0fanfbecB0En2d88ZYPkE1FoBv8rsTE",
+						"rawId": "9JYZk-norLdl0fanfbecB0En2d88ZYPkE1FoBv8rsTE",
+						"response": {
+							"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MEAAAAAg",
+							"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiQ0tESlpkZmFuRXI0Z18wdDZXc2hLbXdWMEQ0a3U5T1pFLUtrbTRsaWlzMCIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NjQxODAiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
+							"signature": "MEQCIAbuKfR5m1CYRtJCs5-N-qgrRgBStb-GkZWpnRsMQwvRAiBOSAADzedvpMgyoKtFDe1arL7SHRrB32Lh9xHL7aD2Jw",
+							"userHandle": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U"
+						},
+						"type": "public-key"
+					},
+					"userVerified": true,
+					"backedUp": false,
+					"error": "user-presence"
+				}
+			]
+		},
+		{
+			"name": "bogus-signature",
+			"description": "A CTAP2.1 platform authenticator whose assertion signatures are zeroed.",
+			"aaguid": "01020304050607080102030405060708",
+			"credentialId": "d30b6ce475cf2d2160cd978e4f3a71e5fb4bc86028651886e2f1116c56fea6a5",
+			"transports": [
+				"internal"
+			],
+			"backedUp": false,
+			"registration": {
+				"options": {
+					"rp": {
+						"id": "localhost",
+						"name": ""
+					},
+					"user": {
+						"id": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U",
+						"name": "user@example.com",
+						"displayName": "user@example.com"
+					},
+					"challenge": "AA",
+					"pubKeyCredParams": [
+						{
+							"type": "public-key",
+							"alg": -48
+						},
+						{
+							"type": "public-key",
+							"alg": -7
+						},
+						{
+							"type": "public-key",
+							"alg": -257
+						}
+					],
+					"excludeCredentials": [],
+					"authenticatorSelection": {
+						"residentKey": "required",
+						"requireResidentKey": true,
+						"userVerification": "preferred"
+					},
+					"attestation": "none",
+					"extensions": {
+						"credProps": true
+					},
+					"timeout": 300000
+				},
+				"response": {
+					"authenticatorAttachment": "platform",
+					"clientExtensionResults": {
+						"credProps": {
+							"rk": true
+						}
+					},
+					"id": "0wts5HXPLSFgzZeOTzpx5ftLyGAoZRiG4vERbFb-pqU",
+					"rawId": "0wts5HXPLSFgzZeOTzpx5ftLyGAoZRiG4vERbFb-pqU",
+					"response": {
+						"attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAQECAwQFBgcIAQIDBAUGBwgAINMLbOR1zy0hYM2Xjk86ceX7S8hgKGUYhuLxEWxW_qalpQECAyYgASFYIPbU9coo4WQJ9MiJBVzD-lu_1HIZHjED3uZjKSjllZTmIlggGfyDtJ6wY5MhskRYfcw4ZzUrDkNG2KDv5AugZ9FOMiE",
+						"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAQECAwQFBgcIAQIDBAUGBwgAINMLbOR1zy0hYM2Xjk86ceX7S8hgKGUYhuLxEWxW_qalpQECAyYgASFYIPbU9coo4WQJ9MiJBVzD-lu_1HIZHjED3uZjKSjllZTmIlggGfyDtJ6wY5MhskRYfcw4ZzUrDkNG2KDv5AugZ9FOMiE",
+						"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiQUEiLCJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjY0MTgwIiwiY3Jvc3NPcmlnaW4iOmZhbHNlfQ",
+						"publicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE9tT1yijhZAn0yIkFXMP6W7_UchkeMQPe5mMpKOWVlOYZ_IO0nrBjkyGyRFh9zDhnNSsOQ0bYoO_kC6Bn0U4yIQ",
+						"publicKeyAlgorithm": -7,
+						"transports": [
+							"internal"
+						]
+					},
+					"type": "public-key"
+				}
+			},
+			"logins": [
+				{
+					"request": "01fae90f20ba62f3f04376c99239d95f47468b3398e440a2c49fab17c78fcceae7000000006a80f0a300",
+					"options": {
+						"challenge": "-ukPILpi8_BDdsmSOdlfR0aLM5jkQKLEn6sXx4_M6uc",
+						"rpId": "localhost",
+						"allowCredentials": [],
+						"userVerification": "preferred",
+						"timeout": 300000
+					},
+					"response": {
+						"authenticatorAttachment": "platform",
+						"clientExtensionResults": {},
+						"id": "0wts5HXPLSFgzZeOTzpx5ftLyGAoZRiG4vERbFb-pqU",
+						"rawId": "0wts5HXPLSFgzZeOTzpx5ftLyGAoZRiG4vERbFb-pqU",
+						"response": {
+							"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MFAAAAAg",
+							"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiLXVrUElMcGk4X0JEZHNtU09kbGZSMGFMTTVqa1FLTEVuNnNYeDRfTTZ1YyIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NjQxODAiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
+							"signature": "AA",
+							"userHandle": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U"
+						},
+						"type": "public-key"
+					},
+					"userVerified": true,
+					"backedUp": false,
+					"error": "signature"
+				}
+			]
+		}
+	]
+}
