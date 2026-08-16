@@ -159,13 +159,9 @@ func testWebAuthnVector(t *testing.T, rp *RelyingParty, v webauthnVector) {
 		if !bytes.Equal(aaguid[:], v.AAGUID) {
 			t.Errorf("AAGUID() = %x, want %x", aaguid, v.AAGUID)
 		}
-		if backedUp, err := BackedUp(record); err != nil || backedUp != v.Registration.BackedUp {
-			t.Errorf("BackedUp() = %v, %v, want %v", backedUp, err, v.Registration.BackedUp)
-		}
-		// The credential ID has no exported accessor.
-		r, err := parseRecord(record)
-		if err != nil {
-			t.Fatal(err)
+		r := mustParseRecord(t, record)
+		if backedUp := r.flags.backupState(); backedUp != v.Registration.BackedUp {
+			t.Errorf("backup state = %v, want %v", backedUp, v.Registration.BackedUp)
 		}
 		if !bytes.Equal(r.credentialID, v.CredentialID) {
 			t.Errorf("credentialID = %x, want %x", r.credentialID, v.CredentialID)

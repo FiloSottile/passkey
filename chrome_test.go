@@ -103,16 +103,14 @@ func TestChromeRecordings(t *testing.T) {
 			if aaguid, err := AAGUID(record); err != nil || !bytes.Equal(aaguid[:], rec.AAGUID) {
 				t.Errorf("AAGUID() = %x, %v, want %x", aaguid, err, rec.AAGUID)
 			}
-			if backedUp, err := BackedUp(record); err != nil || backedUp != rec.BackedUp {
-				t.Errorf("BackedUp() = %v, %v, want %v", backedUp, err, rec.BackedUp)
-			}
 			if transports, err := Transports(record); err != nil || !slices.Equal(transports, rec.Transports) {
 				t.Errorf("Transports() = %q, %v, want %q", transports, err, rec.Transports)
 			}
-			// The credential ID has no exported accessor.
-			if r, err := parseRecord(record); err != nil {
-				t.Fatal(err)
-			} else if !bytes.Equal(r.credentialID, rec.CredentialID) {
+			r := mustParseRecord(t, record)
+			if backedUp := r.flags.backupState(); backedUp != rec.BackedUp {
+				t.Errorf("backup state = %v, want %v", backedUp, rec.BackedUp)
+			}
+			if !bytes.Equal(r.credentialID, rec.CredentialID) {
 				t.Errorf("credentialID = %x, want %x", r.credentialID, rec.CredentialID)
 			}
 

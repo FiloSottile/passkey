@@ -325,17 +325,6 @@ func AAGUID(passkey string) ([16]byte, error) {
 	return r.aaguid, nil
 }
 
-// BackedUp reports whether the credential was backed up (e.g. synced to
-// a cloud account) at registration time. For the current state, check
-// login responses with [Response.BackedUp].
-func BackedUp(passkey string) (bool, error) {
-	r, err := parseRecord(passkey)
-	if err != nil {
-		return false, err
-	}
-	return r.flags.backupState(), nil
-}
-
 // Transports returns the transport hints recorded at registration
 // (e.g. "internal", "hybrid", "usb"). They are used to populate the
 // credential descriptors sent to clients by

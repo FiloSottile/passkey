@@ -51,6 +51,15 @@ func attestationObjectJSON(t *testing.T, a *authenticator, object []byte) []byte
 	return attestationObjectOnly(t, mustJSON(t, m))
 }
 
+func mustParseRecord(t testing.TB, s string) *record {
+	t.Helper()
+	r, err := parseRecord(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return r
+}
+
 // TestRegister exercises each Register check: every case is a fully
 // valid registration response except for the one check under test.
 // Registration responses are not signed (attestation "none"), so no

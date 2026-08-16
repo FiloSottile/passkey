@@ -150,19 +150,7 @@ func TestRecordVectors(t *testing.T) {
 			if !slices.Equal(transports, *v.Transports) {
 				t.Errorf("Transports() = %q, want %q", transports, *v.Transports)
 			}
-			backedUp, err := BackedUp(v.Record)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if backedUp != v.Flags.BS {
-				t.Errorf("BackedUp() = %v, want %v", backedUp, v.Flags.BS)
-			}
-			// The credential ID and the flags other than BS have no
-			// exported accessor.
-			r, err := parseRecord(v.Record)
-			if err != nil {
-				t.Fatal(err)
-			}
+			r := mustParseRecord(t, v.Record)
 			decoded := recordFlags{
 				UP: r.flags.userPresent(),
 				UV: r.flags.userVerified(),
