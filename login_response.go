@@ -36,10 +36,10 @@ type Response struct {
 type authenticationResponse struct {
 	RawID    string `json:"rawId"`
 	Response struct {
-		ClientDataJSON    string  `json:"clientDataJSON"`
-		AuthenticatorData string  `json:"authenticatorData"`
-		Signature         string  `json:"signature"`
-		UserHandle        *string `json:"userHandle"`
+		ClientDataJSON    string `json:"clientDataJSON"`
+		AuthenticatorData string `json:"authenticatorData"`
+		Signature         string `json:"signature"`
+		UserHandle        string `json:"userHandle"`
 	} `json:"response"`
 }
 
@@ -121,16 +121,15 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
 	if err != nil {
 		return nil, fmt.Errorf("passkey: malformed signature: %w", err)
 	}
-	var userID string
-	if r.Response.UserHandle != nil {
-		u, err := base64RawURLDecodeString(*r.Response.UserHandle)
-		if err != nil {
-			return nil, fmt.Errorf("passkey: malformed user ID: %w", err)
-		}
-		if len(u) == 0 || len(u) > 64 {
-			return nil, errors.New("passkey: invalid user ID")
-		}
-		userID = string(u)
+
+	userID, err := base64RawURLDecodeString(r.Response.UserHandle)
+	if err != nil {
+		return nil, fmt.Errorf("passkey: malformed user ID: %w", err)
+	}
+	// We are supposed to reject present-but-empty user IDs, but apparently some
+	// clients produce(d) them. https://github.com/w3c/webauthn/issues/1722
+	if len(userID) > 64 {
+		return nil, errors.New("passkey: invalid user ID")
 	}
 
 	return &Response{
@@ -143,7 +142,7 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
 		userVerified:   flags.userVerified(),
 		backedUp:       flags.backupState(),
 		signature:      sig,
-		userID:         userID,
+		userID:         string(userID),
 	}, nil
 }
 

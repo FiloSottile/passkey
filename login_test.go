@@ -219,6 +219,16 @@ func TestLogin(t *testing.T) {
 			errHas: "assertion has no user handle",
 		},
 		{
+			// An empty user handle is equivalent to an absent one.
+			name: "unscoped login with empty user handle",
+			setup: func(t *testing.T, env *loginEnv) (*RelyingParty, []byte, []byte) {
+				m := env.auth.loginResponse(t, testRPID, testOrigin, env.challenge, "", flagUP|flagUV)
+				m["response"].(map[string]any)["userHandle"] = ""
+				return env.rp, mustJSON(t, m), env.request
+			},
+			errHas: "assertion has no user handle",
+		},
+		{
 			name: "scoped login with mismatched user handle",
 			setup: func(t *testing.T, env *loginEnv) (*RelyingParty, []byte, []byte) {
 				request, requestJSON, err := env.rp.NewLoginForUser(env.user.ID, nil)
@@ -238,6 +248,20 @@ func TestLogin(t *testing.T) {
 					t.Fatal(err)
 				}
 				m := env.auth.loginResponse(t, testRPID, testOrigin, challengeOf(t, requestJSON), "", flagUP|flagUV)
+				return env.rp, mustJSON(t, m), request
+			},
+			ok: true,
+		},
+		{
+			// An empty user handle is equivalent to an absent one.
+			name: "scoped login with empty user handle",
+			setup: func(t *testing.T, env *loginEnv) (*RelyingParty, []byte, []byte) {
+				request, requestJSON, err := env.rp.NewLoginForUser(env.user.ID, nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				m := env.auth.loginResponse(t, testRPID, testOrigin, challengeOf(t, requestJSON), "", flagUP|flagUV)
+				m["response"].(map[string]any)["userHandle"] = ""
 				return env.rp, mustJSON(t, m), request
 			},
 			ok: true,
@@ -727,12 +751,13 @@ func TestParseResponse(t *testing.T) {
 			ok: true,
 		},
 		{
-			// An empty string is present and invalid, not absent.
+			// An empty string is what some clients produce for an
+			// absent user handle.
 			name: "empty user handle",
 			resp: func(t *testing.T, a *authenticator) []byte {
 				return mustJSON(t, responseField(valid(t, a), "userHandle", ""))
 			},
-			errHas: "invalid user ID",
+			ok: true,
 		},
 		{
 			name: "oversized user handle",

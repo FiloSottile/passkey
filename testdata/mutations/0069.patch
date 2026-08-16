@@ -1,15 +1,14 @@
 user handle length bound off by one
 
 diff --git a/login_response.go b/login_response.go
-index afd1659..7e266d8 100644
 --- a/login_response.go
 +++ b/login_response.go
-@@ -127,7 +127,7 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
- 		if err != nil {
- 			return nil, fmt.Errorf("passkey: malformed user ID: %w", err)
- 		}
--		if len(u) == 0 || len(u) > 64 {
-+		if len(u) == 0 || len(u) > 65 {
- 			return nil, errors.New("passkey: invalid user ID")
- 		}
- 		userID = string(u)
+@@ -130,7 +130,7 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
+ 	if err != nil {
+ 		return nil, fmt.Errorf("passkey: malformed user ID: %w", err)
+ 	}
+-	if len(userID) > 64 {
++	if len(userID) > 65 {
+ 		return nil, errors.New("passkey: invalid user ID")
+ 	}
+ 
