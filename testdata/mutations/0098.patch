@@ -1,0 +1,16 @@
+Login accepts a record registered under another RP ID
+
+diff --git a/login.go b/login.go
+--- a/login.go
++++ b/login.go
+@@ -195,10 +195,6 @@
+ 			skipped = append(skipped, fmt.Errorf("%w (record #%d)", err, i))
+ 			continue
+ 		}
+-		if r.rpIDHash != rpIDHash {
+-			skipped = append(skipped, fmt.Errorf("record for a different RP ID (record #%d)", i))
+-			continue
+-		}
+ 		if !bytes.Equal(r.credentialID, response.credentialID) {
+ 			continue
+ 		}

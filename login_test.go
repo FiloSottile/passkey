@@ -329,6 +329,28 @@ func TestLogin(t *testing.T) {
 			errHas: "not registered",
 		},
 		{
+			// The same credential registered under another RP ID: its
+			// key would verify the signature, but the record is not a
+			// candidate.
+			name: "record for a different RP ID",
+			setup: func(t *testing.T, env *loginEnv) (*RelyingParty, []byte, []byte) {
+				otherRP := newTestRP(t, Options{RPID: "other.example"})
+				creationJSON, err := otherRP.NewRegistration(env.user, nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				record, err := otherRP.Register(mustJSON(t, env.auth.registrationResponse(t, "other.example", testOrigin,
+					challengeOf(t, creationJSON), flagUP|flagUV)))
+				if err != nil {
+					t.Fatal(err)
+				}
+				env.records = []string{record}
+				return env.rp, mustJSON(t, env.response(t, flagUP|flagUV)), env.request
+			},
+			errIs:  ErrUnknownCredential,
+			errHas: "record for a different RP ID",
+		},
+		{
 			name: "wrong signing key",
 			setup: func(t *testing.T, env *loginEnv) (*RelyingParty, []byte, []byte) {
 				return env.rp, impostorResponse(t, env), env.request
@@ -814,19 +836,21 @@ func TestLoginLockouts(t *testing.T) {
 	authC := newAuthenticator(t, algES256)
 	authC.credentialID = authA.credentialID
 
-	register := func(a *authenticator) string {
+	register := func(rp *RelyingParty, rpID string, a *authenticator) string {
 		creationJSON, err := rp.NewRegistration(user, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
-		record, err := rp.Register(mustJSON(t, a.registrationResponse(t, testRPID, testOrigin,
+		record, err := rp.Register(mustJSON(t, a.registrationResponse(t, rpID, testOrigin,
 			challengeOf(t, creationJSON), flagUP|flagUV)))
 		if err != nil {
 			t.Fatal(err)
 		}
 		return record
 	}
-	recA, recB := register(authA), register(authB)
+	recA, recB := register(rp, testRPID, authA), register(rp, testRPID, authB)
+	// authA's credential registered under another RP ID.
+	otherRP := register(newTestRP(t, Options{RPID: "other.example"}), "other.example", authA)
 	malformed := "$webauthn$v=1$AAAA"
 
 	request, requestJSON, err := rp.NewLogin()
@@ -898,7 +922,20 @@ func TestLoginLockouts(t *testing.T) {
 			records: []string{malformed},
 			resp:    respA,
 			errIs:   ErrUnknownCredential,
-			errHas:  "could not be parsed",
+			errHas:  "were skipped",
+		},
+		{
+			name:    "other RP ID record before match",
+			records: []string{otherRP, recA},
+			resp:    respA,
+			matched: 1,
+		},
+		{
+			name:    "only other RP ID record",
+			records: []string{otherRP},
+			resp:    respA,
+			errIs:   ErrUnknownCredential,
+			errHas:  "record for a different RP ID",
 		},
 		{
 			name:    "no records",

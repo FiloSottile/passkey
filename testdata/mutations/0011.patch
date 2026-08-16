@@ -1,10 +1,9 @@
 skip signature verification in Login
 
 diff --git a/login.go b/login.go
-index 9c4298c..0952753 100644
 --- a/login.go
 +++ b/login.go
-@@ -199,7 +199,7 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
+@@ -202,7 +202,7 @@
  		if !bytes.Equal(r.credentialID, response.credentialID) {
  			continue
  		}

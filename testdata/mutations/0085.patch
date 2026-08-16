@@ -1,7 +1,6 @@
 Login compares the origin by suffix of the host
 
 diff --git a/login.go b/login.go
-index b86f8cf..edbdafa 100644
 --- a/login.go
 +++ b/login.go
 @@ -10,6 +10,7 @@
@@ -12,7 +11,7 @@ index b86f8cf..edbdafa 100644
  	"time"
  
  	"filippo.io/mldsa"
-@@ -166,7 +167,7 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
+@@ -167,7 +168,7 @@
  	if response.challenge != req.challenge {
  		return 0, errors.New("passkey: client data challenge does not match the request")
  	}
@@ -20,4 +19,4 @@ index b86f8cf..edbdafa 100644
 +	if !strings.HasSuffix(response.origin, strings.TrimPrefix(rp.origin, "https://")) {
  		return 0, fmt.Errorf("passkey: origin %q is not the expected value %q", response.origin, rp.origin)
  	}
- 	if response.rpIDHash != sha256.Sum256([]byte(rp.rpID)) {
+ 	rpIDHash := sha256.Sum256([]byte(rp.rpID))

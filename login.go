@@ -124,10 +124,11 @@ var ErrUserVerificationRequired = errors.New("passkey: user verification require
 // data; that the client data is well-formed JSON with type
 // "webauthn.get", the request's challenge, the expected origin, and
 // crossOrigin absent or false; that the authenticator data carries the
-// hash of the RP ID and has the user presence flag set (and the user
-// verification flag, if [Options.RequireUserVerification] is set); that
-// the request has not expired; and that the asserted user handle, if
-// present, matches the request for user-scoped ceremonies.
+// hash of the RP ID (as does the matched record) and has the user
+// presence flag set (and the user verification flag, if
+// [Options.RequireUserVerification] is set); that the request has not
+// expired; and that the asserted user handle, if present, matches the
+// request for user-scoped ceremonies.
 //
 // The signature counter is not checked (it is zero for the major
 // passkey providers), and the response's backup and user verification
@@ -169,7 +170,8 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
 	if response.origin != rp.origin {
 		return 0, fmt.Errorf("passkey: origin %q is not the expected value %q", response.origin, rp.origin)
 	}
-	if response.rpIDHash != sha256.Sum256([]byte(rp.rpID)) {
+	rpIDHash := sha256.Sum256([]byte(rp.rpID))
+	if response.rpIDHash != rpIDHash {
 		return 0, errors.New("passkey: assertion for a different RP ID")
 	}
 	if req.userID == "" && response.userID == "" {
@@ -184,13 +186,17 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
 	message = append(message, response.clientDataHash[:]...)
 
 	matched = -1
-	var parseErrors, signatureErrors []error
+	var skipped, signatureErrors []error
 	for i, p := range passkeys {
 		r, err := parseRecord(p)
 		if err != nil {
 			// Continue iterating, to avoid locking out an account
 			// due to a single bad record.
-			parseErrors = append(parseErrors, fmt.Errorf("%w (record #%d)", err, i))
+			skipped = append(skipped, fmt.Errorf("%w (record #%d)", err, i))
+			continue
+		}
+		if r.rpIDHash != rpIDHash {
+			skipped = append(skipped, fmt.Errorf("record for a different RP ID (record #%d)", i))
 			continue
 		}
 		if !bytes.Equal(r.credentialID, response.credentialID) {
@@ -212,8 +218,8 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
 			return 0, fmt.Errorf("passkey: %v", signatureErrors[0])
 		case len(signatureErrors) > 1:
 			return 0, fmt.Errorf("passkey: multiple records matched the credential ID but none verified the signature: %v", signatureErrors)
-		case len(parseErrors) > 0:
-			return 0, fmt.Errorf("%w, and some records could not be parsed: %v", ErrUnknownCredential, parseErrors)
+		case len(skipped) > 0:
+			return 0, fmt.Errorf("%w, and some records were skipped: %v", ErrUnknownCredential, skipped)
 		default:
 			return 0, fmt.Errorf("%w", ErrUnknownCredential)
 		}
