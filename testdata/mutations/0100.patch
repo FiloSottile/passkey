@@ -1,0 +1,15 @@
+NewRegistration accepts an empty user name
+
+diff --git a/register.go b/register.go
+--- a/register.go
++++ b/register.go
+@@ -86,9 +86,6 @@
+ 	if len(user.ID) == 0 || len(user.ID) > 64 {
+ 		return nil, errors.New("passkey: invalid user ID")
+ 	}
+-	if user.Name == "" {
+-		return nil, errors.New("passkey: user name is empty")
+-	}
+ 	if strings.ContainsFunc(user.Name, disallowedNameRune) {
+ 		return nil, errors.New("passkey: user name contains disallowed characters")
+ 	}

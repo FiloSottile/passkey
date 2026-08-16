@@ -610,8 +610,15 @@ func TestNewRegistration(t *testing.T) {
 		t.Errorf("options = %s, want an empty excludeCredentials list", creationJSON)
 	}
 
-	if _, err := rp.NewRegistration(valid, nil); err != nil {
+	creationJSON, err = rp.NewRegistration(valid, nil)
+	if err != nil {
 		t.Errorf("NewRegistration() = %v, want success", err)
+	}
+	if !strings.Contains(string(creationJSON), `"rp":{"id":"`+testRPID+`","name":"`+testRPID+`"}`) {
+		t.Errorf("options = %s, want the RP ID as the RP name", creationJSON)
+	}
+	if _, err := rp.NewRegistration(User{ID: "user-id", Name: ""}, nil); err == nil {
+		t.Error("NewRegistration() with an empty name succeeded, want error")
 	}
 	if _, err := rp.NewRegistration(User{ID: "\x00\xff\x80", Name: "n"}, nil); err != nil {
 		t.Errorf("NewRegistration() with an arbitrary-bytes user ID = %v, want success", err)

@@ -1,0 +1,15 @@
+record parser accepts an empty parameter section
+
+diff --git a/record.go b/record.go
+--- a/record.go
++++ b/record.go
+@@ -34,9 +34,6 @@
+ 	rr := &record{}
+ 	var params string
+ 	if p, rest, ok := strings.Cut(r, "$"); ok {
+-		if p == "" {
+-			return nil, errors.New("passkey: invalid record: invalid parameters")
+-		}
+ 		params, r = p, rest
+ 	}
+ 	for len(params) > 0 {

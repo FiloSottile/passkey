@@ -34,6 +34,9 @@ func parseRecord(r string) (*record, error) {
 	rr := &record{}
 	var params string
 	if p, rest, ok := strings.Cut(r, "$"); ok {
+		if p == "" {
+			return nil, errors.New("passkey: invalid record: invalid parameters")
+		}
 		params, r = p, rest
 	}
 	for len(params) > 0 {

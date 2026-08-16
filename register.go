@@ -21,10 +21,11 @@ type User struct {
 	ID string
 
 	// Name is a human-readable identifier for the account, such as a
-	// username or email address. It is displayed in credential pickers
-	// and stored by the authenticator, but never returned to the server
-	// or used in the protocol. It is also sent as the WebAuthn
-	// displayName, which credential providers ignore in practice.
+	// username or email address. It must not be empty. It is displayed in
+	// credential pickers and stored by the authenticator, but never
+	// returned to the server or used in the protocol. It is also sent as
+	// the WebAuthn displayName, which credential providers ignore in
+	// practice.
 	Name string
 }
 
@@ -85,12 +86,16 @@ func (rp *RelyingParty) NewRegistration(user User, passkeys []string) (optionsJS
 	if len(user.ID) == 0 || len(user.ID) > 64 {
 		return nil, errors.New("passkey: invalid user ID")
 	}
+	if user.Name == "" {
+		return nil, errors.New("passkey: user name is empty")
+	}
 	if strings.ContainsFunc(user.Name, disallowedNameRune) {
 		return nil, errors.New("passkey: user name contains disallowed characters")
 	}
 	exclude := credentialDescriptors(passkeys)
 	var o creationOptions
 	o.RP.ID = rp.rpID
+	o.RP.Name = rp.rpID
 	o.User.ID = base64.RawURLEncoding.EncodeToString([]byte(user.ID))
 	o.User.Name = user.Name
 	o.User.DisplayName = user.Name

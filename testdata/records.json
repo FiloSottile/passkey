@@ -351,6 +351,12 @@
 		"error": "bad-base64"
 	},
 	{
+		"name": "empty-parameter-section",
+		"record": "$webauthn$v=1$$o3mm9u6vuaVeN4wRgDTidR5oL6ufLTCrE9ISVYbOGUdBAAAAAAABAgMEBQYHCAkKCwwNDg8AIBAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vpQECAyYgASFYIGsX0fLhLEJH+Lzm5WOkQPJ3A32BLeszoPShOUXYmMKWIlggT+NC4v4af5uO5+tKfA+eFivOM1drMV7Oy7ZAaDe/UfU",
+		"algorithm": -7,
+		"error": "bad-parameter"
+	},
+	{
 		"name": "parameter-without-value",
 		"record": "$webauthn$v=1$transports$o3mm9u6vuaVeN4wRgDTidR5oL6ufLTCrE9ISVYbOGUdBAAAAAAABAgMEBQYHCAkKCwwNDg8AIBAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vpQECAyYgASFYIGsX0fLhLEJH+Lzm5WOkQPJ3A32BLeszoPShOUXYmMKWIlggT+NC4v4af5uO5+tKfA+eFivOM1drMV7Oy7ZAaDe/UfU",
 		"algorithm": -7,

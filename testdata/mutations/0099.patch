@@ -1,0 +1,13 @@
+NewRegistration leaves the RP name empty
+
+diff --git a/register.go b/register.go
+--- a/register.go
++++ b/register.go
+@@ -95,7 +95,6 @@
+ 	exclude := credentialDescriptors(passkeys)
+ 	var o creationOptions
+ 	o.RP.ID = rp.rpID
+-	o.RP.Name = rp.rpID
+ 	o.User.ID = base64.RawURLEncoding.EncodeToString([]byte(user.ID))
+ 	o.User.Name = user.Name
+ 	o.User.DisplayName = user.Name

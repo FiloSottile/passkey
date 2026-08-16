@@ -508,6 +508,7 @@ func writeRecordVectors(t *testing.T) {
 		invalid("base64-carriage-return", "$webauthn$v=1$"+baseB64[:10]+"\r"+baseB64[10:], "bad-base64", algES256),
 		invalid("base64-url-alphabet", strings.Replace(slashes, "/", "_", 1), "bad-base64", algES256),
 		invalid("base64-non-canonical-bits", "$webauthn$v=1$"+nonCanonicalBase64(baseB64), "bad-base64", algES256),
+		invalid("empty-parameter-section", "$webauthn$v=1$$"+baseB64, "bad-parameter", algES256),
 		invalid("parameter-without-value", "$webauthn$v=1$transports$"+baseB64, "bad-parameter", algES256),
 		invalid("trailing-parameter-comma", "$webauthn$v=1$transports=usb,$"+baseB64, "bad-parameter", algES256),
 		invalid("leading-parameter-comma", "$webauthn$v=1$,transports=usb$"+baseB64, "bad-parameter", algES256),
