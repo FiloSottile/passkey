@@ -1,8 +1,10 @@
 // Package ctap2cbor implements a tiny subset of CTAP2's subset of CBOR,
-// sufficient to parse COSE keys within authenticator data.
+// sufficient to parse COSE keys within authenticator data, and to find
+// the authenticator data within an attestation object.
 //
 // Only major types 0 (unsigned integer), 1 (negative integer), 2 (byte
-// strings), and 5 (maps) are supported. Arguments are limited to 16-bit values.
+// strings), 3 (text strings), 4 (arrays), and 5 (maps) are supported, and
+// arrays only to be skipped. Arguments are limited to 16-bit values.
 //
 // See https://www.imperialviolet.org/tourofwebauthn/tourofwebauthn.html#cbor.
 package ctap2cbor
@@ -84,6 +86,19 @@ func (s *String) ReadBytes(out *[]byte) bool {
 	return true
 }
 
+func (s *String) ReadString(out *string) bool {
+	major, arg, ok := s.readTypeAndArgument()
+	if !ok || major != 3 {
+		return false
+	}
+	if len(*s) < int(arg) {
+		return false
+	}
+	*out = string((*s)[:arg])
+	*s = (*s)[arg:]
+	return true
+}
+
 func (s *String) ReadMapHeader(out *uint16) bool {
 	major, arg, ok := s.readTypeAndArgument()
 	if !ok || major != 5 {
@@ -91,4 +106,43 @@ func (s *String) ReadMapHeader(out *uint16) bool {
 	}
 	*out = arg
 	return true
+}
+
+// Skip consumes one data item of any supported major type, including the
+// contents of arrays and maps nested up to eight levels deep.
+func (s *String) Skip() bool {
+	return s.skip(8)
+}
+
+func (s *String) skip(depth int) bool {
+	major, arg, ok := s.readTypeAndArgument()
+	if !ok {
+		return false
+	}
+	switch major {
+	case 0, 1:
+		return true
+	case 2, 3:
+		if len(*s) < int(arg) {
+			return false
+		}
+		*s = (*s)[arg:]
+		return true
+	case 4, 5:
+		if depth == 0 {
+			return false
+		}
+		items := int(arg)
+		if major == 5 {
+			items *= 2
+		}
+		for range items {
+			if !s.skip(depth - 1) {
+				return false
+			}
+		}
+		return true
+	default:
+		return false
+	}
 }

@@ -1,0 +1,14 @@
+Skip consumes map pairs as single items
+
+diff --git a/internal/ctap2cbor/cbor.go b/internal/ctap2cbor/cbor.go
+--- a/internal/ctap2cbor/cbor.go
++++ b/internal/ctap2cbor/cbor.go
+@@ -134,7 +134,7 @@
+ 		}
+ 		items := int(arg)
+ 		if major == 5 {
+-			items *= 2
++			items *= 1
+ 		}
+ 		for range items {
+ 			if !s.skip(depth - 1) {

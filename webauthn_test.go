@@ -3,7 +3,6 @@ package passkey
 import (
 	"bytes"
 	"encoding/base64"
-	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -128,15 +127,12 @@ func testWebAuthnVector(t *testing.T, rp *RelyingParty, v webauthnVector) {
 	b64 := base64.RawURLEncoding.EncodeToString
 	wantRegisterErr, wantParseErr := webauthnVectorOutcome(v)
 
-	// The vectors publish only the attestation object, so the
-	// authenticator data this package requires is lifted out of it.
 	record, err := rp.Register(mustJSON(t, map[string]any{
 		"id":    b64(v.CredentialID),
 		"rawId": b64(v.CredentialID),
 		"type":  "public-key",
 		"response": map[string]any{
 			"clientDataJSON":    b64(v.Registration.ClientDataJSON),
-			"authenticatorData": b64(attestationObjectAuthData(t, v.Registration.AttestationObject)),
 			"attestationObject": b64(v.Registration.AttestationObject),
 		},
 		// No credProps output, which is accepted: not every client reports it.
@@ -229,35 +225,4 @@ func testWebAuthnVector(t *testing.T, rp *RelyingParty, v webauthnVector) {
 	if matched != 0 {
 		t.Errorf("Login() matched record %d, want 0", matched)
 	}
-}
-
-// attestationObjectAuthData returns the authData member of a CBOR
-// attestation object, which fixtures that predate the authenticatorData
-// response field serialize instead of it.
-//
-// Rather than parse CBOR, it takes the authData key, which comes last in
-// the CTAP2 canonical order, and requires the byte string after it to run
-// exactly to the end.
-func attestationObjectAuthData(t testing.TB, attestationObject []byte) []byte {
-	t.Helper()
-	key := []byte("\x68authData") // the CBOR text string "authData"
-	if n := bytes.Count(attestationObject, key); n != 1 {
-		t.Fatalf("attestation object has %d authData members, want one", n)
-	}
-	b := attestationObject[bytes.Index(attestationObject, key)+len(key):]
-	// A byte string header, with the length in the next one or two bytes:
-	// authenticator data is never short enough for an immediate value.
-	var length int
-	switch {
-	case len(b) > 1 && b[0] == 0x58:
-		length, b = int(b[1]), b[2:]
-	case len(b) > 2 && b[0] == 0x59:
-		length, b = int(binary.BigEndian.Uint16(b[1:3])), b[3:]
-	default:
-		t.Fatal("attestation object authData is not a byte string")
-	}
-	if length != len(b) {
-		t.Fatalf("attestation object authData is %d bytes, but %d bytes follow it", length, len(b))
-	}
-	return b
 }

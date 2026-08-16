@@ -1,0 +1,14 @@
+ReadString accepts byte strings
+
+diff --git a/internal/ctap2cbor/cbor.go b/internal/ctap2cbor/cbor.go
+--- a/internal/ctap2cbor/cbor.go
++++ b/internal/ctap2cbor/cbor.go
+@@ -88,7 +88,7 @@
+ 
+ func (s *String) ReadString(out *string) bool {
+ 	major, arg, ok := s.readTypeAndArgument()
+-	if !ok || major != 3 {
++	if !ok || (major != 3 && major != 2) {
+ 		return false
+ 	}
+ 	if len(*s) < int(arg) {

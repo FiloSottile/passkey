@@ -2,6 +2,7 @@ package passkey
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
@@ -27,6 +28,27 @@ func authDataOf(t testing.TB, m map[string]any) []byte {
 func setAuthData(m map[string]any, ad []byte) map[string]any {
 	m["response"].(map[string]any)["authenticatorData"] = base64.RawURLEncoding.EncodeToString(ad)
 	return m
+}
+
+// attestationObjectOnly returns responseJSON without its authenticatorData
+// member, leaving Register to take it from attestationObject.
+func attestationObjectOnly(t testing.TB, responseJSON []byte) []byte {
+	t.Helper()
+	var m map[string]any
+	if err := json.Unmarshal(responseJSON, &m); err != nil {
+		t.Fatal(err)
+	}
+	delete(m["response"].(map[string]any), "authenticatorData")
+	return mustJSON(t, m)
+}
+
+// attestationObjectJSON returns a registration response for the test RP
+// carrying object as its attestationObject, and no authenticatorData.
+func attestationObjectJSON(t *testing.T, a *authenticator, object []byte) []byte {
+	t.Helper()
+	m := a.registrationResponse(t, testRPID, testOrigin, "AA", flagUP|flagUV)
+	m["response"].(map[string]any)["attestationObject"] = base64.RawURLEncoding.EncodeToString(object)
+	return attestationObjectOnly(t, mustJSON(t, m))
 }
 
 // TestRegister exercises each Register check: every case is a fully
@@ -131,6 +153,129 @@ func TestRegister(t *testing.T) {
 				return mustJSON(t, m)
 			},
 			errHas: "malformed authenticator data encoding",
+		},
+		{
+			// Without authenticatorData, the authenticator data comes from
+			// the attestation object.
+			name: "attestation object only",
+			resp: func(t *testing.T, a *authenticator) []byte {
+				return attestationObjectOnly(t, regJSON(t, a, flagUP|flagUV))
+			},
+			ok: true,
+		},
+		{
+			name: "neither authenticator data nor attestation object",
+			resp: func(t *testing.T, a *authenticator) []byte {
+				m := a.registrationResponse(t, testRPID, testOrigin, "AA", flagUP|flagUV)
+				delete(m["response"].(map[string]any), "attestationObject")
+				return attestationObjectOnly(t, mustJSON(t, m))
+			},
+			errHas: "neither authenticatorData nor attestationObject",
+		},
+		{
+			name: "attestation object encoding",
+			resp: func(t *testing.T, a *authenticator) []byte {
+				m := a.registrationResponse(t, testRPID, testOrigin, "AA", flagUP|flagUV)
+				m["response"].(map[string]any)["attestationObject"] = "!!!"
+				return attestationObjectOnly(t, mustJSON(t, m))
+			},
+			errHas: "malformed attestation object encoding",
+		},
+		{
+			// The attestation statement is skipped, not verified.
+			name: "attestation object with packed attestation",
+			resp: func(t *testing.T, a *authenticator) []byte {
+				return attestationObjectJSON(t, a, cborMap(
+					cborText("fmt"), cborText("packed"),
+					cborText("attStmt"), cborMap(
+						cborText("alg"), cborAppendInt(nil, algES256),
+						cborText("sig"), cborBytes(make([]byte, 70)),
+						cborText("x5c"), cborArray(cborBytes(make([]byte, 300)), cborBytes(make([]byte, 300)))),
+					cborText("authData"), cborBytes(a.authData(testRPID, true, flagUP|flagUV))))
+			},
+			ok: true,
+		},
+		{
+			name: "attestation object members in any order",
+			resp: func(t *testing.T, a *authenticator) []byte {
+				return attestationObjectJSON(t, a, cborMap(
+					cborText("authData"), cborBytes(a.authData(testRPID, true, flagUP|flagUV)),
+					cborText("fmt"), cborText("none"),
+					cborText("attStmt"), cborMap()))
+			},
+			ok: true,
+		},
+		{
+			name: "attestation object with authData only",
+			resp: func(t *testing.T, a *authenticator) []byte {
+				return attestationObjectJSON(t, a, cborMap(
+					cborText("authData"), cborBytes(a.authData(testRPID, true, flagUP|flagUV))))
+			},
+			ok: true,
+		},
+		{
+			name: "attestation object not a map",
+			resp: func(t *testing.T, a *authenticator) []byte {
+				return attestationObjectJSON(t, a, cborBytes(a.authData(testRPID, true, flagUP|flagUV)))
+			},
+			errHas: "bad map header",
+		},
+		{
+			name: "attestation object with integer key",
+			resp: func(t *testing.T, a *authenticator) []byte {
+				return attestationObjectJSON(t, a, cborMap(
+					cborAppendInt(nil, 1), cborBytes(a.authData(testRPID, true, flagUP|flagUV))))
+			},
+			errHas: "bad map key",
+		},
+		{
+			name: "attestation object without authData",
+			resp: func(t *testing.T, a *authenticator) []byte {
+				return attestationObjectJSON(t, a, cborMap(
+					cborText("fmt"), cborText("none"), cborText("attStmt"), cborMap()))
+			},
+			errHas: "no authData",
+		},
+		{
+			name: "attestation object with duplicate authData",
+			resp: func(t *testing.T, a *authenticator) []byte {
+				authData := cborBytes(a.authData(testRPID, true, flagUP|flagUV))
+				return attestationObjectJSON(t, a, cborMap(
+					cborText("authData"), authData, cborText("authData"), authData))
+			},
+			errHas: "duplicate authData",
+		},
+		{
+			name: "attestation object authData not a byte string",
+			resp: func(t *testing.T, a *authenticator) []byte {
+				return attestationObjectJSON(t, a, cborMap(cborText("authData"), cborText("authData")))
+			},
+			errHas: "bad authData",
+		},
+		{
+			name: "attestation object with unskippable member",
+			resp: func(t *testing.T, a *authenticator) []byte {
+				return attestationObjectJSON(t, a, cborMap(
+					cborText("fmt"), []byte{0xbf, 0xff}, // an indefinite-length map
+					cborText("authData"), cborBytes(a.authData(testRPID, true, flagUP|flagUV))))
+			},
+			errHas: `bad "fmt" value`,
+		},
+		{
+			name: "attestation object with trailing bytes",
+			resp: func(t *testing.T, a *authenticator) []byte {
+				object := noneAttestationObject(a.authData(testRPID, true, flagUP|flagUV))
+				return attestationObjectJSON(t, a, append(object, 0x00))
+			},
+			errHas: "unexpected trailing bytes",
+		},
+		{
+			name: "attestation object truncated",
+			resp: func(t *testing.T, a *authenticator) []byte {
+				object := noneAttestationObject(a.authData(testRPID, true, flagUP|flagUV))
+				return attestationObjectJSON(t, a, object[:len(object)-1])
+			},
+			errHas: "bad authData",
 		},
 		{
 			name: "authenticator data too short",
@@ -337,7 +482,8 @@ func TestRegister(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			rp := newTestRP(t, Options{})
 			a := newAuthenticator(t, algES256)
-			record, err := rp.Register(tt.resp(t, a))
+			responseJSON := tt.resp(t, a)
+			record, err := rp.Register(responseJSON)
 			if tt.ok {
 				if err != nil {
 					t.Fatalf("Register() = %v, want success", err)
@@ -345,11 +491,30 @@ func TestRegister(t *testing.T) {
 				if _, err := parseRecord(record); err != nil {
 					t.Errorf("parseRecord(Register()) = %v, want success", err)
 				}
+				// The attestation object carries the same authenticator
+				// data, and yields the same record.
+				if got, err := rp.Register(attestationObjectOnly(t, responseJSON)); err != nil || got != record {
+					t.Errorf("Register() from attestationObject = %q, %v, want %q", got, err, record)
+				}
 				return
 			}
 			checkError(t, err, tt.errIs, tt.errHas)
 		})
 	}
+
+	t.Run("authenticator data preferred over attestation object", func(t *testing.T) {
+		rp := newTestRP(t, Options{})
+		a := newAuthenticator(t, algES256)
+		want, err := rp.Register(regJSON(t, a, flagUP|flagUV))
+		if err != nil {
+			t.Fatal(err)
+		}
+		m := a.registrationResponse(t, testRPID, testOrigin, "AA", flagUP|flagUV)
+		m["response"].(map[string]any)["attestationObject"] = "!!!"
+		if got, err := rp.Register(mustJSON(t, m)); err != nil || got != want {
+			t.Errorf("Register() = %q, %v, want %q", got, err, want)
+		}
+	})
 
 	for _, origin := range lookalikeOrigins {
 		t.Run("lookalike origin "+origin, func(t *testing.T) {

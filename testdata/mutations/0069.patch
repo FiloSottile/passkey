@@ -3,10 +3,10 @@ user handle length bound off by one
 diff --git a/login_response.go b/login_response.go
 --- a/login_response.go
 +++ b/login_response.go
-@@ -130,7 +130,7 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
- 	if err != nil {
- 		return nil, fmt.Errorf("passkey: malformed user ID: %w", err)
+@@ -128,7 +128,7 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
  	}
+ 	// We are supposed to reject present-but-empty user IDs, but apparently some
+ 	// clients produce(d) them. https://github.com/w3c/webauthn/issues/1722
 -	if len(userID) > 64 {
 +	if len(userID) > 65 {
  		return nil, errors.New("passkey: invalid user ID")

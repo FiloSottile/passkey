@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"maps"
 	"math/big"
+	"slices"
 	"sync"
 	"testing"
 
@@ -180,13 +181,7 @@ func (a *authenticator) clientDataJSON(t testing.TB, ceremonyType, challenge, or
 func (a *authenticator) registrationResponse(t testing.TB, rpID, origin, challenge string, flags byte) map[string]any {
 	t.Helper()
 	authData := a.authData(rpID, true, flags)
-	attObj := cborAppendMapHeader(nil, 3)
-	attObj = cborAppendString(attObj, "fmt")
-	attObj = cborAppendString(attObj, "none")
-	attObj = cborAppendString(attObj, "attStmt")
-	attObj = cborAppendMapHeader(attObj, 0)
-	attObj = cborAppendString(attObj, "authData")
-	attObj = cborAppendBytes(attObj, authData)
+	attObj := noneAttestationObject(authData)
 
 	return map[string]any{
 		"id":                      base64.RawURLEncoding.EncodeToString(a.credentialID),
@@ -323,6 +318,29 @@ func encodeCOSEKey(t testing.TB, pub crypto.PublicKey) []byte {
 	}
 }
 
+// noneAttestationObject returns an attestation object of format "none"
+// carrying authData.
+func noneAttestationObject(authData []byte) []byte {
+	return cborMap(cborText("fmt"), cborText("none"), cborText("attStmt"), cborMap(),
+		cborText("authData"), cborBytes(authData))
+}
+
+// The cbor functions encode single CBOR data items, to be assembled into
+// larger structures.
+
+func cborText(s string) []byte { return cborAppendString(nil, s) }
+
+func cborBytes(b []byte) []byte { return cborAppendBytes(nil, b) }
+
+func cborArray(items ...[]byte) []byte {
+	return slices.Concat(append([][]byte{cborAppendArrayHeader(nil, uint16(len(items)))}, items...)...)
+}
+
+// cborMap takes alternating keys and values.
+func cborMap(items ...[]byte) []byte {
+	return slices.Concat(append([][]byte{cborAppendMapHeader(nil, uint16(len(items)/2))}, items...)...)
+}
+
 // The cborAppend functions encode CTAP2 canonical CBOR, the encoding
 // counterpart of internal/ctap2cbor.
 
@@ -352,6 +370,10 @@ func cborAppendBytes(b []byte, v []byte) []byte {
 func cborAppendString(b []byte, v string) []byte {
 	b = cborAppendArgument(b, 3, uint16(len(v)))
 	return append(b, v...)
+}
+
+func cborAppendArrayHeader(b []byte, items uint16) []byte {
+	return cborAppendArgument(b, 4, items)
 }
 
 func cborAppendMapHeader(b []byte, pairs uint16) []byte {

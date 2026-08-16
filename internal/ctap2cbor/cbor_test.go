@@ -3,6 +3,7 @@ package ctap2cbor
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"strconv"
 	"strings"
 	"testing"
@@ -183,9 +184,110 @@ type cborExample struct {
 	pairs      int
 }
 
+func TestReadString(t *testing.T) {
+	valid := []struct {
+		in   []byte
+		want string
+	}{
+		{[]byte{0x60}, ""},
+		{[]byte{0x68, 'a', 'u', 't', 'h', 'D', 'a', 't', 'a'}, "authData"},
+		{append([]byte{0x78, 0x18}, bytes.Repeat([]byte{'a'}, 24)...), strings.Repeat("a", 24)},
+		{append([]byte{0x79, 0x01, 0x00}, bytes.Repeat([]byte{'a'}, 256)...), strings.Repeat("a", 256)},
+	}
+	for _, tt := range valid {
+		s := String(tt.in)
+		var v string
+		if !s.ReadString(&v) {
+			t.Errorf("ReadString(%x...) failed", tt.in[:min(4, len(tt.in))])
+			continue
+		}
+		if v != tt.want {
+			t.Errorf("ReadString(%x...) = %q, want %q", tt.in[:min(4, len(tt.in))], v, tt.want)
+		}
+		if len(s) != 0 {
+			t.Errorf("ReadString(%x...) left %d bytes", tt.in[:min(4, len(tt.in))], len(s))
+		}
+	}
+
+	invalid := [][]byte{
+		{0x78, 0x03, 'a', 'b', 'c'}, // 3-byte length in non-minimal form
+		{0x79, 0x00, 0x18},          // 24-byte length in non-minimal form
+		{0x63, 'a', 'b'},            // truncated payload
+		{0x7f},                      // indefinite length
+		{0x05},                      // unsigned integer
+		{0x43, 0x01, 0x02, 0x03},    // byte string
+	}
+	for _, in := range invalid {
+		s := String(in)
+		var v string
+		if s.ReadString(&v) {
+			t.Errorf("ReadString(%x) = %q, want failure", in, v)
+		}
+	}
+}
+
+func TestSkip(t *testing.T) {
+	valid := []string{
+		"00",                         // 0
+		"3903e7",                     // -1000
+		"40",                         // h''
+		"4401020304",                 // h'01020304'
+		"60",                         // ""
+		"6449455446",                 // "IETF"
+		"80",                         // []
+		"83010203",                   // [1, 2, 3]
+		"8301820203820405",           // [1, [2, 3], [4, 5]]
+		"a0",                         // {}
+		"a201020304",                 // {1: 2, 3: 4}
+		"a26161016162820203",         // {"a": 1, "b": [2, 3]}
+		"826161a161626163",           // ["a", {"b": "c"}]
+		"a1636b65798181818181818100", // eight nested levels
+	}
+	for _, in := range valid {
+		encoded, err := hex.DecodeString(in)
+		if err != nil {
+			t.Fatal(err)
+		}
+		// Trailing bytes are left behind.
+		s := String(append(encoded, 0xff))
+		if !s.Skip() {
+			t.Errorf("Skip(%s) failed", in)
+			continue
+		}
+		if len(s) != 1 {
+			t.Errorf("Skip(%s) left %d bytes, want 1", in, len(s))
+		}
+	}
+
+	invalid := []string{
+		"",                             // empty
+		"1a000f4240",                   // 1000000, in a 32-bit argument
+		"5f42010243030405ff",           // (_ h'0102', h'030405')
+		"9fff",                         // [_ ]
+		"83018202039f0405ff",           // [1, [2, 3], [_ 4, 5]]
+		"c11a514b67b0",                 // 1(1363896240)
+		"f4",                           // false
+		"f90000",                       // 0.0
+		"1805",                         // 5, in a non-minimal argument
+		"8301",                         // truncated array
+		"a1636b6579",                   // truncated map
+		"a1636b6579818181818181818100", // nine nested levels
+	}
+	for _, in := range invalid {
+		encoded, err := hex.DecodeString(in)
+		if err != nil {
+			t.Fatal(err)
+		}
+		s := String(encoded)
+		if s.Skip() {
+			t.Errorf("Skip(%s) succeeded, want failure", in)
+		}
+	}
+}
+
 // TestRFC8949AppendixA runs every CBOR example published in RFC 8949,
 // Appendix A through the accessors. The CTAP2 subset accepts only
-// definite-length major types 0, 1, 2, and 5, so most of the table must
+// definite-length major types 0, 1, 2, 3, and 5, so most of the table must
 // be rejected.
 func TestRFC8949AppendixA(t *testing.T) {
 	for _, tt := range rfc8949Examples {
@@ -226,6 +328,25 @@ func TestRFC8949AppendixA(t *testing.T) {
 			}
 			if len(s) != 0 {
 				t.Errorf("%s: ReadBytes(%s) left %d bytes", tt.diagnostic, tt.encoded, len(s))
+			}
+		}
+
+		wantString := tt.major == majorText && !tt.indefinite
+		s = String(encoded)
+		var gotString string
+		if ok := s.ReadString(&gotString); ok != wantString {
+			t.Errorf("%s: ReadString(%s) = %v, want %v", tt.diagnostic, tt.encoded, ok, wantString)
+		} else if ok {
+			// The diagnostic notation of text strings is JSON.
+			var want string
+			if err := json.Unmarshal([]byte(tt.diagnostic), &want); err != nil {
+				t.Fatalf("%s: %v", tt.diagnostic, err)
+			}
+			if gotString != want {
+				t.Errorf("%s: ReadString(%s) = %q, want %q", tt.diagnostic, tt.encoded, gotString, want)
+			}
+			if len(s) != 0 {
+				t.Errorf("%s: ReadString(%s) left %d bytes", tt.diagnostic, tt.encoded, len(s))
 			}
 		}
 

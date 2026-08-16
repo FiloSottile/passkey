@@ -126,7 +126,7 @@ func FuzzRecordRoundTrip(f *testing.F) {
 		f.Add(newFuzzCeremony(f, alg, Options{}).registrationAuthData(), "internal+hybrid")
 	}
 	for _, v := range loadWebAuthnVectors(f).Vectors {
-		f.Add(attestationObjectAuthData(f, v.Registration.AttestationObject), "")
+		f.Add(vectorAuthData(f, v), "")
 	}
 	f.Add([]byte(nil), "usb")
 
@@ -161,6 +161,8 @@ func FuzzRegister(f *testing.F) {
 	extended.auth.extensions = []byte{0xa0} // an empty CBOR map
 	f.Add(mustJSON(f, extended.auth.registrationResponse(f, testRPID, testOrigin,
 		extended.creationChallenge, flagUP|flagUV)))
+	// Only the attestation object, so its parser is reachable.
+	f.Add(attestationObjectOnly(f, newFuzzCeremony(f, algES256, Options{}).registrationJSON))
 	f.Add([]byte("{}"))
 
 	f.Fuzz(func(t *testing.T, responseJSON []byte) {
@@ -378,7 +380,7 @@ func FuzzCOSEKey(f *testing.F) {
 		f.Add(newAuthenticator(f, alg).coseKey)
 	}
 	for _, v := range loadWebAuthnVectors(f).Vectors {
-		f.Add(attestedCredentialKey(f, attestationObjectAuthData(f, v.Registration.AttestationObject)))
+		f.Add(attestedCredentialKey(f, vectorAuthData(f, v)))
 	}
 	f.Add([]byte(nil))
 
@@ -403,6 +405,41 @@ func FuzzCOSEKey(f *testing.F) {
 			t.Error("the consumed prefix parses to a different key")
 		}
 	})
+}
+
+// FuzzParseAttestationObject checks that the authData member
+// parseAttestationObject returns is a slice of the input, and that
+// wrapping it in a none attestation object yields it back.
+func FuzzParseAttestationObject(f *testing.F) {
+	for _, v := range loadWebAuthnVectors(f).Vectors {
+		f.Add([]byte(v.Registration.AttestationObject))
+	}
+	f.Add([]byte(nil))
+
+	f.Fuzz(func(t *testing.T, b []byte) {
+		authData, err := parseAttestationObject(b)
+		if err != nil {
+			return
+		}
+		if !bytes.Contains(b, authData) {
+			t.Fatal("parseAttestationObject() returned bytes that are not the input's")
+		}
+		none := noneAttestationObject(authData)
+		if again, err := parseAttestationObject(none); err != nil || !bytes.Equal(again, authData) {
+			t.Errorf("parseAttestationObject(none(%x)) = %x, %v, want %x", authData, again, err, authData)
+		}
+	})
+}
+
+// vectorAuthData returns the authenticator data of a vector's registration,
+// which the vectors publish only within the attestation object.
+func vectorAuthData(t testing.TB, v webauthnVector) []byte {
+	t.Helper()
+	authData, err := parseAttestationObject(v.Registration.AttestationObject)
+	if err != nil {
+		t.Fatalf("%s: %v", v.Name, err)
+	}
+	return authData
 }
 
 // attestedCredentialKey returns everything after the credential ID of

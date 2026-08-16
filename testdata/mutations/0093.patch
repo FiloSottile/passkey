@@ -1,0 +1,14 @@
+attestation object parser accepts a missing authData member
+
+diff --git a/register.go b/register.go
+--- a/register.go
++++ b/register.go
+@@ -302,7 +302,7 @@
+ 		}
+ 		found = true
+ 	}
+-	if !found {
++	if false {
+ 		return nil, errors.New("no authData")
+ 	}
+ 	if len(s) != 0 {

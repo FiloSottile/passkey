@@ -9,6 +9,8 @@ import (
 	"slices"
 	"strings"
 	"unicode"
+
+	"filippo.io/passkey/internal/ctap2cbor"
 )
 
 // User identifies the account a passkey is being registered for.
@@ -114,6 +116,7 @@ type registrationResponse struct {
 	Response struct {
 		ClientDataJSON    string   `json:"clientDataJSON"`
 		AuthenticatorData string   `json:"authenticatorData"`
+		AttestationObject string   `json:"attestationObject"`
 		Transports        []string `json:"transports"`
 	} `json:"response"`
 	ClientExtensionResults struct {
@@ -207,6 +210,20 @@ func (rp *RelyingParty) Register(responseJSON []byte) (passkey string, err error
 	if err != nil {
 		return "", fmt.Errorf("passkey: malformed authenticator data encoding: %w", err)
 	}
+	if len(ad) == 0 {
+		// Browser APIs include authenticatorData, but some native platform APIs
+		// expose only the attestation object.
+		ao, err := base64RawURLDecodeString(resp.Response.AttestationObject)
+		if err != nil {
+			return "", fmt.Errorf("passkey: malformed attestation object encoding: %w", err)
+		}
+		if len(ao) == 0 {
+			return "", errors.New("passkey: response has neither authenticatorData nor attestationObject")
+		}
+		if ad, err = parseAttestationObject(ao); err != nil {
+			return "", fmt.Errorf("passkey: malformed attestation object: %w", err)
+		}
+	}
 	r := &record{}
 	if err := parseRegistrationAuthData(r, ad); err != nil {
 		return "", fmt.Errorf("passkey: malformed authenticator data: %w", err)
@@ -253,4 +270,43 @@ func base64RawURLDecodeString(s string) ([]byte, error) {
 		return nil, errors.New("invalid base64 encoding")
 	}
 	return base64.RawURLEncoding.Strict().DecodeString(s)
+}
+
+// parseAttestationObject returns the authData member of a CBOR attestation
+// object. The attestation statement is not verified, and is skipped like any
+// other member.
+func parseAttestationObject(b []byte) ([]byte, error) {
+	s := ctap2cbor.String(b)
+	var pairs uint16
+	if !s.ReadMapHeader(&pairs) {
+		return nil, errors.New("bad map header")
+	}
+	var authData []byte
+	var found bool
+	for range pairs {
+		var key string
+		if !s.ReadString(&key) {
+			return nil, errors.New("bad map key")
+		}
+		if key != "authData" {
+			if !s.Skip() {
+				return nil, fmt.Errorf("bad %q value", key)
+			}
+			continue
+		}
+		if found {
+			return nil, errors.New("duplicate authData")
+		}
+		if !s.ReadBytes(&authData) {
+			return nil, errors.New("bad authData")
+		}
+		found = true
+	}
+	if !found {
+		return nil, errors.New("no authData")
+	}
+	if len(s) != 0 {
+		return nil, fmt.Errorf("%d unexpected trailing bytes", len(s))
+	}
+	return authData, nil
 }

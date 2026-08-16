@@ -1,0 +1,14 @@
+Skip nesting depth limit off by one
+
+diff --git a/internal/ctap2cbor/cbor.go b/internal/ctap2cbor/cbor.go
+--- a/internal/ctap2cbor/cbor.go
++++ b/internal/ctap2cbor/cbor.go
+@@ -129,7 +129,7 @@
+ 		*s = (*s)[arg:]
+ 		return true
+ 	case 4, 5:
+-		if depth == 0 {
++		if depth < 0 {
+ 			return false
+ 		}
+ 		items := int(arg)

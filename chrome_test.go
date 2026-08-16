@@ -90,6 +90,11 @@ func TestChromeRecordings(t *testing.T) {
 			t.Fatalf("%s: Register() = %v, want success", rec.Name, err)
 		}
 		records = append(records, record)
+
+		// The attestation object alone yields the same record.
+		if got, err := rp.Register(attestationObjectOnly(t, rec.Registration.Response)); err != nil || got != record {
+			t.Errorf("%s: Register() from attestationObject = %q, %v, want %q", rec.Name, got, err, record)
+		}
 	}
 
 	for i, rec := range f.Recordings {

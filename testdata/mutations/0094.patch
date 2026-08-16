@@ -1,0 +1,14 @@
+attestation object parser accepts duplicate authData members
+
+diff --git a/register.go b/register.go
+--- a/register.go
++++ b/register.go
+@@ -294,7 +294,7 @@
+ 			}
+ 			continue
+ 		}
+-		if found {
++		if false {
+ 			return nil, errors.New("duplicate authData")
+ 		}
+ 		if !s.ReadBytes(&authData) {
