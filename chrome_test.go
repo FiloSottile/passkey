@@ -39,13 +39,14 @@ type chromeRecording struct {
 }
 
 // chromeLogin is a login ceremony: the stored request, the request
-// options, and the response, along with the flags it must report and,
-// if the authenticator was configured to break it, why it must be
-// rejected.
+// options, and the response, along with whether it was begun with
+// NewLoginWithCredentials, the flags it must report and, if the authenticator
+// was configured to break it, why it must be rejected.
 type chromeLogin struct {
 	Request      hexBytes        `json:"request"`
 	Options      json.RawMessage `json:"options"`
 	Response     json.RawMessage `json:"response"`
+	UserScoped   bool            `json:"userScoped"`
 	UserVerified bool            `json:"userVerified"`
 	BackedUp     bool            `json:"backedUp"`
 	Error        string          `json:"error"`
@@ -127,8 +128,15 @@ func TestChromeRecordings(t *testing.T) {
 					if resp.RequestID() != RequestID(login.Request) {
 						t.Errorf("Response.RequestID() = %q, want %q", resp.RequestID(), RequestID(login.Request))
 					}
-					if resp.UnauthenticatedUserID() != f.UserID {
-						t.Errorf("UnauthenticatedUserID() = %q, want %q", resp.UnauthenticatedUserID(), f.UserID)
+					// Chrome asserts the user handle even when
+					// answering allowCredentials, but a user-scoped
+					// ceremony does not expose it.
+					wantUserID := f.UserID
+					if login.UserScoped {
+						wantUserID = ""
+					}
+					if resp.UnauthenticatedUserID() != wantUserID {
+						t.Errorf("UnauthenticatedUserID() = %q, want %q", resp.UnauthenticatedUserID(), wantUserID)
 					}
 					if resp.UserVerified() != login.UserVerified {
 						t.Errorf("UserVerified() = %v, want %v", resp.UserVerified(), login.UserVerified)

@@ -328,7 +328,7 @@ func AAGUID(passkey string) ([16]byte, error) {
 // Transports returns the transport hints recorded at registration
 // (e.g. "internal", "hybrid", "usb"). They are used to populate the
 // credential descriptors sent to clients by
-// [RelyingParty.NewRegistration] and [RelyingParty.NewLoginForUser],
+// [RelyingParty.NewRegistration] and [RelyingParty.NewLoginWithCredentials],
 // where they help the client reach the right authenticator during
 // login; they are exposed for interoperability and diagnostics.
 func Transports(passkey string) ([]string, error) {

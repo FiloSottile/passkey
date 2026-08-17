@@ -322,6 +322,10 @@ func FuzzParseResponse(f *testing.F) {
 		if n := len(r.UnauthenticatedUserID()); n > 64 {
 			t.Errorf("user ID is %d bytes, want at most 64", n)
 		}
+		// The user handle is exposed when the response is what identifies the user.
+		if (r.UnauthenticatedUserID() == "") != userScoped(r.challenge) {
+			t.Errorf("UnauthenticatedUserID() = %q with userScoped() = %v", r.UnauthenticatedUserID(), userScoped(r.challenge))
+		}
 		// The response identifies the request its challenge came from.
 		request := (&loginRequest{challenge: r.challenge, created: time.Now()}).Bytes()
 		if r.RequestID() != RequestID(request) || r.RequestID() == "" {
@@ -334,9 +338,8 @@ func FuzzParseResponse(f *testing.F) {
 // itself, and that RequestID and RequestCreation agree with the parser
 // on which requests are valid.
 func FuzzParseLoginRequest(f *testing.F) {
-	f.Add(newLoginRequest("").Bytes())
-	f.Add(newLoginRequest("wxJph3ZClFxTP2xF9r2W0A").Bytes())
-	f.Add(newLoginRequest(strings.Repeat("u", 64)).Bytes())
+	f.Add(newLoginRequest(false).Bytes())
+	f.Add(newLoginRequest(true).Bytes())
 	f.Add([]byte(nil))
 
 	f.Fuzz(func(t *testing.T, b []byte) {
@@ -353,9 +356,6 @@ func FuzzParseLoginRequest(f *testing.F) {
 		}
 		if got := r.Bytes(); !bytes.Equal(got, b) {
 			t.Errorf("re-serialized request = %x, want %x", got, b)
-		}
-		if len(r.userID) > 64 {
-			t.Errorf("user ID is %d bytes, want at most 64", len(r.userID))
 		}
 		if !created.Equal(r.created) {
 			t.Errorf("RequestCreation() = %v, want %v", created, r.created)

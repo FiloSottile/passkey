@@ -1,0 +1,15 @@
+NewLogin begins a user-scoped ceremony
+
+diff --git a/login.go b/login.go
+index 8dd0ae4..c76e316 100644
+--- a/login.go
++++ b/login.go
+@@ -30,7 +30,7 @@
+ //
+ // [Challenges]: #hdr-Challenges
+ func (rp *RelyingParty) NewLogin() (request, optionsJSON []byte, err error) {
+-	return rp.newLogin(false, nil)
++	return rp.newLogin(true, nil)
+ }
+ 
+ // NewLoginWithCredentials begins a login ceremony for a user the application has

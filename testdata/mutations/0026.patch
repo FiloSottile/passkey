@@ -1,16 +1,16 @@
 skip assertion authenticator data length check
 
 diff --git a/login_response.go b/login_response.go
-index afd1659..7aa8207 100644
+index 018dfcf..e1ee767 100644
 --- a/login_response.go
 +++ b/login_response.go
-@@ -92,9 +92,6 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
+@@ -93,9 +93,6 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
  	if err != nil {
  		return nil, fmt.Errorf("passkey: malformed authenticator data encoding: %w", err)
  	}
 -	if len(ad) < 32+1+4 {
 -		return nil, errors.New("passkey: malformed authenticator data")
 -	}
- 	rpIDHash := ad[:32]
+ 	rpIDHash := [32]byte(ad[:32])
  	flags := flags(ad[32])
  	if flags.attestedData() {

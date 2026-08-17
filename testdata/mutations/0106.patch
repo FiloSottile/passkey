@@ -1,0 +1,17 @@
+ParseResponse exposes the user handle of a user-scoped response
+
+diff --git a/login_response.go b/login_response.go
+index 018dfcf..fcea554 100644
+--- a/login_response.go
++++ b/login_response.go
+@@ -133,9 +133,7 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
+ 		return nil, errors.New("passkey: invalid user ID")
+ 	}
+ 	userID := string(u)
+-	if userScoped(challenge) {
+-		userID = ""
+-	} else if userID == "" {
++	if !userScoped(challenge) && userID == "" {
+ 		return nil, errors.New("passkey: assertion has no user handle")
+ 	}
+ 

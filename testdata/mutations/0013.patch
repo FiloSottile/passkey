@@ -1,15 +1,15 @@
 client data hashed over base64 text instead of decoded bytes
 
 diff --git a/login_response.go b/login_response.go
-index afd1659..180ca10 100644
+index 018dfcf..518205e 100644
 --- a/login_response.go
 +++ b/login_response.go
-@@ -135,7 +135,7 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
+@@ -141,7 +141,7 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
  
  	return &Response{
  		credentialID:   credID,
 -		clientDataHash: sha256.Sum256(cd),
 +		clientDataHash: sha256.Sum256([]byte(r.Response.ClientDataJSON)),
- 		challenge:      [32]byte(challenge),
+ 		challenge:      challenge,
  		origin:         c.Origin,
  		authData:       ad,

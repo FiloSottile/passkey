@@ -1,0 +1,14 @@
+request serializer omits the creation time
+
+diff --git a/login_request.go b/login_request.go
+index f24f43a..e68e08f 100644
+--- a/login_request.go
++++ b/login_request.go
+@@ -88,7 +88,6 @@ func (r *loginRequest) Bytes() []byte {
+ 	b := make([]byte, 0, 1+32+8)
+ 	b = append(b, 1)
+ 	b = append(b, r.challenge[:]...)
+-	b = binary.BigEndian.AppendUint64(b, uint64(r.created.Unix()))
+ 	return b
+ }
+ 

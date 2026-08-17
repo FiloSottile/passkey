@@ -168,6 +168,10 @@ func testWebAuthnVector(t *testing.T, rp *RelyingParty, v webauthnVector) {
 		}
 	}
 
+	// The vectors carry no user handle, which is not signed, so one is
+	// supplied: whether the ceremony is user-scoped is decided by the
+	// vector's fixed challenge, and an unscoped login requires a handle.
+	const userID = "kaHmSAdCq9BGgqNhPRRTvw"
 	resp, err := ParseResponse(mustJSON(t, map[string]any{
 		"id":    b64(v.CredentialID),
 		"rawId": b64(v.CredentialID),
@@ -176,8 +180,7 @@ func testWebAuthnVector(t *testing.T, rp *RelyingParty, v webauthnVector) {
 			"clientDataJSON":    b64(v.Authentication.ClientDataJSON),
 			"authenticatorData": b64(v.Authentication.AuthenticatorData),
 			"signature":         b64(v.Authentication.Signature),
-			// The vectors carry no user handle, so the login below is
-			// user-scoped: a scoped request accepts an assertion without one.
+			"userHandle":        b64([]byte(userID)),
 		},
 		"clientExtensionResults": map[string]any{},
 	}))
@@ -199,6 +202,13 @@ func testWebAuthnVector(t *testing.T, rp *RelyingParty, v webauthnVector) {
 	if resp.BackedUp() != v.Authentication.BackedUp {
 		t.Errorf("BackedUp() = %v, want %v", resp.BackedUp(), v.Authentication.BackedUp)
 	}
+	wantUserID := userID
+	if userScoped([32]byte(v.Authentication.Challenge)) {
+		wantUserID = ""
+	}
+	if got := resp.UnauthenticatedUserID(); got != wantUserID {
+		t.Errorf("UnauthenticatedUserID() = %q, want %q", got, wantUserID)
+	}
 	if record == "" {
 		// The registration was rejected, so there is no record to log in against.
 		return
@@ -209,7 +219,6 @@ func testWebAuthnVector(t *testing.T, rp *RelyingParty, v webauthnVector) {
 	request := (&loginRequest{
 		challenge: [32]byte(v.Authentication.Challenge),
 		created:   time.Now(),
-		userID:    "kaHmSAdCq9BGgqNhPRRTvw",
 	}).Bytes()
 	if resp.RequestID() != RequestID(request) {
 		t.Errorf("Response.RequestID() = %q, want %q", resp.RequestID(), RequestID(request))

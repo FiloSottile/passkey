@@ -27,10 +27,10 @@
 // with no index on credential IDs and no uniqueness constraints. No
 // other columns are needed by this package; applications may add their
 // own (e.g. a nickname, creation time, or last-used time for a
-// passkey management UI). Lookups always resolve the user first (from the session
-// during registration, from [Response.UnauthenticatedUserID] during login)
-// and then pass all of the user's records to [RelyingParty.Login], which
-// selects the right one.
+// passkey management UI). Lookups always resolve the user first (from the
+// session during registration, from [Response.UnauthenticatedUserID] or the
+// session during login) and then pass all of the user's records to
+// [RelyingParty.Login], which selects the right one.
 //
 // (Because credentials are never resolved by credential ID across
 // accounts, a credential ID registered maliciously into one account can
@@ -54,7 +54,7 @@
 //
 // # Challenges
 //
-// [RelyingParty.NewLogin] and [RelyingParty.NewLoginForUser] return an
+// [RelyingParty.NewLogin] and [RelyingParty.NewLoginWithCredentials] return an
 // opaque request value that must be presented back to [RelyingParty.Login].
 //
 // The application must:
@@ -131,7 +131,7 @@ type Options struct {
 	// RequireUserVerification causes Login to fail with
 	// [ErrUserVerificationRequired] unless the authenticator performed
 	// user verification (e.g. PIN or biometrics). NewLogin and
-	// NewLoginForUser then request userVerification: "required", so
+	// NewLoginWithCredentials then request userVerification: "required", so
 	// clients prompt for verification rather than return an assertion
 	// that would be rejected. It also causes NewRegistration to request
 	// userVerification: "required", so that clients fail credential
@@ -146,7 +146,7 @@ type Options struct {
 	RequireUserVerification bool
 
 	// Timeout is how long a request returned by NewLogin or
-	// NewLoginForUser remains valid: Login rejects responses to
+	// NewLoginWithCredentials remains valid: Login rejects responses to
 	// expired requests. It is also communicated to the client as a
 	// ceremony timeout hint (for both registration and login), and is
 	// the recommended lifetime for requests stored by the application.

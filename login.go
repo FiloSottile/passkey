@@ -30,26 +30,30 @@ import (
 //
 // [Challenges]: #hdr-Challenges
 func (rp *RelyingParty) NewLogin() (request, optionsJSON []byte, err error) {
-	return rp.newLogin("", nil)
+	return rp.newLogin(false, nil)
 }
 
-// NewLoginForUser begins a login ceremony for a known user, such as a
-// re-authentication prompt before a sensitive operation.
+// NewLoginWithCredentials begins a login ceremony for a user the application has
+// already identified, such as a re-authentication prompt before a sensitive
+// operation in a signed-in session.
 //
-// The user's passkey records are communicated to the client as
-// allowCredentials, so the client offers only that user's credentials
-// instead of an account picker. The response is verified with
-// [RelyingParty.Login], passing the user's records; Login fails if the
-// response asserts a user handle other than userID.
+// passkeys is the user's passkey records, and must not be empty. They are
+// communicated to the client as allowCredentials, so it offers only that
+// user's credentials instead of an account picker.
+//
+// The user is identified by the application, not by the response:
+// [Response.UnauthenticatedUserID] is empty for these ceremonies, and the
+// application must look up the user's records the same way it did to begin
+// the ceremony (e.g. from the session) and pass them to [RelyingParty.Login].
 //
 // allowCredentials discloses the user's credential IDs to whoever receives
-// optionsJSON, so passkeys should be nil if NewLoginForUser is being used to
-// answer an unauthenticated username.
-func (rp *RelyingParty) NewLoginForUser(userID string, passkeys []string) (request, optionsJSON []byte, err error) {
-	if len(userID) == 0 || len(userID) > 64 {
-		return nil, nil, errors.New("passkey: invalid user ID")
+// optionsJSON, so this is not for username-first flows, where the user is
+// identified by an unauthenticated username: those use [RelyingParty.NewLogin].
+func (rp *RelyingParty) NewLoginWithCredentials(passkeys []string) (request, optionsJSON []byte, err error) {
+	if len(passkeys) == 0 {
+		return nil, nil, errors.New("passkey: no passkey records")
 	}
-	return rp.newLogin(userID, passkeys)
+	return rp.newLogin(true, passkeys)
 }
 
 type requestOptions struct {
@@ -60,9 +64,9 @@ type requestOptions struct {
 	Timeout          int64                  `json:"timeout"`
 }
 
-func (rp *RelyingParty) newLogin(userID string, passkeys []string) (request, optionsJSON []byte, err error) {
+func (rp *RelyingParty) newLogin(scoped bool, passkeys []string) (request, optionsJSON []byte, err error) {
 	allowed := credentialDescriptors(passkeys)
-	r := newLoginRequest(userID)
+	r := newLoginRequest(scoped)
 	uv := "preferred"
 	if rp.requireUserVerification {
 		uv = "required"
@@ -126,9 +130,8 @@ var ErrUserVerificationRequired = errors.New("passkey: user verification require
 // crossOrigin absent or false; that the authenticator data carries the
 // hash of the RP ID (as does the matched record) and has the user
 // presence flag set (and the user verification flag, if
-// [Options.RequireUserVerification] is set); that the request has not
-// expired; and that the asserted user handle, if present, matches the
-// request for user-scoped ceremonies.
+// [Options.RequireUserVerification] is set); and that the request has
+// not expired.
 //
 // The signature counter is not checked (it is zero for the major
 // passkey providers), and the response's backup and user verification
@@ -173,12 +176,6 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
 	rpIDHash := sha256.Sum256([]byte(rp.rpID))
 	if response.rpIDHash != rpIDHash {
 		return 0, errors.New("passkey: assertion for a different RP ID")
-	}
-	if req.userID == "" && response.userID == "" {
-		return 0, errors.New("passkey: assertion has no user handle")
-	}
-	if response.userID != "" && req.userID != "" && response.userID != req.userID {
-		return 0, errors.New("passkey: assertion is for a different user than the request")
 	}
 
 	message := make([]byte, 0, len(response.authData)+len(response.clientDataHash))

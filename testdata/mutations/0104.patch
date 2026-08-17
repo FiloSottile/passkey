@@ -1,0 +1,15 @@
+NewLoginWithCredentials begins an unscoped ceremony
+
+diff --git a/login.go b/login.go
+index 8dd0ae4..a37ab71 100644
+--- a/login.go
++++ b/login.go
+@@ -53,7 +53,7 @@ func (rp *RelyingParty) NewLoginWithCredentials(passkeys []string) (request, opt
+ 	if len(passkeys) == 0 {
+ 		return nil, nil, errors.New("passkey: no passkey records")
+ 	}
+-	return rp.newLogin(true, passkeys)
++	return rp.newLogin(false, passkeys)
+ }
+ 
+ type requestOptions struct {

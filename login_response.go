@@ -28,7 +28,7 @@ type Response struct {
 	backedUp     bool
 
 	signature []byte
-	userID    string
+	userID    string // empty for user-scoped ceremonies
 }
 
 // authenticationResponse is the AuthenticationResponseJSON of WebAuthn L3
@@ -74,13 +74,14 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
 	if c.Type != "webauthn.get" {
 		return nil, fmt.Errorf("passkey: client data type is %q, expected %q", c.Type, "webauthn.get")
 	}
-	challenge, err := base64RawURLDecodeString(c.Challenge)
+	ch, err := base64RawURLDecodeString(c.Challenge)
 	if err != nil {
 		return nil, fmt.Errorf("passkey: malformed client data encoding: %w", err)
 	}
-	if len(challenge) != 32 {
+	if len(ch) != 32 {
 		return nil, fmt.Errorf("passkey: malformed challenge")
 	}
+	challenge := [32]byte(ch)
 	if c.CrossOrigin != nil && *c.CrossOrigin {
 		return nil, errors.New("passkey: ceremony was performed in a cross-origin frame")
 	}
@@ -95,7 +96,7 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
 	if len(ad) < 32+1+4 {
 		return nil, errors.New("passkey: malformed authenticator data")
 	}
-	rpIDHash := ad[:32]
+	rpIDHash := [32]byte(ad[:32])
 	flags := flags(ad[32])
 	if flags.attestedData() {
 		return nil, errors.New("passkey: authenticator data unexpectedly has attested data")
@@ -122,27 +123,33 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
 		return nil, fmt.Errorf("passkey: malformed signature: %w", err)
 	}
 
-	userID, err := base64RawURLDecodeString(r.Response.UserHandle)
+	u, err := base64RawURLDecodeString(r.Response.UserHandle)
 	if err != nil {
 		return nil, fmt.Errorf("passkey: malformed user ID: %w", err)
 	}
 	// We are supposed to reject present-but-empty user IDs, but apparently some
 	// clients produce(d) them. https://github.com/w3c/webauthn/issues/1722
-	if len(userID) > 64 {
+	if len(u) > 64 {
 		return nil, errors.New("passkey: invalid user ID")
+	}
+	userID := string(u)
+	if userScoped(challenge) {
+		userID = ""
+	} else if userID == "" {
+		return nil, errors.New("passkey: assertion has no user handle")
 	}
 
 	return &Response{
 		credentialID:   credID,
 		clientDataHash: sha256.Sum256(cd),
-		challenge:      [32]byte(challenge),
+		challenge:      challenge,
 		origin:         c.Origin,
 		authData:       ad,
-		rpIDHash:       [32]byte(rpIDHash),
+		rpIDHash:       rpIDHash,
 		userVerified:   flags.userVerified(),
 		backedUp:       flags.backupState(),
 		signature:      sig,
-		userID:         string(userID),
+		userID:         userID,
 	}, nil
 }
 
@@ -169,8 +176,9 @@ func (r *Response) RequestID() string {
 // [RelyingParty.Login], and must not be used for anything but looking up
 // the user's passkey records.
 //
-// The return value may be empty for responses to [RelyingParty.NewLoginForUser]
-// ceremonies, where the application already knows the user.
+// It is empty if and only if [RelyingParty.NewLoginWithCredentials] initiated
+// the ceremony: the application identified the user before beginning the
+// ceremony, and must look up their records the same way, not from the response.
 func (r *Response) UnauthenticatedUserID() string {
 	return r.userID
 }

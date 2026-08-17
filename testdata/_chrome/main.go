@@ -82,13 +82,15 @@ type recording struct {
 // login is a login ceremony: the request value the application would
 // have stored, the PublicKeyCredentialRequestOptions passed to
 // navigator.credentials.get(), and the toJSON() serialization of what it
-// returned, along with the flags the authenticator was configured to
-// report and, for responses the authenticator was configured to break,
-// the reason they must be rejected.
+// returned, along with whether the ceremony was begun with
+// NewLoginWithCredentials, the flags the authenticator was configured to report
+// and, for responses the authenticator was configured to break, the
+// reason they must be rejected.
 type login struct {
 	Request      string          `json:"request"` // hex
 	Options      json.RawMessage `json:"options"`
 	Response     json.RawMessage `json:"response"`
+	UserScoped   bool            `json:"userScoped,omitempty"`
 	UserVerified bool            `json:"userVerified"`
 	BackedUp     bool            `json:"backedUp"`
 	Error        string          `json:"error,omitempty"`
@@ -110,7 +112,7 @@ func main() {
 
 	// A platform authenticator with user verification, and the shape of
 	// the counter incrementing across logins. The last login is
-	// user-scoped: it answers a NewLoginForUser ceremony.
+	// user-scoped: it answers a NewLoginWithCredentials ceremony.
 	a := s.addAuthenticator("platform",
 		"A CTAP2.1 platform authenticator with user verification, "+
 			"whose credentials are not backup eligible; "+
@@ -119,7 +121,7 @@ func main() {
 	a.register()
 	a.login()
 	a.login()
-	a.loginForUser()
+	a.loginWithCredentials()
 	// Chrome must honor excludeCredentials: an authenticator that holds
 	// one of the excluded credentials refuses to create another.
 	if _, _, err := a.create([]string{a.record}); err == nil {
@@ -539,20 +541,20 @@ func (a *authenticator) login() {
 	if err != nil {
 		a.s.fatalf("%v", err)
 	}
-	a.recordLogin(request, optionsJSON)
+	a.recordLogin(request, optionsJSON, false)
 }
 
-// loginForUser runs a user-scoped login ceremony and records the
+// loginWithCredentials runs a user-scoped login ceremony and records the
 // exchange.
-func (a *authenticator) loginForUser() {
-	request, optionsJSON, err := a.s.rp.NewLoginForUser(a.s.user.ID, []string{a.record})
+func (a *authenticator) loginWithCredentials() {
+	request, optionsJSON, err := a.s.rp.NewLoginWithCredentials([]string{a.record})
 	if err != nil {
 		a.s.fatalf("%v", err)
 	}
-	a.recordLogin(request, optionsJSON)
+	a.recordLogin(request, optionsJSON, true)
 }
 
-func (a *authenticator) recordLogin(request, optionsJSON []byte) {
+func (a *authenticator) recordLogin(request, optionsJSON []byte, userScoped bool) {
 	responseJSON, err := a.get(optionsJSON)
 	if err != nil {
 		a.s.fatalf("%s: login: %v", a.rec.Name, err)
@@ -561,6 +563,7 @@ func (a *authenticator) recordLogin(request, optionsJSON []byte) {
 		Request:      hex.EncodeToString(request),
 		Options:      optionsJSON,
 		Response:     responseJSON,
+		UserScoped:   userScoped,
 		UserVerified: a.opts.HasUserVerification && a.opts.IsUserVerified,
 		BackedUp:     a.backedUp,
 	}

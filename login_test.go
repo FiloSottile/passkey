@@ -12,9 +12,14 @@ import (
 	"time"
 )
 
-// testChallenge is a base64url challenge for ceremonies that don't need
-// a request, such as ParseResponse tests.
-var testChallenge = base64.RawURLEncoding.EncodeToString(bytes.Repeat([]byte{0x42}, 32))
+// testChallenge and testScopedChallenge are base64url challenges for
+// ceremonies that don't need a request, such as ParseResponse tests: the
+// first of a NewLogin ceremony, the second of a NewLoginWithCredentials
+// one.
+var (
+	testChallenge       = base64.RawURLEncoding.EncodeToString(bytes.Repeat([]byte{0x42}, 32))
+	testScopedChallenge = base64.RawURLEncoding.EncodeToString(append([]byte{challengeUserScoped}, bytes.Repeat([]byte{0x42}, 31)...))
+)
 
 func newTestRP(t testing.TB, opts Options) *RelyingParty {
 	t.Helper()
@@ -81,7 +86,7 @@ func (env *loginEnv) response(t *testing.T, flags byte) map[string]any {
 
 // withRequestCreated returns a copy of a login request with the
 // creation timestamp rewritten. The wire format is version, 32-byte
-// challenge, big-endian Unix seconds at [33:41], then the user ID.
+// challenge, then big-endian Unix seconds at [33:41].
 func withRequestCreated(request []byte, created time.Time) []byte {
 	b := slices.Clone(request)
 	binary.BigEndian.PutUint64(b[33:41], uint64(created.Unix()))
@@ -211,39 +216,23 @@ func TestLogin(t *testing.T) {
 			errHas: "assertion for a different RP ID",
 		},
 		{
-			name: "unscoped login without user handle",
+			// The user handle plays no part in a user-scoped ceremony:
+			// the records passed to Login identify the user.
+			name: "scoped login with another user's handle",
 			setup: func(t *testing.T, env *loginEnv) (*RelyingParty, []byte, []byte) {
-				m := env.auth.loginResponse(t, testRPID, testOrigin, env.challenge, "", flagUP|flagUV)
-				return env.rp, mustJSON(t, m), env.request
-			},
-			errHas: "assertion has no user handle",
-		},
-		{
-			// An empty user handle is equivalent to an absent one.
-			name: "unscoped login with empty user handle",
-			setup: func(t *testing.T, env *loginEnv) (*RelyingParty, []byte, []byte) {
-				m := env.auth.loginResponse(t, testRPID, testOrigin, env.challenge, "", flagUP|flagUV)
-				m["response"].(map[string]any)["userHandle"] = ""
-				return env.rp, mustJSON(t, m), env.request
-			},
-			errHas: "assertion has no user handle",
-		},
-		{
-			name: "scoped login with mismatched user handle",
-			setup: func(t *testing.T, env *loginEnv) (*RelyingParty, []byte, []byte) {
-				request, requestJSON, err := env.rp.NewLoginForUser(env.user.ID, nil)
+				request, requestJSON, err := env.rp.NewLoginWithCredentials(env.records)
 				if err != nil {
 					t.Fatal(err)
 				}
 				m := env.auth.loginResponse(t, testRPID, testOrigin, challengeOf(t, requestJSON), "someone-else", flagUP|flagUV)
 				return env.rp, mustJSON(t, m), request
 			},
-			errHas: "different user",
+			ok: true,
 		},
 		{
 			name: "scoped login without user handle",
 			setup: func(t *testing.T, env *loginEnv) (*RelyingParty, []byte, []byte) {
-				request, requestJSON, err := env.rp.NewLoginForUser(env.user.ID, nil)
+				request, requestJSON, err := env.rp.NewLoginWithCredentials(env.records)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -256,7 +245,7 @@ func TestLogin(t *testing.T) {
 			// An empty user handle is equivalent to an absent one.
 			name: "scoped login with empty user handle",
 			setup: func(t *testing.T, env *loginEnv) (*RelyingParty, []byte, []byte) {
-				request, requestJSON, err := env.rp.NewLoginForUser(env.user.ID, nil)
+				request, requestJSON, err := env.rp.NewLoginWithCredentials(env.records)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -267,29 +256,11 @@ func TestLogin(t *testing.T) {
 			ok: true,
 		},
 		{
-			// nil records is the documented way to answer an
-			// unauthenticated username; allowCredentials serializes as
-			// an empty array, not null.
-			name: "scoped login with matching user handle",
-			setup: func(t *testing.T, env *loginEnv) (*RelyingParty, []byte, []byte) {
-				request, requestJSON, err := env.rp.NewLoginForUser(env.user.ID, nil)
-				if err != nil {
-					t.Fatal(err)
-				}
-				if !strings.Contains(string(requestJSON), `"allowCredentials":[]`) {
-					t.Errorf("options = %s, want an empty allowCredentials list", requestJSON)
-				}
-				m := env.auth.loginResponse(t, testRPID, testOrigin, challengeOf(t, requestJSON), env.user.ID, flagUP|flagUV)
-				return env.rp, mustJSON(t, m), request
-			},
-			ok: true,
-		},
-		{
 			// Malformed records are dropped from allowCredentials
 			// rather than failing the ceremony.
 			name: "scoped login with malformed record",
 			setup: func(t *testing.T, env *loginEnv) (*RelyingParty, []byte, []byte) {
-				request, requestJSON, err := env.rp.NewLoginForUser(env.user.ID, []string{"not a passkey record", env.record})
+				request, requestJSON, err := env.rp.NewLoginWithCredentials([]string{"not a passkey record", env.record})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -757,11 +728,13 @@ func TestParseResponse(t *testing.T) {
 			errHas: "malformed user ID",
 		},
 		{
+			// Only the response to a NewLogin ceremony identifies the
+			// user, so it must carry a user handle.
 			name: "null user handle",
 			resp: func(t *testing.T, a *authenticator) []byte {
 				return mustJSON(t, responseField(valid(t, a), "userHandle", nil))
 			},
-			ok: true,
+			errHas: "no user handle",
 		},
 		{
 			name: "absent user handle",
@@ -770,7 +743,7 @@ func TestParseResponse(t *testing.T) {
 				delete(m["response"].(map[string]any), "userHandle")
 				return mustJSON(t, m)
 			},
-			ok: true,
+			errHas: "no user handle",
 		},
 		{
 			// An empty string is what some clients produce for an
@@ -779,7 +752,35 @@ func TestParseResponse(t *testing.T) {
 			resp: func(t *testing.T, a *authenticator) []byte {
 				return mustJSON(t, responseField(valid(t, a), "userHandle", ""))
 			},
+			errHas: "no user handle",
+		},
+		{
+			// A user-scoped ceremony disregards the user handle, so it
+			// may be missing, as authenticators answering
+			// allowCredentials are allowed to omit it.
+			name: "scoped absent user handle",
+			resp: func(t *testing.T, a *authenticator) []byte {
+				return mustJSON(t, a.loginResponse(t, testRPID, testOrigin, testScopedChallenge, "", flagUP|flagUV))
+			},
 			ok: true,
+		},
+		{
+			name: "scoped empty user handle",
+			resp: func(t *testing.T, a *authenticator) []byte {
+				m := a.loginResponse(t, testRPID, testOrigin, testScopedChallenge, "", flagUP|flagUV)
+				return mustJSON(t, responseField(m, "userHandle", ""))
+			},
+			ok: true,
+		},
+		{
+			// It is still parsed, and must be well-formed.
+			name: "scoped oversized user handle",
+			resp: func(t *testing.T, a *authenticator) []byte {
+				handle := base64.RawURLEncoding.EncodeToString(bytes.Repeat([]byte{0x61}, 65))
+				m := a.loginResponse(t, testRPID, testOrigin, testScopedChallenge, "", flagUP|flagUV)
+				return mustJSON(t, responseField(m, "userHandle", handle))
+			},
+			errHas: "invalid user ID",
 		},
 		{
 			name: "oversized user handle",
@@ -962,16 +963,87 @@ func TestLoginLockouts(t *testing.T) {
 	}
 }
 
-// TestNewLoginForUser checks the user ID validation: 1 to 64 bytes.
-func TestNewLoginForUser(t *testing.T) {
+func TestUserScopedLogin(t *testing.T) {
 	rp := newTestRP(t, Options{})
-	if _, _, err := rp.NewLoginForUser(strings.Repeat("a", 64), nil); err != nil {
-		t.Errorf("NewLoginForUser() with a 64-byte user ID = %v, want success", err)
+	for _, passkeys := range [][]string{nil, {}} {
+		if _, _, err := rp.NewLoginWithCredentials(passkeys); err == nil {
+			t.Errorf("NewLoginWithCredentials(%#v) succeeded, want error", passkeys)
+		}
 	}
-	if _, _, err := rp.NewLoginForUser("", nil); err == nil {
-		t.Error("NewLoginForUser() with an empty user ID succeeded, want error")
+
+	env := newLoginEnv(t)
+	request, requestJSON, err := env.rp.NewLoginWithCredentials(env.records)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if _, _, err := rp.NewLoginForUser(strings.Repeat("a", 65), nil); err == nil {
-		t.Error("NewLoginForUser() with a 65-byte user ID succeeded, want error")
+	challenge := challengeOf(t, requestJSON)
+
+	for _, handle := range []string{env.user.ID, "someone-else", ""} {
+		m := env.auth.loginResponse(t, testRPID, testOrigin, challenge, handle, flagUP|flagUV)
+		resp, err := ParseResponse(mustJSON(t, m))
+		if err != nil {
+			t.Fatalf("ParseResponse() = %v", err)
+		}
+		if got := resp.UnauthenticatedUserID(); got != "" {
+			t.Errorf("handle %q: UnauthenticatedUserID() = %q, want empty", handle, got)
+		}
+		if resp.RequestID() != RequestID(request) {
+			t.Errorf("handle %q: Response.RequestID() = %q, want %q", handle, resp.RequestID(), RequestID(request))
+		}
+		if _, err := env.rp.Login(resp, request, env.records); err != nil {
+			t.Errorf("handle %q: Login() = %v, want success", handle, err)
+		}
 	}
+
+	m := env.response(t, flagUP|flagUV)
+	resp, err := ParseResponse(mustJSON(t, m))
+	if err != nil {
+		t.Fatalf("ParseResponse() = %v", err)
+	}
+	if got := resp.UnauthenticatedUserID(); got != env.user.ID {
+		t.Errorf("unscoped: UnauthenticatedUserID() = %q, want %q", got, env.user.ID)
+	}
+
+	// The kind is a byte of the challenge: a response carrying the other
+	// one, however well signed, no longer answers the request. It passes
+	// for the other kind of ceremony only until Login.
+	otherKind := func(t *testing.T, challenge string) string {
+		b, err := base64.RawURLEncoding.DecodeString(challenge)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if b[0] == challengeUserScoped {
+			b[0] = challengeUnscoped
+		} else {
+			b[0] = challengeUserScoped
+		}
+		return base64.RawURLEncoding.EncodeToString(b)
+	}
+	m = env.auth.loginResponse(t, testRPID, testOrigin, otherKind(t, challenge), env.user.ID, flagUP|flagUV)
+	resp, err = ParseResponse(mustJSON(t, m))
+	if err != nil {
+		t.Fatalf("ParseResponse() = %v", err)
+	}
+	if got := resp.UnauthenticatedUserID(); got != env.user.ID {
+		t.Errorf("scoped response marked unscoped: UnauthenticatedUserID() = %q, want %q", got, env.user.ID)
+	}
+	if resp.RequestID() == RequestID(request) {
+		t.Error("scoped response marked unscoped: Response.RequestID() still identifies the request")
+	}
+	_, err = env.rp.Login(resp, request, env.records)
+	checkError(t, err, nil, "challenge does not match")
+
+	m = env.auth.loginResponse(t, testRPID, testOrigin, otherKind(t, env.challenge), env.user.ID, flagUP|flagUV)
+	resp, err = ParseResponse(mustJSON(t, m))
+	if err != nil {
+		t.Fatalf("ParseResponse() = %v", err)
+	}
+	if got := resp.UnauthenticatedUserID(); got != "" {
+		t.Errorf("unscoped response marked scoped: UnauthenticatedUserID() = %q, want empty", got)
+	}
+	if resp.RequestID() == RequestID(env.request) {
+		t.Error("unscoped response marked scoped: Response.RequestID() still identifies the request")
+	}
+	_, err = env.rp.Login(resp, env.request, env.records)
+	checkError(t, err, nil, "challenge does not match")
 }

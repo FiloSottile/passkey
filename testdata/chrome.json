@@ -1,14 +1,14 @@
 {
 	"browser": "Chrome/151.0.7922.138",
 	"rpId": "localhost",
-	"origin": "http://localhost:64180",
-	"userId": "J3LCEHYN7A4LPFIP2GZBENY2CE",
+	"origin": "http://localhost:53015",
+	"userId": "34K7CR72RDE6T625ITCLWOKRBK",
 	"recordings": [
 		{
 			"name": "platform",
 			"description": "A CTAP2.1 platform authenticator with user verification, whose credentials are not backup eligible; the last login is user-scoped.",
 			"aaguid": "01020304050607080102030405060708",
-			"credentialId": "fe463100f6542e39e56d24a1c1ae37c874f173e9c92a1d4f49c22e5ea0329b52",
+			"credentialId": "70600e6a438d4440ef4e4b5115db799cab10dc01b8ddcd4d14bf609143567ab9",
 			"transports": [
 				"internal"
 			],
@@ -17,10 +17,10 @@
 				"options": {
 					"rp": {
 						"id": "localhost",
-						"name": ""
+						"name": "localhost"
 					},
 					"user": {
-						"id": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U",
+						"id": "MzRLN0NSNzJSREU2VDYyNUlUQ0xXT0tSQks",
 						"name": "user@example.com",
 						"displayName": "user@example.com"
 					},
@@ -58,13 +58,13 @@
 							"rk": true
 						}
 					},
-					"id": "_kYxAPZULjnlbSShwa43yHTxc-nJKh1PScIuXqAym1I",
-					"rawId": "_kYxAPZULjnlbSShwa43yHTxc-nJKh1PScIuXqAym1I",
+					"id": "cGAOakONREDvTktRFdt5nKsQ3AG43c1NFL9gkUNWerk",
+					"rawId": "cGAOakONREDvTktRFdt5nKsQ3AG43c1NFL9gkUNWerk",
 					"response": {
-						"attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAQECAwQFBgcIAQIDBAUGBwgAIP5GMQD2VC455W0kocGuN8h08XPpySodT0nCLl6gMptSpQECAyYgASFYIGkQgnsSlZXHVSQz0xOEIw5a21KI_hzibJ4XEkI85UB2IlggmN5MHPpoDEi5zg2cHhSh2aiWxqfdg0sVKQmWcdVxPzU",
-						"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAQECAwQFBgcIAQIDBAUGBwgAIP5GMQD2VC455W0kocGuN8h08XPpySodT0nCLl6gMptSpQECAyYgASFYIGkQgnsSlZXHVSQz0xOEIw5a21KI_hzibJ4XEkI85UB2IlggmN5MHPpoDEi5zg2cHhSh2aiWxqfdg0sVKQmWcdVxPzU",
-						"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiQUEiLCJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjY0MTgwIiwiY3Jvc3NPcmlnaW4iOmZhbHNlfQ",
-						"publicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEaRCCexKVlcdVJDPTE4QjDlrbUoj-HOJsnhcSQjzlQHaY3kwc-mgMSLnODZweFKHZqJbGp92DSxUpCZZx1XE_NQ",
+						"attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAQECAwQFBgcIAQIDBAUGBwgAIHBgDmpDjURA705LURXbeZyrENwBuN3NTRS_YJFDVnq5pQECAyYgASFYIApZWEMLpX4FAcSShgJsrlaaXZkK0pBKQ18bhjUa0DbFIlggO5IJO-GLHtkdQ3WS8l5a_b-eqtqpez3u6AOMtIRSnH4",
+						"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAQECAwQFBgcIAQIDBAUGBwgAIHBgDmpDjURA705LURXbeZyrENwBuN3NTRS_YJFDVnq5pQECAyYgASFYIApZWEMLpX4FAcSShgJsrlaaXZkK0pBKQ18bhjUa0DbFIlggO5IJO-GLHtkdQ3WS8l5a_b-eqtqpez3u6AOMtIRSnH4",
+						"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiQUEiLCJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjUzMDE1IiwiY3Jvc3NPcmlnaW4iOmZhbHNlLCJvdGhlcl9rZXlzX2Nhbl9iZV9hZGRlZF9oZXJlIjoiZG8gbm90IGNvbXBhcmUgY2xpZW50RGF0YUpTT04gYWdhaW5zdCBhIHRlbXBsYXRlLiBTZWUgaHR0cHM6Ly9nb28uZ2wveWFiUGV4In0",
+						"publicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAECllYQwulfgUBxJKGAmyuVppdmQrSkEpDXxuGNRrQNsU7kgk74Yse2R1DdZLyXlr9v56q2ql7Pe7oA4y0hFKcfg",
 						"publicKeyAlgorithm": -7,
 						"transports": [
 							"internal"
@@ -75,9 +75,9 @@
 			},
 			"logins": [
 				{
-					"request": "014ff3782278be6aaa8e28bb16e236ffce7e53121c63a07db153e2b5f2b6f40e08000000006a80f0a100",
+					"request": "01006d7ece0565fe0f52aaed246272dc26e88f6f2cb6428a22202e666552de011d000000006a82b6e1",
 					"options": {
-						"challenge": "T_N4Ini-aqqOKLsW4jb_zn5TEhxjoH2xU-K18rb0Dgg",
+						"challenge": "AG1-zgVl_g9Squ0kYnLcJuiPbyy2QooiIC5mZVLeAR0",
 						"rpId": "localhost",
 						"allowCredentials": [],
 						"userVerification": "preferred",
@@ -86,13 +86,13 @@
 					"response": {
 						"authenticatorAttachment": "platform",
 						"clientExtensionResults": {},
-						"id": "_kYxAPZULjnlbSShwa43yHTxc-nJKh1PScIuXqAym1I",
-						"rawId": "_kYxAPZULjnlbSShwa43yHTxc-nJKh1PScIuXqAym1I",
+						"id": "cGAOakONREDvTktRFdt5nKsQ3AG43c1NFL9gkUNWerk",
+						"rawId": "cGAOakONREDvTktRFdt5nKsQ3AG43c1NFL9gkUNWerk",
 						"response": {
 							"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MFAAAAAg",
-							"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiVF9ONEluaS1hcXFPS0xzVzRqYl96bjVURWh4am9IMnhVLUsxOHJiMERnZyIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NjQxODAiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
-							"signature": "MEUCIQDXpLEBvm0UZ-NS7blnZG1Yu8yelc8jvYtV5AQqbpjv9QIgCV-VMmuybu58Eao_AqOep_Vz-8xRVxzIcfuOY9T7QEE",
-							"userHandle": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U"
+							"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiQUcxLXpnVmxfZzlTcXUwa1luTGNKdWlQYnl5MlFvb2lJQzVtWlZMZUFSMCIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NTMwMTUiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
+							"signature": "MEUCIG5NGL1RlOfvp96UWyXmT6JuJ--C9-qYDdmuMiWRa_tXAiEAljLs7YAgs1rO9Mu_1cxNRI7KZz1ODTTulTMz0TWe4Vc",
+							"userHandle": "MzRLN0NSNzJSREU2VDYyNUlUQ0xXT0tSQks"
 						},
 						"type": "public-key"
 					},
@@ -100,9 +100,9 @@
 					"backedUp": false
 				},
 				{
-					"request": "0199e86d3aab0c363a4e94c127b8e49daeecac27e7389068bcb05d081968372b6a000000006a80f0a100",
+					"request": "01008869c1b774742a355ee4787b04cca7cc3a255161626c53ae16c22e2c83bdbe000000006a82b6e1",
 					"options": {
-						"challenge": "mehtOqsMNjpOlMEnuOSdruysJ-c4kGi8sF0IGWg3K2o",
+						"challenge": "AIhpwbd0dCo1XuR4ewTMp8w6JVFhYmxTrhbCLiyDvb4",
 						"rpId": "localhost",
 						"allowCredentials": [],
 						"userVerification": "preferred",
@@ -111,13 +111,13 @@
 					"response": {
 						"authenticatorAttachment": "platform",
 						"clientExtensionResults": {},
-						"id": "_kYxAPZULjnlbSShwa43yHTxc-nJKh1PScIuXqAym1I",
-						"rawId": "_kYxAPZULjnlbSShwa43yHTxc-nJKh1PScIuXqAym1I",
+						"id": "cGAOakONREDvTktRFdt5nKsQ3AG43c1NFL9gkUNWerk",
+						"rawId": "cGAOakONREDvTktRFdt5nKsQ3AG43c1NFL9gkUNWerk",
 						"response": {
 							"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MFAAAAAw",
-							"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoibWVodE9xc01OanBPbE1FbnVPU2RydXlzSi1jNGtHaThzRjBJR1dnM0sybyIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NjQxODAiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
-							"signature": "MEYCIQD3nc4fmHgY3mKCsEJMc1Gcs1EwVP9TY7KSNS1Qoa6UoQIhAN1UrsvceddugVNO7caJuBJU7XI9OkJS6ilfEwx4js8P",
-							"userHandle": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U"
+							"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiQUlocHdiZDBkQ28xWHVSNGV3VE1wOHc2SlZGaFlteFRyaGJDTGl5RHZiNCIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NTMwMTUiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
+							"signature": "MEUCICAp8Hbu6WKRgdtgAmSwjDM8MU_26StndKqq7ArKOM5PAiEA6RsrV13q-2bvyF4ykiz-bAyC3D0EHE34BU6xoCaCX80",
+							"userHandle": "MzRLN0NSNzJSREU2VDYyNUlUQ0xXT0tSQks"
 						},
 						"type": "public-key"
 					},
@@ -125,14 +125,14 @@
 					"backedUp": false
 				},
 				{
-					"request": "0158c99e68e64dec2b7fd4a4f88f7c71723e586939ab3312f4588f8a474990696f000000006a80f0a11a4a334c434548594e3741344c5046495032475a42454e59324345",
+					"request": "0101d7014a4fbd969dc18446d9c65fd91ffcb1eeab6a04a200dd654a1c097a67c9000000006a82b6e1",
 					"options": {
-						"challenge": "WMmeaOZN7Ct_1KT4j3xxcj5YaTmrMxL0WI-KR0mQaW8",
+						"challenge": "AdcBSk-9lp3BhEbZxl_ZH_yx7qtqBKIA3WVKHAl6Z8k",
 						"rpId": "localhost",
 						"allowCredentials": [
 							{
 								"type": "public-key",
-								"id": "_kYxAPZULjnlbSShwa43yHTxc-nJKh1PScIuXqAym1I",
+								"id": "cGAOakONREDvTktRFdt5nKsQ3AG43c1NFL9gkUNWerk",
 								"transports": [
 									"internal"
 								]
@@ -144,16 +144,17 @@
 					"response": {
 						"authenticatorAttachment": "platform",
 						"clientExtensionResults": {},
-						"id": "_kYxAPZULjnlbSShwa43yHTxc-nJKh1PScIuXqAym1I",
-						"rawId": "_kYxAPZULjnlbSShwa43yHTxc-nJKh1PScIuXqAym1I",
+						"id": "cGAOakONREDvTktRFdt5nKsQ3AG43c1NFL9gkUNWerk",
+						"rawId": "cGAOakONREDvTktRFdt5nKsQ3AG43c1NFL9gkUNWerk",
 						"response": {
 							"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MFAAAABA",
-							"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiV01tZWFPWk43Q3RfMUtUNGozeHhjajVZYVRtck14TDBXSS1LUjBtUWFXOCIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NjQxODAiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
-							"signature": "MEYCIQDLLtnS-Ryfc_QTWk5GAKZsnt5n6LDt7rvCPnbtA9W0dAIhAOIA8mzt7EX9rZxTF7e2H3JZM9K73At_FvauAUK0SbfN",
-							"userHandle": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U"
+							"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiQWRjQlNrLTlscDNCaEViWnhsX1pIX3l4N3F0cUJLSUEzV1ZLSEFsNlo4ayIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NTMwMTUiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
+							"signature": "MEUCIQD1RoszKTMwcphb_0FsglcA4BgR5O6x2rdW6ht2tlzv-wIgIvXKIgDnxQlL9DYRvq8RNowQSfvKVrMls_Ya-KxRkRw",
+							"userHandle": "MzRLN0NSNzJSREU2VDYyNUlUQ0xXT0tSQks"
 						},
 						"type": "public-key"
 					},
+					"userScoped": true,
 					"userVerified": true,
 					"backedUp": false
 				}
@@ -163,7 +164,7 @@
 			"name": "synced",
 			"description": "A CTAP2.1 platform authenticator whose credentials are backup eligible and backed up.",
 			"aaguid": "01020304050607080102030405060708",
-			"credentialId": "b5de0e2089cbe62d30c27dbf622d0ac48863627c9c99e9dbcfae0545b76482ca",
+			"credentialId": "8dbd15ddefaf103b234b0138b3d61a53fe01634dc5fe1ebcdeaad3230f249e28",
 			"transports": [
 				"internal"
 			],
@@ -172,10 +173,10 @@
 				"options": {
 					"rp": {
 						"id": "localhost",
-						"name": ""
+						"name": "localhost"
 					},
 					"user": {
-						"id": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U",
+						"id": "MzRLN0NSNzJSREU2VDYyNUlUQ0xXT0tSQks",
 						"name": "user@example.com",
 						"displayName": "user@example.com"
 					},
@@ -213,13 +214,13 @@
 							"rk": true
 						}
 					},
-					"id": "td4OIInL5i0wwn2_Yi0KxIhjYnycmenbz64FRbdkgso",
-					"rawId": "td4OIInL5i0wwn2_Yi0KxIhjYnycmenbz64FRbdkgso",
+					"id": "jb0V3e-vEDsjSwE4s9YaU_4BY03F_h683qrTIw8knig",
+					"rawId": "jb0V3e-vEDsjSwE4s9YaU_4BY03F_h683qrTIw8knig",
 					"response": {
-						"attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NdAAAAAQECAwQFBgcIAQIDBAUGBwgAILXeDiCJy-YtMMJ9v2ItCsSIY2J8nJnp28-uBUW3ZILKpQECAyYgASFYIHc7EozRD1lCtPmUjhludABy35OBAW0goE9fxtS5WQsHIlggVqFki7JHSZFnmCaFIqoDTVguZItIQkyzc6zX4i85rew",
-						"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NdAAAAAQECAwQFBgcIAQIDBAUGBwgAILXeDiCJy-YtMMJ9v2ItCsSIY2J8nJnp28-uBUW3ZILKpQECAyYgASFYIHc7EozRD1lCtPmUjhludABy35OBAW0goE9fxtS5WQsHIlggVqFki7JHSZFnmCaFIqoDTVguZItIQkyzc6zX4i85rew",
-						"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiQUEiLCJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjY0MTgwIiwiY3Jvc3NPcmlnaW4iOmZhbHNlfQ",
-						"publicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEdzsSjNEPWUK0-ZSOGW50AHLfk4EBbSCgT1_G1LlZCwdWoWSLskdJkWeYJoUiqgNNWC5ki0hCTLNzrNfiLzmt7A",
+						"attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NdAAAAAQECAwQFBgcIAQIDBAUGBwgAII29Fd3vrxA7I0sBOLPWGlP-AWNNxf4evN6q0yMPJJ4opQECAyYgASFYIPJjhgtfiBKtT-A1hlLlxfWkC1THuRCMwrgSR7pl0-A7IlgglOHrt9vcacH1LdiKsM7Oefj8pnK9zaJxSzKC535IzaQ",
+						"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NdAAAAAQECAwQFBgcIAQIDBAUGBwgAII29Fd3vrxA7I0sBOLPWGlP-AWNNxf4evN6q0yMPJJ4opQECAyYgASFYIPJjhgtfiBKtT-A1hlLlxfWkC1THuRCMwrgSR7pl0-A7IlgglOHrt9vcacH1LdiKsM7Oefj8pnK9zaJxSzKC535IzaQ",
+						"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiQUEiLCJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjUzMDE1IiwiY3Jvc3NPcmlnaW4iOmZhbHNlfQ",
+						"publicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE8mOGC1-IEq1P4DWGUuXF9aQLVMe5EIzCuBJHumXT4DuU4eu329xpwfUt2Iqwzs55-Pymcr3NonFLMoLnfkjNpA",
 						"publicKeyAlgorithm": -7,
 						"transports": [
 							"internal"
@@ -230,9 +231,9 @@
 			},
 			"logins": [
 				{
-					"request": "012667d2a14ca15a5a0d858045439532743e10d303e6260a8cc752b3061919502c000000006a80f0a100",
+					"request": "010076a2b166f07c4c256e57bd7e482c6c3d7022f41c557420c19abfb7b25b36b8000000006a82b6e2",
 					"options": {
-						"challenge": "JmfSoUyhWloNhYBFQ5UydD4Q0wPmJgqMx1KzBhkZUCw",
+						"challenge": "AHaisWbwfEwlble9fkgsbD1wIvQcVXQgwZq_t7JbNrg",
 						"rpId": "localhost",
 						"allowCredentials": [],
 						"userVerification": "preferred",
@@ -241,13 +242,13 @@
 					"response": {
 						"authenticatorAttachment": "platform",
 						"clientExtensionResults": {},
-						"id": "td4OIInL5i0wwn2_Yi0KxIhjYnycmenbz64FRbdkgso",
-						"rawId": "td4OIInL5i0wwn2_Yi0KxIhjYnycmenbz64FRbdkgso",
+						"id": "jb0V3e-vEDsjSwE4s9YaU_4BY03F_h683qrTIw8knig",
+						"rawId": "jb0V3e-vEDsjSwE4s9YaU_4BY03F_h683qrTIw8knig",
 						"response": {
 							"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MdAAAAAg",
-							"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiSm1mU29VeWhXbG9OaFlCRlE1VXlkRDRRMHdQbUpncU14MUt6QmhrWlVDdyIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NjQxODAiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
-							"signature": "MEUCIGAR8SGoWooe_30p_WK-kr0wSTZ9VMuladkozA2QikRWAiEAiY7Ul2WlBu0HcYozzsX8k-gcQcQC0U65Xr2WhVtkxR4",
-							"userHandle": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U"
+							"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiQUhhaXNXYndmRXdsYmxlOWZrZ3NiRDF3SXZRY1ZYUWd3WnFfdDdKYk5yZyIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NTMwMTUiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
+							"signature": "MEUCIQCbUPGfzfsNPhXi4weiwaFzJTbDYN_x6p6gci2U970XpgIgLVx1B_hRA0sW3MNCDdfUwsGkS8dhFPK-zogHmUt8oko",
+							"userHandle": "MzRLN0NSNzJSREU2VDYyNUlUQ0xXT0tSQks"
 						},
 						"type": "public-key"
 					},
@@ -260,7 +261,7 @@
 			"name": "backup-eligible",
 			"description": "A CTAP2.1 platform authenticator whose credentials are backup eligible but not backed up; the credential is backed up between the first and the second login.",
 			"aaguid": "01020304050607080102030405060708",
-			"credentialId": "ba9e18f59bb66263fdc04a4f40a7b227d3de60c4b072ec73b7fe6430ae65508a",
+			"credentialId": "0c2053ffe2bfc7c5a88ebfe2811ac8f5bb89037fd465d436b18a4a98bd325129",
 			"transports": [
 				"internal"
 			],
@@ -269,10 +270,10 @@
 				"options": {
 					"rp": {
 						"id": "localhost",
-						"name": ""
+						"name": "localhost"
 					},
 					"user": {
-						"id": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U",
+						"id": "MzRLN0NSNzJSREU2VDYyNUlUQ0xXT0tSQks",
 						"name": "user@example.com",
 						"displayName": "user@example.com"
 					},
@@ -310,13 +311,13 @@
 							"rk": true
 						}
 					},
-					"id": "up4Y9Zu2YmP9wEpPQKeyJ9PeYMSwcuxzt_5kMK5lUIo",
-					"rawId": "up4Y9Zu2YmP9wEpPQKeyJ9PeYMSwcuxzt_5kMK5lUIo",
+					"id": "DCBT_-K_x8Wojr_igRrI9buJA3_UZdQ2sYpKmL0yUSk",
+					"rawId": "DCBT_-K_x8Wojr_igRrI9buJA3_UZdQ2sYpKmL0yUSk",
 					"response": {
-						"attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NNAAAAAQECAwQFBgcIAQIDBAUGBwgAILqeGPWbtmJj_cBKT0CnsifT3mDEsHLsc7f-ZDCuZVCKpQECAyYgASFYIM0MF-1d3qcwYmy9-GSGoVvkRUHlW9ez9jMH7ZGmCK5VIlggtAiE6tAfy9L9Yo0ELYsN5cjgYub4gX60BSqe8uvHOro",
-						"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NNAAAAAQECAwQFBgcIAQIDBAUGBwgAILqeGPWbtmJj_cBKT0CnsifT3mDEsHLsc7f-ZDCuZVCKpQECAyYgASFYIM0MF-1d3qcwYmy9-GSGoVvkRUHlW9ez9jMH7ZGmCK5VIlggtAiE6tAfy9L9Yo0ELYsN5cjgYub4gX60BSqe8uvHOro",
-						"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiQUEiLCJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjY0MTgwIiwiY3Jvc3NPcmlnaW4iOmZhbHNlfQ",
-						"publicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEzQwX7V3epzBibL34ZIahW-RFQeVb17P2MwftkaYIrlW0CITq0B_L0v1ijQQtiw3lyOBi5viBfrQFKp7y68c6ug",
+						"attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NNAAAAAQECAwQFBgcIAQIDBAUGBwgAIAwgU__iv8fFqI6_4oEayPW7iQN_1GXUNrGKSpi9MlEppQECAyYgASFYIN6CuK8YpUCRaTgkONH6R58eFFnNtu3ZNzMTq9hJ7w1VIlggMLgT-q6wgQ-t427Tdz-a59WOe5cZncRn6JWUw3bur_s",
+						"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NNAAAAAQECAwQFBgcIAQIDBAUGBwgAIAwgU__iv8fFqI6_4oEayPW7iQN_1GXUNrGKSpi9MlEppQECAyYgASFYIN6CuK8YpUCRaTgkONH6R58eFFnNtu3ZNzMTq9hJ7w1VIlggMLgT-q6wgQ-t427Tdz-a59WOe5cZncRn6JWUw3bur_s",
+						"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiQUEiLCJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjUzMDE1IiwiY3Jvc3NPcmlnaW4iOmZhbHNlfQ",
+						"publicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE3oK4rxilQJFpOCQ40fpHnx4UWc227dk3MxOr2EnvDVUwuBP6rrCBD63jbtN3P5rn1Y57lxmdxGfolZTDdu6v-w",
 						"publicKeyAlgorithm": -7,
 						"transports": [
 							"internal"
@@ -327,9 +328,9 @@
 			},
 			"logins": [
 				{
-					"request": "01ce62537da562f043c18d1dfa65f2d1271e222f5aeaf825af24f26c018e5d7a99000000006a80f0a100",
+					"request": "0100e4c47b6f63cdc8f0618c5ebe149e91197ca41097794cacf7227097f9c60500000000006a82b6e2",
 					"options": {
-						"challenge": "zmJTfaVi8EPBjR36ZfLRJx4iL1rq-CWvJPJsAY5depk",
+						"challenge": "AOTEe29jzcjwYYxevhSekRl8pBCXeUys9yJwl_nGBQA",
 						"rpId": "localhost",
 						"allowCredentials": [],
 						"userVerification": "preferred",
@@ -338,13 +339,13 @@
 					"response": {
 						"authenticatorAttachment": "platform",
 						"clientExtensionResults": {},
-						"id": "up4Y9Zu2YmP9wEpPQKeyJ9PeYMSwcuxzt_5kMK5lUIo",
-						"rawId": "up4Y9Zu2YmP9wEpPQKeyJ9PeYMSwcuxzt_5kMK5lUIo",
+						"id": "DCBT_-K_x8Wojr_igRrI9buJA3_UZdQ2sYpKmL0yUSk",
+						"rawId": "DCBT_-K_x8Wojr_igRrI9buJA3_UZdQ2sYpKmL0yUSk",
 						"response": {
 							"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MNAAAAAg",
-							"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiem1KVGZhVmk4RVBCalIzNlpmTFJKeDRpTDFycS1DV3ZKUEpzQVk1ZGVwayIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NjQxODAiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
-							"signature": "MEUCIBRd3GMDDaSZ8oJtGVLuPzXQEeSvpLfxSAGc2qDUSDEQAiEA7zzr56UZqdAGAstxCYIX1-NJ9yWGwnAz3nYwTNzOPtY",
-							"userHandle": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U"
+							"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiQU9URWUyOWp6Y2p3WVl4ZXZoU2VrUmw4cEJDWGVVeXM5eUp3bF9uR0JRQSIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NTMwMTUiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
+							"signature": "MEQCIAOAqB7CWGWMxTEsyOiCjI1YDsjro73GGBYSd87GLo3MAiBnI26jszAi7sFP16mWDtaujz7Zwp115XRSG-nhBFioDw",
+							"userHandle": "MzRLN0NSNzJSREU2VDYyNUlUQ0xXT0tSQks"
 						},
 						"type": "public-key"
 					},
@@ -352,9 +353,9 @@
 					"backedUp": false
 				},
 				{
-					"request": "01347402fc3291e41842378604a2e5437bbed8b134735d3e36ecbe46728571d062000000006a80f0a100",
+					"request": "01007c4769d93c36f13c0015cdf70fa3aa67e78fcadf0d4efacaaf1b30e4916108000000006a82b6e2",
 					"options": {
-						"challenge": "NHQC_DKR5BhCN4YEouVDe77YsTRzXT427L5GcoVx0GI",
+						"challenge": "AHxHadk8NvE8ABXN9w-jqmfnj8rfDU76yq8bMOSRYQg",
 						"rpId": "localhost",
 						"allowCredentials": [],
 						"userVerification": "preferred",
@@ -363,13 +364,13 @@
 					"response": {
 						"authenticatorAttachment": "platform",
 						"clientExtensionResults": {},
-						"id": "up4Y9Zu2YmP9wEpPQKeyJ9PeYMSwcuxzt_5kMK5lUIo",
-						"rawId": "up4Y9Zu2YmP9wEpPQKeyJ9PeYMSwcuxzt_5kMK5lUIo",
+						"id": "DCBT_-K_x8Wojr_igRrI9buJA3_UZdQ2sYpKmL0yUSk",
+						"rawId": "DCBT_-K_x8Wojr_igRrI9buJA3_UZdQ2sYpKmL0yUSk",
 						"response": {
 							"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MdAAAAAw",
-							"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiTkhRQ19ES1I1QmhDTjRZRW91VkRlNzdZc1RSelhUNDI3TDVHY29WeDBHSSIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NjQxODAiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
-							"signature": "MEUCIQCuyiHKEvywhYql7Ce7k9z5XjcXcKz4-9unNGZR9Da8EQIgMconuveu5SIBvviInLbjZFgIHdlWL1J93E87epMGdJM",
-							"userHandle": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U"
+							"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiQUh4SGFkazhOdkU4QUJYTjl3LWpxbWZuajhyZkRVNzZ5cThiTU9TUllRZyIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NTMwMTUiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
+							"signature": "MEUCIH9QoQnGBAvBcoaEyh00o8tp_ZOKIQxPHWAEoGVDOlk9AiEA0G_w25Sw7tn2Jog5RsrRpqyuG1ti1xHpmgVILst6kHU",
+							"userHandle": "MzRLN0NSNzJSREU2VDYyNUlUQ0xXT0tSQks"
 						},
 						"type": "public-key"
 					},
@@ -382,7 +383,7 @@
 			"name": "security-key",
 			"description": "A CTAP2.1 USB authenticator with user verification.",
 			"aaguid": "00000000000000000000000000000000",
-			"credentialId": "ba232ee271d38f35b0ce4cb8e3ca0369daf83ddf62d5867e9a4c1d33294b56b3",
+			"credentialId": "655ff1469514602f6add7016027e0ebd3e4c75bf4b66cf4cfe61fe94864ed72e",
 			"transports": [
 				"usb"
 			],
@@ -391,10 +392,10 @@
 				"options": {
 					"rp": {
 						"id": "localhost",
-						"name": ""
+						"name": "localhost"
 					},
 					"user": {
-						"id": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U",
+						"id": "MzRLN0NSNzJSREU2VDYyNUlUQ0xXT0tSQks",
 						"name": "user@example.com",
 						"displayName": "user@example.com"
 					},
@@ -432,13 +433,13 @@
 							"rk": true
 						}
 					},
-					"id": "uiMu4nHTjzWwzky448oDadr4Pd9i1YZ-mkwdMylLVrM",
-					"rawId": "uiMu4nHTjzWwzky448oDadr4Pd9i1YZ-mkwdMylLVrM",
+					"id": "ZV_xRpUUYC9q3XAWAn4OvT5Mdb9LZs9M_mH-lIZO1y4",
+					"rawId": "ZV_xRpUUYC9q3XAWAn4OvT5Mdb9LZs9M_mH-lIZO1y4",
 					"response": {
-						"attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAQAAAAAAAAAAAAAAAAAAAAAAILojLuJx0481sM5MuOPKA2na-D3fYtWGfppMHTMpS1azpQECAyYgASFYIKf3iUUVSScRPAqbP5IsTJa-GC1eiZKCi9APEIFG-Y7gIlggmcTO0iv5RPZ9BfQYWTQGzwQiR_9TENoKfb8Ch8jzEwE",
-						"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAQAAAAAAAAAAAAAAAAAAAAAAILojLuJx0481sM5MuOPKA2na-D3fYtWGfppMHTMpS1azpQECAyYgASFYIKf3iUUVSScRPAqbP5IsTJa-GC1eiZKCi9APEIFG-Y7gIlggmcTO0iv5RPZ9BfQYWTQGzwQiR_9TENoKfb8Ch8jzEwE",
-						"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiQUEiLCJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjY0MTgwIiwiY3Jvc3NPcmlnaW4iOmZhbHNlLCJvdGhlcl9rZXlzX2Nhbl9iZV9hZGRlZF9oZXJlIjoiZG8gbm90IGNvbXBhcmUgY2xpZW50RGF0YUpTT04gYWdhaW5zdCBhIHRlbXBsYXRlLiBTZWUgaHR0cHM6Ly9nb28uZ2wveWFiUGV4In0",
-						"publicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEp_eJRRVJJxE8Cps_kixMlr4YLV6JkoKL0A8QgUb5juCZxM7SK_lE9n0F9BhZNAbPBCJH_1MQ2gp9vwKHyPMTAQ",
+						"attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAQAAAAAAAAAAAAAAAAAAAAAAIGVf8UaVFGAvat1wFgJ-Dr0-THW_S2bPTP5h_pSGTtcupQECAyYgASFYINPhN-gZiweC7P5DEMzPduhyIO5WIdwyViopLWsmzkEgIlgg7gdnhnI3ebFlvi_ByFvHCqKPkuogC2HHKbR9A7F13eQ",
+						"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAQAAAAAAAAAAAAAAAAAAAAAAIGVf8UaVFGAvat1wFgJ-Dr0-THW_S2bPTP5h_pSGTtcupQECAyYgASFYINPhN-gZiweC7P5DEMzPduhyIO5WIdwyViopLWsmzkEgIlgg7gdnhnI3ebFlvi_ByFvHCqKPkuogC2HHKbR9A7F13eQ",
+						"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiQUEiLCJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjUzMDE1IiwiY3Jvc3NPcmlnaW4iOmZhbHNlfQ",
+						"publicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE0-E36BmLB4Ls_kMQzM926HIg7lYh3DJWKiktaybOQSDuB2eGcjd5sWW-L8HIW8cKoo-S6iALYccptH0DsXXd5A",
 						"publicKeyAlgorithm": -7,
 						"transports": [
 							"usb"
@@ -449,9 +450,9 @@
 			},
 			"logins": [
 				{
-					"request": "013af22e3258ee53624dd1d6c63e92a88a9743cacbc674f92ffe32e3b784766488000000006a80f0a200",
+					"request": "0100881a45d7e840ebdb2e29f993a61b4cb81eb383e41acda31bd24eb1ecfad117000000006a82b6e2",
 					"options": {
-						"challenge": "OvIuMljuU2JN0dbGPpKoipdDysvGdPkv_jLjt4R2ZIg",
+						"challenge": "AIgaRdfoQOvbLin5k6YbTLges4PkGs2jG9JOsez60Rc",
 						"rpId": "localhost",
 						"allowCredentials": [],
 						"userVerification": "preferred",
@@ -460,13 +461,13 @@
 					"response": {
 						"authenticatorAttachment": "cross-platform",
 						"clientExtensionResults": {},
-						"id": "uiMu4nHTjzWwzky448oDadr4Pd9i1YZ-mkwdMylLVrM",
-						"rawId": "uiMu4nHTjzWwzky448oDadr4Pd9i1YZ-mkwdMylLVrM",
+						"id": "ZV_xRpUUYC9q3XAWAn4OvT5Mdb9LZs9M_mH-lIZO1y4",
+						"rawId": "ZV_xRpUUYC9q3XAWAn4OvT5Mdb9LZs9M_mH-lIZO1y4",
 						"response": {
 							"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MFAAAAAg",
-							"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiT3ZJdU1sanVVMkpOMGRiR1BwS29pcGREeXN2R2RQa3ZfakxqdDRSMlpJZyIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NjQxODAiLCJjcm9zc09yaWdpbiI6ZmFsc2UsIm90aGVyX2tleXNfY2FuX2JlX2FkZGVkX2hlcmUiOiJkbyBub3QgY29tcGFyZSBjbGllbnREYXRhSlNPTiBhZ2FpbnN0IGEgdGVtcGxhdGUuIFNlZSBodHRwczovL2dvby5nbC95YWJQZXgifQ",
-							"signature": "MEQCIEoxVqa35UZIuHXc-izdnoZleqqNVw0P3CFinPUnwYT6AiAS0CGD6EfxN0ErP_s1rhI3iaI6mJHuFlyp1yWbDyV_4Q",
-							"userHandle": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U"
+							"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiQUlnYVJkZm9RT3ZiTGluNWs2WWJUTGdlczRQa0dzMmpHOUpPc2V6NjBSYyIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NTMwMTUiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
+							"signature": "MEYCIQDyktP07Y2fILX3aZRBW2fpg-V_Pu-Yn5aLZoT8UjlFvQIhALVpwj9Ey_JG2uGD2ZM4hMEegCMI9LYeeRHGoyMpMQDu",
+							"userHandle": "MzRLN0NSNzJSREU2VDYyNUlUQ0xXT0tSQks"
 						},
 						"type": "public-key"
 					},
@@ -479,7 +480,7 @@
 			"name": "no-user-verification",
 			"description": "A CTAP2.1 platform authenticator that clears the user verification flag in every response.",
 			"aaguid": "01020304050607080102030405060708",
-			"credentialId": "3d5e51ed8d19accdfa46cad032ab1996c8bd48f59bacf4b9c03436a4e3a620c6",
+			"credentialId": "e49abdb16f044c76fa26d913fc8f44b26bc7c44a0a9e3688c1e52e83a1d5b5a1",
 			"transports": [
 				"internal"
 			],
@@ -488,10 +489,10 @@
 				"options": {
 					"rp": {
 						"id": "localhost",
-						"name": ""
+						"name": "localhost"
 					},
 					"user": {
-						"id": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U",
+						"id": "MzRLN0NSNzJSREU2VDYyNUlUQ0xXT0tSQks",
 						"name": "user@example.com",
 						"displayName": "user@example.com"
 					},
@@ -529,13 +530,13 @@
 							"rk": true
 						}
 					},
-					"id": "PV5R7Y0ZrM36RsrQMqsZlsi9SPWbrPS5wDQ2pOOmIMY",
-					"rawId": "PV5R7Y0ZrM36RsrQMqsZlsi9SPWbrPS5wDQ2pOOmIMY",
+					"id": "5Jq9sW8ETHb6JtkT_I9EsmvHxEoKnjaIweUug6HVtaE",
+					"rawId": "5Jq9sW8ETHb6JtkT_I9EsmvHxEoKnjaIweUug6HVtaE",
 					"response": {
-						"attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NBAAAAAQECAwQFBgcIAQIDBAUGBwgAID1eUe2NGazN-kbK0DKrGZbIvUj1m6z0ucA0NqTjpiDGpQECAyYgASFYIF8i7oqRaHNGUciVCyk4ZuXA_hX2rDS5Ek3J1wNur8UrIlggNR43StiJip_9wNyv-64DT4Z9oyfb19dBOzYPOHM_vZo",
-						"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NBAAAAAQECAwQFBgcIAQIDBAUGBwgAID1eUe2NGazN-kbK0DKrGZbIvUj1m6z0ucA0NqTjpiDGpQECAyYgASFYIF8i7oqRaHNGUciVCyk4ZuXA_hX2rDS5Ek3J1wNur8UrIlggNR43StiJip_9wNyv-64DT4Z9oyfb19dBOzYPOHM_vZo",
-						"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiQUEiLCJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjY0MTgwIiwiY3Jvc3NPcmlnaW4iOmZhbHNlfQ",
-						"publicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEXyLuipFoc0ZRyJULKThm5cD-FfasNLkSTcnXA26vxSs1HjdK2ImKn_3A3K_7rgNPhn2jJ9vX10E7Ng84cz-9mg",
+						"attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NBAAAAAQECAwQFBgcIAQIDBAUGBwgAIOSavbFvBEx2-ibZE_yPRLJrx8RKCp42iMHlLoOh1bWhpQECAyYgASFYIA6tyDDv0_ys8mtWaqXbXuk534pYP7dmk6_5SePwWRvYIlgg2DVLZNFrWEKTsZ5RacbI2R3jZAyogy0IsPAUj8K4-MQ",
+						"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NBAAAAAQECAwQFBgcIAQIDBAUGBwgAIOSavbFvBEx2-ibZE_yPRLJrx8RKCp42iMHlLoOh1bWhpQECAyYgASFYIA6tyDDv0_ys8mtWaqXbXuk534pYP7dmk6_5SePwWRvYIlgg2DVLZNFrWEKTsZ5RacbI2R3jZAyogy0IsPAUj8K4-MQ",
+						"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiQUEiLCJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjUzMDE1IiwiY3Jvc3NPcmlnaW4iOmZhbHNlfQ",
+						"publicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEDq3IMO_T_Kzya1Zqpdte6Tnfilg_t2aTr_lJ4_BZG9jYNUtk0WtYQpOxnlFpxsjZHeNkDKiDLQiw8BSPwrj4xA",
 						"publicKeyAlgorithm": -7,
 						"transports": [
 							"internal"
@@ -546,9 +547,9 @@
 			},
 			"logins": [
 				{
-					"request": "01bd57f6259ddc6f4f8f324815c2a89c3e18a76644ad562cad2bcbe0a4bf45517d000000006a80f0a200",
+					"request": "010020b09ea2f9dbecc4359c09c909fbab01dac75764ffe1e8b02a9083a95c2dbf000000006a82b6e3",
 					"options": {
-						"challenge": "vVf2JZ3cb0-PMkgVwqicPhinZkStViytK8vgpL9FUX0",
+						"challenge": "ACCwnqL52-zENZwJyQn7qwHax1dk_-HosCqQg6lcLb8",
 						"rpId": "localhost",
 						"allowCredentials": [],
 						"userVerification": "preferred",
@@ -557,13 +558,13 @@
 					"response": {
 						"authenticatorAttachment": "platform",
 						"clientExtensionResults": {},
-						"id": "PV5R7Y0ZrM36RsrQMqsZlsi9SPWbrPS5wDQ2pOOmIMY",
-						"rawId": "PV5R7Y0ZrM36RsrQMqsZlsi9SPWbrPS5wDQ2pOOmIMY",
+						"id": "5Jq9sW8ETHb6JtkT_I9EsmvHxEoKnjaIweUug6HVtaE",
+						"rawId": "5Jq9sW8ETHb6JtkT_I9EsmvHxEoKnjaIweUug6HVtaE",
 						"response": {
 							"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MBAAAAAg",
-							"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoidlZmMkpaM2NiMC1QTWtnVndxaWNQaGluWmtTdFZpeXRLOHZncEw5RlVYMCIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NjQxODAiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
-							"signature": "MEQCIEmpp-krwSnkgJLHSFOF4hUB1jUbHCC8ucA_3gRzBTZKAiBeP09g2vNX_IYNLuYHRQ5pCVmATL3yBlfLvnAyok3XCA",
-							"userHandle": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U"
+							"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiQUNDd25xTDUyLXpFTlp3SnlRbjdxd0hheDFka18tSG9zQ3FRZzZsY0xiOCIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NTMwMTUiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
+							"signature": "MEQCIGv1Ttvrj8eFXeP3DtBIn8cWfF1nEflEOa8ygGmlx0dTAiB064e97gmNMV85m5ACEDxe5nmGeRodtBZmOxUfvIJ8bQ",
+							"userHandle": "MzRLN0NSNzJSREU2VDYyNUlUQ0xXT0tSQks"
 						},
 						"type": "public-key"
 					},
@@ -576,7 +577,7 @@
 			"name": "no-user-presence",
 			"description": "A CTAP2.1 platform authenticator that clears the user presence flag in every response.",
 			"aaguid": "01020304050607080102030405060708",
-			"credentialId": "f4961993e9e8acb765d1f6a77db79c074127d9df3c6583e413516806ff2bb131",
+			"credentialId": "7b0cc1ae1e0b3175418599911e3eb47e47996a99d065891c1f1dd1423b3ff8e1",
 			"transports": [
 				"internal"
 			],
@@ -585,10 +586,10 @@
 				"options": {
 					"rp": {
 						"id": "localhost",
-						"name": ""
+						"name": "localhost"
 					},
 					"user": {
-						"id": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U",
+						"id": "MzRLN0NSNzJSREU2VDYyNUlUQ0xXT0tSQks",
 						"name": "user@example.com",
 						"displayName": "user@example.com"
 					},
@@ -626,13 +627,13 @@
 							"rk": true
 						}
 					},
-					"id": "9JYZk-norLdl0fanfbecB0En2d88ZYPkE1FoBv8rsTE",
-					"rawId": "9JYZk-norLdl0fanfbecB0En2d88ZYPkE1FoBv8rsTE",
+					"id": "ewzBrh4LMXVBhZmRHj60fkeZapnQZYkcHx3RQjs_-OE",
+					"rawId": "ewzBrh4LMXVBhZmRHj60fkeZapnQZYkcHx3RQjs_-OE",
 					"response": {
-						"attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NEAAAAAQECAwQFBgcIAQIDBAUGBwgAIPSWGZPp6Ky3ZdH2p323nAdBJ9nfPGWD5BNRaAb_K7ExpQECAyYgASFYIFWNtEXA9QFuR920xZYcgil3KG2_LDgC3WU32XVK_nHxIlggVXd8lS9aC3Pz6ypXQ5TXonyOF1TfbXdu6sVEizGfOfw",
-						"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NEAAAAAQECAwQFBgcIAQIDBAUGBwgAIPSWGZPp6Ky3ZdH2p323nAdBJ9nfPGWD5BNRaAb_K7ExpQECAyYgASFYIFWNtEXA9QFuR920xZYcgil3KG2_LDgC3WU32XVK_nHxIlggVXd8lS9aC3Pz6ypXQ5TXonyOF1TfbXdu6sVEizGfOfw",
-						"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiQUEiLCJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjY0MTgwIiwiY3Jvc3NPcmlnaW4iOmZhbHNlLCJvdGhlcl9rZXlzX2Nhbl9iZV9hZGRlZF9oZXJlIjoiZG8gbm90IGNvbXBhcmUgY2xpZW50RGF0YUpTT04gYWdhaW5zdCBhIHRlbXBsYXRlLiBTZWUgaHR0cHM6Ly9nb28uZ2wveWFiUGV4In0",
-						"publicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEVY20RcD1AW5H3bTFlhyCKXcobb8sOALdZTfZdUr-cfFVd3yVL1oLc_PrKldDlNeifI4XVN9td27qxUSLMZ85_A",
+						"attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NEAAAAAQECAwQFBgcIAQIDBAUGBwgAIHsMwa4eCzF1QYWZkR4-tH5HmWqZ0GWJHB8d0UI7P_jhpQECAyYgASFYIMccn66QSnHDKCaNWsRVz7DLGWcALXhIz8jBRpdSo9kiIlggFVT4ByZzSTqBgpsnmM4DKJm2eC4sJND3ZdcEoNRhWmk",
+						"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NEAAAAAQECAwQFBgcIAQIDBAUGBwgAIHsMwa4eCzF1QYWZkR4-tH5HmWqZ0GWJHB8d0UI7P_jhpQECAyYgASFYIMccn66QSnHDKCaNWsRVz7DLGWcALXhIz8jBRpdSo9kiIlggFVT4ByZzSTqBgpsnmM4DKJm2eC4sJND3ZdcEoNRhWmk",
+						"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiQUEiLCJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjUzMDE1IiwiY3Jvc3NPcmlnaW4iOmZhbHNlfQ",
+						"publicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAExxyfrpBKccMoJo1axFXPsMsZZwAteEjPyMFGl1Kj2SIVVPgHJnNJOoGCmyeYzgMombZ4Liwk0Pdl1wSg1GFaaQ",
 						"publicKeyAlgorithm": -7,
 						"transports": [
 							"internal"
@@ -643,9 +644,9 @@
 			},
 			"logins": [
 				{
-					"request": "0108a0c965d7da9c4af883fd2de96b212a6c15d03e24bbd39913e2a49b89628acd000000006a80f0a200",
+					"request": "010001201a83ec0defce6c06a25b30ad079e80e87586e8fa4e5136681d79be494a000000006a82b6e3",
 					"options": {
-						"challenge": "CKDJZdfanEr4g_0t6WshKmwV0D4ku9OZE-Kkm4liis0",
+						"challenge": "AAEgGoPsDe_ObAaiWzCtB56A6HWG6PpOUTZoHXm-SUo",
 						"rpId": "localhost",
 						"allowCredentials": [],
 						"userVerification": "preferred",
@@ -654,13 +655,13 @@
 					"response": {
 						"authenticatorAttachment": "platform",
 						"clientExtensionResults": {},
-						"id": "9JYZk-norLdl0fanfbecB0En2d88ZYPkE1FoBv8rsTE",
-						"rawId": "9JYZk-norLdl0fanfbecB0En2d88ZYPkE1FoBv8rsTE",
+						"id": "ewzBrh4LMXVBhZmRHj60fkeZapnQZYkcHx3RQjs_-OE",
+						"rawId": "ewzBrh4LMXVBhZmRHj60fkeZapnQZYkcHx3RQjs_-OE",
 						"response": {
 							"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MEAAAAAg",
-							"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiQ0tESlpkZmFuRXI0Z18wdDZXc2hLbXdWMEQ0a3U5T1pFLUtrbTRsaWlzMCIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NjQxODAiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
-							"signature": "MEQCIAbuKfR5m1CYRtJCs5-N-qgrRgBStb-GkZWpnRsMQwvRAiBOSAADzedvpMgyoKtFDe1arL7SHRrB32Lh9xHL7aD2Jw",
-							"userHandle": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U"
+							"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiQUFFZ0dvUHNEZV9PYkFhaVd6Q3RCNTZBNkhXRzZQcE9VVFpvSFhtLVNVbyIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NTMwMTUiLCJjcm9zc09yaWdpbiI6ZmFsc2UsIm90aGVyX2tleXNfY2FuX2JlX2FkZGVkX2hlcmUiOiJkbyBub3QgY29tcGFyZSBjbGllbnREYXRhSlNPTiBhZ2FpbnN0IGEgdGVtcGxhdGUuIFNlZSBodHRwczovL2dvby5nbC95YWJQZXgifQ",
+							"signature": "MEUCIEOdPskhwTfhtr7ciLCaXBRD58Rahydg3FONblqWK0NzAiEA6Qfv__yEiq-92v7FjWivjG_CBFrUyVZhXhPHbr-b0D4",
+							"userHandle": "MzRLN0NSNzJSREU2VDYyNUlUQ0xXT0tSQks"
 						},
 						"type": "public-key"
 					},
@@ -674,7 +675,7 @@
 			"name": "bogus-signature",
 			"description": "A CTAP2.1 platform authenticator whose assertion signatures are zeroed.",
 			"aaguid": "01020304050607080102030405060708",
-			"credentialId": "d30b6ce475cf2d2160cd978e4f3a71e5fb4bc86028651886e2f1116c56fea6a5",
+			"credentialId": "f83490768f38483aead2c14c676ee6adabbf8b4a15900c25677f0d3c09e9f615",
 			"transports": [
 				"internal"
 			],
@@ -683,10 +684,10 @@
 				"options": {
 					"rp": {
 						"id": "localhost",
-						"name": ""
+						"name": "localhost"
 					},
 					"user": {
-						"id": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U",
+						"id": "MzRLN0NSNzJSREU2VDYyNUlUQ0xXT0tSQks",
 						"name": "user@example.com",
 						"displayName": "user@example.com"
 					},
@@ -724,13 +725,13 @@
 							"rk": true
 						}
 					},
-					"id": "0wts5HXPLSFgzZeOTzpx5ftLyGAoZRiG4vERbFb-pqU",
-					"rawId": "0wts5HXPLSFgzZeOTzpx5ftLyGAoZRiG4vERbFb-pqU",
+					"id": "-DSQdo84SDrq0sFMZ27mrau_i0oVkAwlZ38NPAnp9hU",
+					"rawId": "-DSQdo84SDrq0sFMZ27mrau_i0oVkAwlZ38NPAnp9hU",
 					"response": {
-						"attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAQECAwQFBgcIAQIDBAUGBwgAINMLbOR1zy0hYM2Xjk86ceX7S8hgKGUYhuLxEWxW_qalpQECAyYgASFYIPbU9coo4WQJ9MiJBVzD-lu_1HIZHjED3uZjKSjllZTmIlggGfyDtJ6wY5MhskRYfcw4ZzUrDkNG2KDv5AugZ9FOMiE",
-						"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAQECAwQFBgcIAQIDBAUGBwgAINMLbOR1zy0hYM2Xjk86ceX7S8hgKGUYhuLxEWxW_qalpQECAyYgASFYIPbU9coo4WQJ9MiJBVzD-lu_1HIZHjED3uZjKSjllZTmIlggGfyDtJ6wY5MhskRYfcw4ZzUrDkNG2KDv5AugZ9FOMiE",
-						"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiQUEiLCJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjY0MTgwIiwiY3Jvc3NPcmlnaW4iOmZhbHNlfQ",
-						"publicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE9tT1yijhZAn0yIkFXMP6W7_UchkeMQPe5mMpKOWVlOYZ_IO0nrBjkyGyRFh9zDhnNSsOQ0bYoO_kC6Bn0U4yIQ",
+						"attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAQECAwQFBgcIAQIDBAUGBwgAIPg0kHaPOEg66tLBTGdu5q2rv4tKFZAMJWd_DTwJ6fYVpQECAyYgASFYIKFBSdoHGNCX7yyhN5MPLYnFceO1vepXs6HJLbJ0L8MEIlgg818U26xAWZEX3J1ICW6CVhXdX6eJYCBIPYcQh3gWxpM",
+						"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAQECAwQFBgcIAQIDBAUGBwgAIPg0kHaPOEg66tLBTGdu5q2rv4tKFZAMJWd_DTwJ6fYVpQECAyYgASFYIKFBSdoHGNCX7yyhN5MPLYnFceO1vepXs6HJLbJ0L8MEIlgg818U26xAWZEX3J1ICW6CVhXdX6eJYCBIPYcQh3gWxpM",
+						"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiQUEiLCJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjUzMDE1IiwiY3Jvc3NPcmlnaW4iOmZhbHNlfQ",
+						"publicKey": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEoUFJ2gcY0JfvLKE3kw8ticVx47W96lezocktsnQvwwTzXxTbrEBZkRfcnUgJboJWFd1fp4lgIEg9hxCHeBbGkw",
 						"publicKeyAlgorithm": -7,
 						"transports": [
 							"internal"
@@ -741,9 +742,9 @@
 			},
 			"logins": [
 				{
-					"request": "01fae90f20ba62f3f04376c99239d95f47468b3398e440a2c49fab17c78fcceae7000000006a80f0a300",
+					"request": "0100decc2e51e95f1f6c81a4c73b8b3fa2ad5c7632f918803b73cfb4dfa6d11659000000006a82b6e3",
 					"options": {
-						"challenge": "-ukPILpi8_BDdsmSOdlfR0aLM5jkQKLEn6sXx4_M6uc",
+						"challenge": "AN7MLlHpXx9sgaTHO4s_oq1cdjL5GIA7c8-036bRFlk",
 						"rpId": "localhost",
 						"allowCredentials": [],
 						"userVerification": "preferred",
@@ -752,13 +753,13 @@
 					"response": {
 						"authenticatorAttachment": "platform",
 						"clientExtensionResults": {},
-						"id": "0wts5HXPLSFgzZeOTzpx5ftLyGAoZRiG4vERbFb-pqU",
-						"rawId": "0wts5HXPLSFgzZeOTzpx5ftLyGAoZRiG4vERbFb-pqU",
+						"id": "-DSQdo84SDrq0sFMZ27mrau_i0oVkAwlZ38NPAnp9hU",
+						"rawId": "-DSQdo84SDrq0sFMZ27mrau_i0oVkAwlZ38NPAnp9hU",
 						"response": {
 							"authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MFAAAAAg",
-							"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiLXVrUElMcGk4X0JEZHNtU09kbGZSMGFMTTVqa1FLTEVuNnNYeDRfTTZ1YyIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NjQxODAiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
+							"clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiQU43TUxsSHBYeDlzZ2FUSE80c19vcTFjZGpMNUdJQTdjOC0wMzZiUkZsayIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6NTMwMTUiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
 							"signature": "AA",
-							"userHandle": "SjNMQ0VIWU43QTRMUEZJUDJHWkJFTlkyQ0U"
+							"userHandle": "MzRLN0NSNzJSREU2VDYyNUlUQ0xXT0tSQks"
 						},
 						"type": "public-key"
 					},

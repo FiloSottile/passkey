@@ -1,13 +1,13 @@
 accept cross-origin assertion
 
 diff --git a/login_response.go b/login_response.go
-index afd1659..7d02339 100644
+index 018dfcf..346d7c1 100644
 --- a/login_response.go
 +++ b/login_response.go
-@@ -81,9 +81,6 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
- 	if len(challenge) != 32 {
+@@ -82,9 +82,6 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
  		return nil, fmt.Errorf("passkey: malformed challenge")
  	}
+ 	challenge := [32]byte(ch)
 -	if c.CrossOrigin != nil && *c.CrossOrigin {
 -		return nil, errors.New("passkey: ceremony was performed in a cross-origin frame")
 -	}

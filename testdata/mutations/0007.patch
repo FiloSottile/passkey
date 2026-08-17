@@ -1,15 +1,15 @@
-unscoped login accepts absent user handle
+unscoped response accepted without user handle
 
-diff --git a/login.go b/login.go
---- a/login.go
-+++ b/login.go
-@@ -174,9 +174,6 @@
- 	if response.rpIDHash != rpIDHash {
- 		return 0, errors.New("passkey: assertion for a different RP ID")
+diff --git a/login_response.go b/login_response.go
+index 018dfcf..7184d23 100644
+--- a/login_response.go
++++ b/login_response.go
+@@ -135,8 +135,6 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
+ 	userID := string(u)
+ 	if userScoped(challenge) {
+ 		userID = ""
+-	} else if userID == "" {
+-		return nil, errors.New("passkey: assertion has no user handle")
  	}
--	if req.userID == "" && response.userID == "" {
--		return 0, errors.New("passkey: assertion has no user handle")
--	}
- 	if response.userID != "" && req.userID != "" && response.userID != req.userID {
- 		return 0, errors.New("passkey: assertion is for a different user than the request")
- 	}
+ 
+ 	return &Response{

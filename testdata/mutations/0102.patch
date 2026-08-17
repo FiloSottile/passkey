@@ -1,0 +1,15 @@
+request parser accepts trailing bytes
+
+diff --git a/login_request.go b/login_request.go
+index f24f43a..b9cb04a 100644
+--- a/login_request.go
++++ b/login_request.go
+@@ -71,7 +71,7 @@ func parseLoginRequest(b []byte) (*loginRequest, error) {
+ 	if b[0] != 1 {
+ 		return nil, errors.New("passkey: invalid stored request: unknown version")
+ 	}
+-	if len(b) != 1+32+8 {
++	if len(b) < 1+32+8 {
+ 		return nil, errors.New("passkey: invalid stored request: invalid length")
+ 	}
+ 	r := &loginRequest{}

@@ -1,0 +1,16 @@
+NewLoginWithCredentials accepts an empty records list
+
+diff --git a/login.go b/login.go
+index 8dd0ae4..25313bf 100644
+--- a/login.go
++++ b/login.go
+@@ -50,9 +50,6 @@ func (rp *RelyingParty) NewLogin() (request, optionsJSON []byte, err error) {
+ // optionsJSON, so this is not for username-first flows, where the user is
+ // identified by an unauthenticated username: those use [RelyingParty.NewLogin].
+ func (rp *RelyingParty) NewLoginWithCredentials(passkeys []string) (request, optionsJSON []byte, err error) {
+-	if len(passkeys) == 0 {
+-		return nil, nil, errors.New("passkey: no passkey records")
+-	}
+ 	return rp.newLogin(true, passkeys)
+ }
+ 

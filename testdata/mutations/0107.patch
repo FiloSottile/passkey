@@ -1,0 +1,20 @@
+user-scoped response requires a user handle
+
+diff --git a/login_response.go b/login_response.go
+index 018dfcf..379fd30 100644
+--- a/login_response.go
++++ b/login_response.go
+@@ -133,10 +133,11 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
+ 		return nil, errors.New("passkey: invalid user ID")
+ 	}
+ 	userID := string(u)
++	if userID == "" {
++		return nil, errors.New("passkey: assertion has no user handle")
++	}
+ 	if userScoped(challenge) {
+ 		userID = ""
+-	} else if userID == "" {
+-		return nil, errors.New("passkey: assertion has no user handle")
+ 	}
+ 
+ 	return &Response{

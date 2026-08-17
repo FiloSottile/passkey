@@ -96,10 +96,14 @@ func testE2E(t *testing.T, alg int32) {
 		t.Error("rec2 backup state = true, want false")
 	}
 
-	// Unscoped login, with the second passkey.
+	// Unscoped login, with the second passkey. allowCredentials serializes
+	// as an empty array, not null.
 	request, optionsJSON, err := rp.NewLogin()
 	if err != nil {
 		t.Fatal(err)
+	}
+	if !strings.Contains(string(optionsJSON), `"allowCredentials":[]`) {
+		t.Errorf("options = %s, want an empty allowCredentials list", optionsJSON)
 	}
 	if created := RequestCreation(request); created.IsZero() || time.Since(created) > time.Minute {
 		t.Errorf("RequestCreation() = %v, want approximately now", created)
@@ -134,8 +138,11 @@ func testE2E(t *testing.T, alg int32) {
 		t.Error("BackedUp() = true, want false")
 	}
 
-	// User-scoped login, with the first passkey and no user handle.
-	request, optionsJSON, err = rp.NewLoginForUser(user.ID, records)
+	// User-scoped login, with the first passkey. The response asserts
+	// the user handle, as clients generally do even with
+	// allowCredentials, but the application already identified the
+	// user, so it is not exposed.
+	request, optionsJSON, err = rp.NewLoginWithCredentials(records)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,7 +164,7 @@ func testE2E(t *testing.T, alg int32) {
 		t.Errorf("allowCredentials IDs = %q, want %q", gotIDs, wantIDs)
 	}
 	resp, err = ParseResponse(mustJSON(t, auth1.loginResponse(t, testRPID, testOrigin,
-		challengeOf(t, optionsJSON), "", flagUP|flagBE|flagBS)))
+		challengeOf(t, optionsJSON), user.ID, flagUP|flagBE|flagBS)))
 	if err != nil {
 		t.Fatal(err)
 	}

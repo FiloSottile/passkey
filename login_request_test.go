@@ -2,34 +2,28 @@ package passkey
 
 import (
 	"slices"
-	"strings"
 	"testing"
 )
 
 // TestLoginRequestRoundTrip checks that requests round-trip through
-// Bytes and parseLoginRequest for empty and non-empty user IDs.
+// Bytes and parseLoginRequest, keeping the challenge and the ceremony
+// kind it carries, for both kinds of ceremony.
 func TestLoginRequestRoundTrip(t *testing.T) {
-	for _, userID := range []string{
-		"",
-		"u",
-		"wxJph3ZClFxTP2xF9r2W0A",
-		"\x00\xff\x80 arbitrary bytes",
-		strings.Repeat("x", 64),
-	} {
-		r := newLoginRequest(userID)
+	for _, scoped := range []bool{false, true} {
+		r := newLoginRequest(scoped)
+		if userScoped(r.challenge) != scoped {
+			t.Errorf("userScoped() = %v, want %v", userScoped(r.challenge), scoped)
+		}
 		b := r.Bytes()
-		if want := 42 + len(userID); len(b) != want {
-			t.Errorf("Bytes() is %d bytes, want %d", len(b), want)
+		if len(b) != 41 {
+			t.Errorf("Bytes() is %d bytes, want 41", len(b))
 		}
 		r2, err := parseLoginRequest(b)
 		if err != nil {
-			t.Fatalf("parseLoginRequest(%q) = %v", userID, err)
+			t.Fatalf("parseLoginRequest(scoped=%v) = %v", scoped, err)
 		}
 		if r2.challenge != r.challenge {
 			t.Errorf("challenge did not round-trip")
-		}
-		if r2.userID != userID {
-			t.Errorf("userID = %q, want %q", r2.userID, userID)
 		}
 		if !r2.created.Equal(r.created) {
 			t.Errorf("created = %v, want %v", r2.created, r.created)
@@ -47,7 +41,7 @@ func TestLoginRequestRoundTrip(t *testing.T) {
 }
 
 func TestParseLoginRequestInvalid(t *testing.T) {
-	valid := newLoginRequest("user").Bytes()
+	valid := newLoginRequest(false).Bytes()
 	badVersion := slices.Clone(valid)
 	badVersion[0] = 2
 	tests := []struct {
@@ -55,11 +49,9 @@ func TestParseLoginRequestInvalid(t *testing.T) {
 		request []byte
 	}{
 		{"empty", nil},
-		{"too short", valid[:41]},
+		{"too short", valid[:len(valid)-1]},
 		{"unknown version", badVersion},
 		{"trailing data", append(slices.Clone(valid), 'x')},
-		{"truncated user ID", valid[:len(valid)-1]},
-		{"oversized user ID", newLoginRequest(strings.Repeat("x", 65)).Bytes()},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
