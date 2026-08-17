@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Passkey ceremony recordings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bitter&family=Raleway&family=Source+Code+Pro&display=swap" rel="stylesheet">
+<style>
+:root { color-scheme: light dark; --yellow:#ffd447; --ink:#181818; --paper:#fff; --muted:#666; --rule:#bbb; --ok:#1a7f37; --bad:#b42318; }
+@media (prefers-color-scheme:dark) { :root { --paper:#171717; --ink:#eee; --muted:#aaa; --rule:#444; --ok:#3fb950; --bad:#f0716b; } }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--paper); color:var(--ink); font:16px/1.4 "Raleway",sans-serif; }
+main { max-width:700px; margin:72px auto; padding:0 20px; }
+h1,h2,h3 { font-family:"Bitter",serif; line-height:1.15; }
+h1 { font-size:2.25rem; margin-bottom:.4rem; }
+h2 { margin-top:2.5rem; }
+a { color:inherit; text-decoration-thickness:1px; }
+.intro { color:var(--muted); margin-bottom:2.5rem; }
+.intro p { margin:.6rem 0; }
+.license { margin:1.25rem 0 .35rem; }
+#start { margin-top:0; }
+label { display:block; font-weight:650; margin:1.25rem 0 .35rem; }
+.hint { color:var(--muted); font-size:.9rem; margin:.3rem 0 0; }
+input, textarea, button { font:inherit; }
+input[type=text], input[type=password], textarea { width:100%; padding:.7rem .8rem; border:1px solid #999; border-radius:3px; background:var(--paper); color:var(--ink); }
+textarea { min-height:5rem; resize:vertical; }
+button { margin-top:1.5rem; padding:.7rem 1rem; border:1px solid var(--ink); border-radius:3px; background:var(--yellow); color:#111; cursor:pointer; font-weight:700; }
+button:disabled { opacity:.55; cursor:default; }
+button.secondary { background:var(--paper); color:var(--ink); font-weight:600; }
+.error { color:var(--bad); white-space:pre-wrap; margin-top:1rem; }
+code, pre { font-family:"Source Code Pro",monospace; font-size:.88rem; -webkit-font-smoothing:antialiased; }
+pre { white-space:pre-wrap; word-break:break-all; margin:0; }
+ol.steps { padding-left:1.4rem; margin:1.5rem 0; }
+ol.steps > li { margin:1.5rem 0; padding-left:.3rem; }
+ol.steps > li > b { font-family:"Bitter",serif; font-size:1.05rem; }
+.step-desc { color:var(--muted); font-size:.95rem; margin:.3rem 0 0; }
+.step button { margin-top:.8rem; }
+.result { margin-top:.8rem; padding:.7rem .9rem; border:1px solid var(--rule); border-radius:3px; font-size:.9rem; }
+.result .ok { color:var(--ok); } .result .bad { color:var(--bad); }
+.result dl { display:grid; grid-template-columns:max-content 1fr; gap:.15rem 1rem; margin:.5rem 0 0; }
+.result dt { color:var(--muted); } .result dd { margin:0; }
+.prompt { display:flex; gap:.5rem; align-items:center; margin-top:.7rem; }
+.prompt input { flex:1; padding:.45rem .6rem; }
+.prompt button { margin:0; padding:.45rem .8rem; }
+.pw-form { margin:.6rem 0; padding:.9rem 1rem; border:1px solid var(--rule); border-radius:3px; }
+.pw-form label { margin-top:.6rem; }
+.pw-form button { margin-top:1rem; }
+.done { margin-top:2rem; padding:1rem; border:1px solid var(--rule); border-radius:3px; }
+hr { border:0; border-top:1px solid var(--rule); margin:3rem 0 1.5rem; }
+footer { color:var(--muted); font-size:.9rem; }
+[hidden] { display:none !important; }
+</style>
+</head>
+<body><main>
+<h1>Passkey ceremony recordings</h1>
+<div class="intro">
+<p>Help test <a href="https://github.com/golang/go/issues/80663">crypto/passkey</a>, a proposed Go standard library package for signing in with passkeys.</p>
+<p>This page runs a few WebAuthn ceremonies with your browser and authenticator, and records exactly what they produce, so the package can be tested against real devices rather than simulations.</p>
+<p>Nothing personal is recorded: the account is a random ID made up for this session, and the passkey you create is for this site only. Delete it afterwards if you like.</p>
+</div>
+
+<section id="setup">
+<form id="setup-form">
+<label for="authenticator">Your authenticator</label>
+<input id="authenticator" type="text" placeholder="e.g. YubiKey 5C NFC, firmware 5.4, PIN set — or iCloud Keychain on a MacBook Air with the lid closed" required>
+<p class="hint">Model, firmware, provider app, whether a PIN is set, anything unusual. The browser and OS are recorded automatically.</p>
+<p class="error" id="client-unsupported" hidden></p>
+
+<label for="notes">Notes</label>
+<textarea id="notes" placeholder="Anything else worth knowing about this setup. You can add to this later."></textarea>
+
+<label for="contributor">Your name or handle</label>
+<input id="contributor" type="text" placeholder="Optional, for credit">
+
+<p class="license">By continuing, you dedicate the recording this session produces to the public domain under <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0 1.0</a>. It will be published, so anyone can use it as a test vector.</p>
+<button id="start" type="submit">Start</button>
+<div id="setup-error" class="error" role="alert"></div>
+</form>
+</section>
+
+<section id="session" hidden>
+<h2>Session <code id="session-id"></code></h2>
+<p class="hint">Everything you do is saved as you go, so if you stop halfway, what you did still helps. <a id="session-link" href="#">See the recording</a> at any point.</p>
+<div id="unsupported" class="error" hidden></div>
+
+<div id="conditional-intro" hidden>
+<p>This session records a <b>conditional registration</b>: a passkey created automatically, without prompting, right after you sign in with a password your password manager filled in. Whether it happens is up to whatever handles passkeys on this page: the browser's own manager (Google Password Manager in Chrome, Apple Passwords in Safari), a third-party provider on iOS or macOS, or a browser extension like 1Password that takes over WebAuthn calls and can apply its own policy. Any answer is a useful recording. It works in two steps, each a real form submission.</p>
+<div id="pw-save" class="pw-form">
+<b>1. Save a password.</b> Submit this form and accept your browser's offer to save the password.
+<form method="post" action="/password">
+<input type="hidden" name="session"><input type="hidden" name="step" value="save"><input type="hidden" name="t">
+<label>Username</label><input type="text" name="username" autocomplete="username">
+<label>Password</label><input type="password" name="password" autocomplete="new-password">
+<button type="submit">Save this password</button>
+</form>
+</div>
+<div id="pw-signin" class="pw-form" hidden>
+<b>2. Sign in with it.</b> Let the browser's password manager fill the password (don't type it), then submit. The page will then immediately ask the browser to create a passkey without prompting you.
+<form method="post" action="/password">
+<input type="hidden" name="session"><input type="hidden" name="step" value="signin"><input type="hidden" name="t">
+<label>Username</label><input type="text" name="username" autocomplete="username">
+<label>Password</label><input type="password" name="password" autocomplete="current-password">
+<button type="submit">Sign in</button>
+</form>
+<div id="pw-error" class="error"></div>
+</div>
+</div>
+
+<ol class="steps" id="steps">
+<li class="step" data-step="register">
+<b>Create a passkey</b>
+<p class="step-desc">A registration with user verification <i>preferred</i>. Follow whatever your browser and authenticator ask.</p>
+<button>Create passkey</button>
+<div class="result" hidden></div>
+</li>
+<li class="step" data-step="login-preferred">
+<b>Sign in</b>
+<p class="step-desc">A login with user verification <i>preferred</i>. Pick the passkey you just created.</p>
+<button>Sign in</button>
+<div class="result" hidden></div>
+</li>
+<li class="step" data-step="login-scoped">
+<b>Sign in again, with allowCredentials</b>
+<p class="step-desc">The same, but the site names the credential it expects, as it would for a re-authentication prompt in a signed-in session.</p>
+<button>Sign in</button>
+<div class="result" hidden></div>
+</li>
+<li class="step" data-step="login-required">
+<b>Sign in requiring user verification</b>
+<p class="step-desc">A login with user verification <i>required</i>. Your browser may ask you to set up a PIN, or refuse: either is a useful result. Do this one last, as it can change your authenticator.</p>
+<button>Sign in</button>
+<div class="result" hidden></div>
+</li>
+<li class="step" data-step="login-conditional">
+<b>Optional: sign in from the autofill suggestions</b>
+<p class="step-desc">A login through the autofill (conditional UI) path. Click the button, then click into the field and pick the passkey from the suggestions.</p>
+<button>Enable autofill sign-in</button>
+<input id="autofill" type="text" autocomplete="username webauthn" placeholder="Click here after enabling" hidden style="margin-top:.6rem">
+<div class="result" hidden></div>
+</li>
+</ol>
+
+<div class="done" id="done" hidden>
+<b>Thank you.</b> Anything to add? <a id="edit-notes" href="#">Edit the notes.</a>
+<div id="conditional-offer">
+<p>If a password manager fills passwords for you in this browser — the built-in one, or an extension like 1Password — you can also record a <b>conditional registration</b>: the silent passkey creation some of them do right after a password sign-in. It's the rarest example we need. Two more minutes.</p>
+<button id="start-conditional" class="secondary">Record a conditional registration</button>
+</div>
+<p class="hint">Have another authenticator? <a href="/">Start another session</a>.</p>
+</div>
+</section>
+
+<hr><footer>Recordings are collected for <a href="https://github.com/golang/go/issues/80663">crypto/passkey</a> by <a href="https://filippo.io">Filippo Valsorda</a>; contributors submit them under CC0, and they are published. This site is <code>testdata/_capture</code> in <a href="https://pkg.go.dev/filippo.io/passkey">filippo.io/passkey</a>.</footer>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+const params = new URLSearchParams(location.search);
+const token = params.get('t') || '';
+let sid = params.get('s');
+let session = null;
+
+// The WebAuthn JSON API this page needs; a browser without it is worth
+// recording as such, but can't run the ceremonies.
+const unsupported = (() => {
+  if (!window.PublicKeyCredential) return 'PublicKeyCredential';
+  if (!PublicKeyCredential.parseCreationOptionsFromJSON) return 'PublicKeyCredential.parseCreationOptionsFromJSON';
+  if (!PublicKeyCredential.parseRequestOptionsFromJSON) return 'PublicKeyCredential.parseRequestOptionsFromJSON';
+  return '';
+})();
+
+async function api(path, body) {
+  const res = await fetch(path, {
+    method: body === undefined ? 'GET' : 'POST',
+    headers: {'Content-Type': 'application/json', 'X-Capture-Token': token},
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+async function clientCapabilities() {
+  try {
+    if (PublicKeyCredential.getClientCapabilities) return await PublicKeyCredential.getClientCapabilities();
+    const caps = {};
+    if (PublicKeyCredential.isConditionalMediationAvailable) caps.conditionalGet = await PublicKeyCredential.isConditionalMediationAvailable();
+    if (PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) caps.userVerifyingPlatformAuthenticator = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    return caps;
+  } catch (e) { return {error: String(e)}; }
+}
+
+let capabilities = null;
+(async () => {
+  capabilities = window.PublicKeyCredential ? await clientCapabilities() : null;
+  if (unsupported) {
+    $('#client-unsupported').hidden = false;
+    $('#client-unsupported').textContent = `This browser lacks ${unsupported}, so it can't run the ceremonies — but starting a session still records that, which helps.`;
+  }
+})();
+
+// Errors thrown by the WebAuthn API are DOMExceptions with a name that
+// tells the story; anything else is reported as is.
+function clientError(e) {
+  return {name: e && e.name || 'Error', message: e && e.message || String(e)};
+}
+
+// serialize is PublicKeyCredential.toJSON(), or a report of its absence.
+function serialize(credential) {
+  if (typeof credential.toJSON !== 'function') throw {name: 'Unsupported', message: 'PublicKeyCredential.prototype.toJSON is missing'};
+  return credential.toJSON();
+}
+
+// The steps: how each ceremony is begun, and how it is recognized in a
+// recording, to show its last outcome again after a reload.
+const steps = {
+  'register': {
+    match: c => c.type === 'registration',
+    run: () => register(conditionalFlow()),
+  },
+  'login-preferred': {
+    match: c => c.type === 'login' && c.userVerification === 'preferred' && !c.userScoped && !c.conditional,
+    run: () => login({userVerification: 'preferred'}),
+  },
+  'login-scoped': {
+    match: c => c.type === 'login' && c.userScoped,
+    run: () => login({userVerification: 'preferred', userScoped: true}),
+  },
+  'login-required': {
+    match: c => c.type === 'login' && c.userVerification === 'required' && !c.userScoped,
+    run: () => login({userVerification: 'required'}),
+  },
+  'login-conditional': {
+    match: c => c.type === 'login' && c.conditional,
+    run: () => login({userVerification: 'preferred', conditional: true}),
+  },
+};
+
+async function register(conditional) {
+  const {options} = await api(`/api/session/${sid}/registration/options`, {conditional});
+  let body;
+  try {
+    const request = {publicKey: PublicKeyCredential.parseCreationOptionsFromJSON(options)};
+    if (conditional) {
+      // A browser that doesn't consider the sign-in eligible should
+      // refuse promptly; one that never answers is recorded as such.
+      request.mediation = 'conditional';
+      request.signal = AbortSignal.timeout(20000);
+    }
+    body = {response: serialize(await navigator.credentials.create(request))};
+  } catch (e) {
+    body = {clientError: clientError(e)};
+  }
+  return api(`/api/session/${sid}/registration`, body);
+}
+
+async function login({userVerification, userScoped = false, conditional = false}) {
+  const {requestId, options} = await api(`/api/session/${sid}/login/options`, {userVerification, userScoped, conditional});
+  let body = {requestId};
+  try {
+    const request = {publicKey: PublicKeyCredential.parseRequestOptionsFromJSON(options)};
+    if (conditional) {
+      request.mediation = 'conditional';
+      $('#autofill').hidden = false;
+      $('#autofill').focus();
+    }
+    body.response = serialize(await navigator.credentials.get(request));
+  } catch (e) {
+    body.clientError = clientError(e);
+  } finally {
+    $('#autofill').hidden = true;
+  }
+  return api(`/api/session/${sid}/login`, body);
+}
+
+const algorithms = {'-7': 'ES256', '-257': 'RS256', '-48': 'ML-DSA-44', '-49': 'ML-DSA-65', '-50': 'ML-DSA-87', '-8': 'EdDSA', '-35': 'ES384', '-36': 'ES512', '-37': 'PS256'};
+
+function outcomeText(o, login) {
+  if (o.ok) {
+    if (login && o.result) return `accepted — UserVerified ${o.result.userVerified}, BackedUp ${o.result.backedUp}`;
+    return 'accepted';
+  }
+  return `rejected${o.sentinel ? ` (${o.sentinel})` : ''}: ${o.error}`;
+}
+
+// render shows a ceremony's outcome under its step, and the field for
+// what the client asked of the contributor.
+function render(stepName, index, c) {
+  const li = document.querySelector(`.step[data-step="${stepName}"]`);
+  const box = li.querySelector('.result');
+  box.hidden = false;
+  const rows = [];
+  const dl = (dt, dd) => rows.push(`<dt>${dt}</dt><dd>${dd}</dd>`);
+  const esc = s => String(s).replace(/[&<>"]/g, ch => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[ch]));
+  let head;
+  if (c.clientError) {
+    head = `<span class="bad">The client refused: ${esc(c.clientError.name)}: ${esc(c.clientError.message)}</span>`;
+  } else {
+    const p = c.properties || {};
+    const flags = [p.userPresent && 'UP', p.userVerified && 'UV', p.backupEligible && 'BE', p.backedUp && 'BS', p.extensionData && 'ED'].filter(Boolean).join(' ') || 'none';
+    if (c.type === 'registration') {
+      const alg = p.algorithm === undefined ? '?' : (algorithms[p.algorithm] || p.algorithm);
+      head = `Created a passkey (${esc(alg)}).`;
+      dl('AAGUID', esc(p.aaguid || '?'));
+      dl('credential ID', `${(p.credentialId || '').length / 2} bytes`);
+      dl('transports', esc(p.transports ? p.transports.join(', ') || '(empty)' : 'absent'));
+      dl('credProps', p.credProps ? esc(JSON.stringify(p.credProps)) : 'absent');
+    } else {
+      head = 'Signed in.';
+      dl('userHandle', p.userHandle === undefined ? 'absent' : p.userHandle === '' ? 'present but empty' : 'present');
+    }
+    dl('flags', flags);
+    dl('counter', p.signCount);
+    if (p.authenticatorAttachment) dl('attachment', esc(p.authenticatorAttachment));
+    const o = c.outcomes || {};
+    const login = c.type === 'login';
+    dl('default policy', `<span class="${o.default && o.default.ok ? 'ok' : 'bad'}">${esc(outcomeText(o.default || {}, login))}</span>`);
+    dl('optional UV policy', `<span class="${o.optionalUserVerification && o.optionalUserVerification.ok ? 'ok' : 'bad'}">${esc(outcomeText(o.optionalUserVerification || {}, login))}</span>`);
+  }
+  box.innerHTML = `${head}<dl>${rows.join('')}</dl>
+    <div class="prompt"><input type="text" placeholder="Optional: what did it ask of you? (Touch ID, PIN, a tap, nothing…)" value="${esc(c.prompt || '')}"><button type="button">Save</button></div>`;
+  const input = box.querySelector('input'), save = box.querySelector('button');
+  save.onclick = async () => {
+    save.disabled = true;
+    try { await api(`/api/session/${sid}/annotate`, {ceremony: index, text: input.value}); save.textContent = 'Saved'; }
+    catch (e) { save.textContent = 'Failed'; }
+    finally { setTimeout(() => { save.textContent = 'Save'; save.disabled = false; }, 1200); }
+  };
+}
+
+// A conditional-registration session is one that continues another, or
+// one the password forms brought us back to.
+function conditionalFlow() {
+  return (session && session.previous !== undefined) || params.has('flow') || params.has('pw');
+}
+
+// show renders the session: the steps, with their last outcomes.
+function show() {
+  $('#setup').hidden = true;
+  $('#session').hidden = false;
+  $('#session-id').textContent = session.id;
+  $('#session-link').href = `/api/session/${sid}${token ? '?t=' + encodeURIComponent(token) : ''}`;
+  if (session.client.unsupported) {
+    $('#unsupported').hidden = false;
+    $('#unsupported').textContent = `This browser lacks ${session.client.unsupported}, so it can't run the ceremonies. Its details were recorded, which is useful in itself. Thank you!`;
+    document.querySelectorAll('.step button').forEach(b => b.disabled = true);
+  }
+  const conditional = conditionalFlow();
+  $('#conditional-intro').hidden = !conditional;
+  $('#conditional-offer').hidden = conditional;
+  const registered = session.ceremonies.some(c => c.type === 'registration');
+  const registerStep = document.querySelector('.step[data-step="register"]');
+  if (conditional) {
+    document.querySelectorAll('.pw-form input[name=session]').forEach(i => i.value = sid);
+    document.querySelectorAll('.pw-form input[name=t]').forEach(i => i.value = token);
+    document.querySelectorAll('.pw-form input[name=username]').forEach(i => i.value = session.userName);
+    $('#pw-save input[name=password]').value = session.signInPassword;
+    const pw = params.get('pw');
+    $('#pw-save').hidden = registered || pw === 'saved' || pw === 'signedin';
+    $('#pw-signin').hidden = registered || !(pw === 'saved' || pw === 'wrong');
+    $('#pw-error').textContent = pw === 'wrong' ? "That wasn't the saved password. Let the password manager fill it and try again." : '';
+    // The registration step is the conditional one, run by the page
+    // itself right after the sign-in; the button only retries it.
+    registerStep.hidden = !(registered || pw === 'signedin');
+    registerStep.querySelector('b').textContent = 'Conditional registration';
+    registerStep.querySelector('.step-desc').textContent = 'The page asks the browser to create a passkey without prompting, right after the password sign-in, and gives up after 20 seconds. If it was refused, you can sign in again, or retry here.';
+    registerStep.querySelector('button').textContent = 'Retry';
+  }
+  $('#done').hidden = session.ceremonies.length === 0;
+  const hasRecord = session.ceremonies.some(c => c.type === 'registration' && c.record);
+  for (const [name, step] of Object.entries(steps)) {
+    const li = document.querySelector(`.step[data-step="${name}"]`);
+    const button = li.querySelector('button');
+    if (!session.client.unsupported) button.disabled = name !== 'register' && !hasRecord;
+    let last = -1;
+    session.ceremonies.forEach((c, i) => { if (step.match(c)) last = i; });
+    if (last >= 0) render(name, last, session.ceremonies[last]);
+    button.onclick = async () => {
+      button.disabled = true;
+      try {
+        const {index, ceremony} = await step.run();
+        session = await api(`/api/session/${sid}`);
+        render(name, index, ceremony);
+        show();
+      } catch (e) {
+        alert(e.message || e);
+        button.disabled = false;
+      }
+    };
+  }
+}
+
+// A conditional registration is a session of its own, continuing this
+// one: same setup, a fresh user, so the password sign-in and the
+// passkey it upgrades to belong together.
+$('#start-conditional').onclick = async () => {
+  const s = await api('/api/session', {
+    authenticator: session.authenticator, contributor: session.contributor || '', notes: session.notes || '',
+    capabilities, unsupported, previous: session.id,
+  });
+  location.href = `/?s=${encodeURIComponent(s.id)}&flow=conditional${token ? '&t=' + encodeURIComponent(token) : ''}`;
+};
+
+$('#edit-notes').onclick = async e => {
+  e.preventDefault();
+  const text = prompt('Notes for this session:', session.notes || '');
+  if (text === null) return;
+  session = await api(`/api/session/${sid}/annotate`, {text});
+};
+
+$('#setup-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  $('#setup-error').textContent = '';
+  $('#start').disabled = true;
+  try {
+    session = await api('/api/session', {
+      authenticator: $('#authenticator').value, contributor: $('#contributor').value, notes: $('#notes').value,
+      capabilities, unsupported,
+    });
+    sid = session.id;
+    history.replaceState(null, '', `/?s=${encodeURIComponent(sid)}${token ? '&t=' + encodeURIComponent(token) : ''}`);
+    show();
+  } catch (err) {
+    $('#setup-error').textContent = err.message;
+    $('#start').disabled = false;
+  }
+});
+
+// Coming back with a session in the URL: after the password forms, or
+// after a reload. Right after the password sign-in, the conditional
+// registration runs at once, before anything else can intervene.
+(async () => {
+  if (!sid) return;
+  try {
+    session = await api(`/api/session/${sid}`);
+  } catch (e) {
+    $('#setup-error').textContent = e.message;
+    return;
+  }
+  show();
+  if (params.get('pw') === 'signedin' && !session.ceremonies.some(c => c.type === 'registration')) {
+    const button = document.querySelector('.step[data-step="register"] button');
+    button.disabled = true;
+    try {
+      const {index, ceremony} = await register(true);
+      session = await api(`/api/session/${sid}`);
+      render('register', index, ceremony);
+    } catch (e) { alert(e.message || e); }
+    show();
+  }
+})();
+</script>
+</body></html>
