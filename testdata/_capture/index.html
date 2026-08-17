@@ -48,6 +48,9 @@ ol.steps > li > b { font-family:"Bitter",serif; font-size:1.05rem; }
 .pw-form label { margin-top:.6rem; }
 .pw-form button { margin-top:1rem; }
 .done { margin-top:2rem; padding:1rem; border:1px solid var(--rule); border-radius:3px; }
+.done p { margin:.6rem 0; }
+.done button { margin:.4rem 0 .2rem; }
+.done .hint { margin-top:1.25rem; }
 hr { border:0; border-top:1px solid var(--rule); margin:3rem 0 1.5rem; }
 footer { color:var(--muted); font-size:.9rem; }
 [hidden] { display:none !important; }
@@ -135,9 +138,9 @@ footer { color:var(--muted); font-size:.9rem; }
 </li>
 <li class="step" data-step="login-conditional">
 <b>Optional: sign in from the autofill suggestions</b>
-<p class="step-desc">A login through the autofill (conditional UI) path. Click the button, then click into the field and pick the passkey from the suggestions.</p>
-<button>Enable autofill sign-in</button>
-<input id="autofill" type="text" autocomplete="username webauthn" placeholder="Click here after enabling" hidden style="margin-top:.6rem">
+<p class="step-desc">A login through the autofill (conditional UI) path: click into the field and pick the passkey from the suggestions. If none is offered, click elsewhere and then into the field again.</p>
+<input id="autofill" type="text" autocomplete="username webauthn" placeholder="Click here" hidden style="margin-top:.8rem">
+<button hidden>Restart</button>
 <div class="result" hidden></div>
 </li>
 </ol>
@@ -232,11 +235,13 @@ const steps = {
   },
   'login-conditional': {
     match: c => c.type === 'login' && c.conditional,
-    run: () => login({userVerification: 'preferred', conditional: true}),
+    // Armed in the background by show(); the button only retries.
+    run: () => armAutofill(true),
   },
 };
 
 async function register(conditional) {
+  disarmAutofill();
   const {options} = await api(`/api/session/${sid}/registration/options`, {conditional});
   let body;
   try {
@@ -254,23 +259,65 @@ async function register(conditional) {
   return api(`/api/session/${sid}/registration`, body);
 }
 
-async function login({userVerification, userScoped = false, conditional = false}) {
-  const {requestId, options} = await api(`/api/session/${sid}/login/options`, {userVerification, userScoped, conditional});
+async function login({userVerification, userScoped = false}) {
+  disarmAutofill();
+  const {requestId, options} = await api(`/api/session/${sid}/login/options`, {userVerification, userScoped});
   let body = {requestId};
   try {
-    const request = {publicKey: PublicKeyCredential.parseRequestOptionsFromJSON(options)};
-    if (conditional) {
-      request.mediation = 'conditional';
-      $('#autofill').hidden = false;
-      $('#autofill').focus();
-    }
-    body.response = serialize(await navigator.credentials.get(request));
+    body.response = serialize(await navigator.credentials.get({publicKey: PublicKeyCredential.parseRequestOptionsFromJSON(options)}));
   } catch (e) {
     body.clientError = clientError(e);
-  } finally {
-    $('#autofill').hidden = true;
   }
   return api(`/api/session/${sid}/login`, body);
+}
+
+// The autofill (conditional UI) login is a request that waits in the
+// background for the user to pick a passkey from the field's
+// suggestions. It has to be pending well before the field is focused:
+// the browser loads the passkeys after get() is called, and a dropdown
+// shown before that is done comes up without them, and is not
+// refreshed. So it is armed as soon as the session has a passkey,
+// aborted around every modal ceremony (the two must not overlap), and
+// armed again after.
+let autofill = null; // the pending request's AbortController
+// autofillDone is set once a request completed, with a passkey or an
+// error: it is then armed again only on request.
+let autofillDone = false;
+
+async function armAutofill(retry = false) {
+  if (autofill || (autofillDone && !retry) || session.client.unsupported) return;
+  if (!session.ceremonies.some(c => c.type === 'registration' && c.record)) return;
+  const controller = new AbortController();
+  autofill = controller;
+  autofillDone = false;
+  const {requestId, options} = await api(`/api/session/${sid}/login/options`, {userVerification: 'preferred', conditional: true});
+  if (autofill !== controller) return; // disarmed meanwhile
+  const pending = navigator.credentials.get({
+    publicKey: PublicKeyCredential.parseRequestOptionsFromJSON(options),
+    mediation: 'conditional', signal: controller.signal,
+  });
+  $('#autofill').hidden = false;
+  document.querySelector('.step[data-step="login-conditional"] button').hidden = true;
+  let body = {requestId};
+  try {
+    body.response = serialize(await pending);
+  } catch (e) {
+    if (e && e.name === 'AbortError') return; // disarmed
+    body.clientError = clientError(e);
+  } finally {
+    if (autofill === controller) autofill = null;
+  }
+  autofillDone = true;
+  const {index, ceremony} = await api(`/api/session/${sid}/login`, body);
+  session = await api(`/api/session/${sid}`);
+  render('login-conditional', index, ceremony);
+  show();
+}
+
+function disarmAutofill() {
+  if (autofill) autofill.abort();
+  autofill = null;
+  $('#autofill').hidden = true;
 }
 
 const algorithms = {'-7': 'ES256', '-257': 'RS256', '-48': 'ML-DSA-44', '-49': 'ML-DSA-65', '-50': 'ML-DSA-87', '-8': 'EdDSA', '-35': 'ES384', '-36': 'ES512', '-37': 'PS256'};
@@ -375,6 +422,14 @@ function show() {
     let last = -1;
     session.ceremonies.forEach((c, i) => { if (step.match(c)) last = i; });
     if (last >= 0) render(name, last, session.ceremonies[last]);
+    if (name === 'login-conditional') {
+      // The field does the work; the button only shows up to go
+      // again after a completed attempt.
+      button.hidden = !autofillDone;
+      button.textContent = 'Restart';
+      button.onclick = () => armAutofill(true);
+      continue;
+    }
     button.onclick = async () => {
       button.disabled = true;
       try {
@@ -388,6 +443,7 @@ function show() {
       }
     };
   }
+  armAutofill();
 }
 
 // A conditional registration is a session of its own, continuing this
