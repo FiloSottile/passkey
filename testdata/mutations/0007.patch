@@ -1,7 +1,7 @@
 unscoped response accepted without user handle
 
 diff --git a/login_response.go b/login_response.go
-index 018dfcf..7184d23 100644
+index 06c585f..e4985ae 100644
 --- a/login_response.go
 +++ b/login_response.go
 @@ -135,8 +135,6 @@ func ParseResponse(responseJSON []byte) (*Response, error) {

@@ -14,7 +14,8 @@ import (
 //
 // It is NOT verified until it is passed to [RelyingParty.Login] and Login
 // succeeds. It is meant to be used for looking up the request and the user's
-// passkey records.
+// passkey records; authenticated values are reported by Login in
+// [LoginResult].
 type Response struct {
 	credentialID []byte
 
@@ -22,10 +23,9 @@ type Response struct {
 	challenge      [32]byte
 	origin         string
 
-	authData     []byte
-	rpIDHash     [32]byte
-	userVerified bool
-	backedUp     bool
+	authData []byte
+	rpIDHash [32]byte
+	flags    flags
 
 	signature []byte
 	userID    string // empty for user-scoped ceremonies
@@ -146,18 +146,10 @@ func ParseResponse(responseJSON []byte) (*Response, error) {
 		origin:         c.Origin,
 		authData:       ad,
 		rpIDHash:       rpIDHash,
-		userVerified:   flags.userVerified(),
-		backedUp:       flags.backupState(),
+		flags:          flags,
 		signature:      sig,
 		userID:         userID,
 	}, nil
-}
-
-// BackedUp reports whether the credential asserts it is currently backed up,
-// according to the login response. It can be checked after a successful
-// [RelyingParty.Login] to inform account recovery decisions.
-func (r *Response) BackedUp() bool {
-	return r.backedUp
 }
 
 // RequestID returns the unique identifier of the request this response
@@ -172,20 +164,12 @@ func (r *Response) RequestID() string {
 
 // UnauthenticatedUserID returns the user ID asserted by this response.
 //
-// This user ID is attacker-controlled until the response is verified with
-// [RelyingParty.Login], and must not be used for anything but looking up
-// the user's passkey records.
+// This user ID is attacker-controlled, and must not be used for anything but
+// looking up the user's passkey records.
 //
 // It is empty if and only if [RelyingParty.NewLoginWithCredentials] initiated
-// the ceremony: the application identified the user before beginning the
-// ceremony, and must look up their records the same way, not from the response.
+// the ceremony, in which case the application already identified the user
+// before, and must look up their records the same way, not from the response.
 func (r *Response) UnauthenticatedUserID() string {
 	return r.userID
-}
-
-// UserVerified reports whether user verification was performed,
-// according to a login response. It can be checked after a successful
-// [RelyingParty.Login] to gate sensitive operations.
-func (r *Response) UserVerified() bool {
-	return r.userVerified
 }

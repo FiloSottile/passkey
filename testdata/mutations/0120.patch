@@ -1,0 +1,15 @@
+record backing checked after the UV flag
+
+diff --git a/login.go b/login.go
+index 4af8d4f..6707cb3 100644
+--- a/login.go
++++ b/login.go
+@@ -287,7 +287,7 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
+ 				BackedUp:     response.flags.backupState(),
+ 			}
+ 			if !rp.optionalUserVerification && !result.UserVerified {
+-				if !uvSetUpAtRegistration {
++				if response.flags.userVerified() {
+ 					return nil, fmt.Errorf("%w: the matched record has neither the UV nor the BE flag, "+
+ 						"so user verification can't be relied upon", ErrUserVerificationUnavailable)
+ 				}

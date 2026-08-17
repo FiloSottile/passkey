@@ -23,9 +23,7 @@ type User struct {
 	// Name is a human-readable identifier for the account, such as a
 	// username or email address. It must not be empty. It is displayed in
 	// credential pickers and stored by the authenticator, but never
-	// returned to the server or used in the protocol. It is also sent as
-	// the WebAuthn displayName, which credential providers ignore in
-	// practice.
+	// returned to the server or used in the protocol.
 	Name string
 }
 
@@ -75,10 +73,12 @@ type creationOptions struct {
 // user won't end up with duplicate passkeys on the same authenticator.
 //
 // optionsJSON is a PublicKeyCredentialCreationOptions object to be
-// passed to navigator.credentials.create() as the publicKey field,
-// requesting a discoverable credential (residentKey: "required") with
-// attestation "none" and the credProps extension. The requested
-// algorithms are, in order of preference, ML-DSA-44, ES256, and RS256.
+//
+//  1. parsed from JSON on the client side, then
+//  2. passed to PublicKeyCredential.parseCreationOptionsFromJSON(), and then
+//  3. passed to navigator.credentials.create() as the publicKey field.
+//
+// It can be used both for modal and for conditional UI flows.
 //
 // Registration is stateless for the server: there is no request value
 // to store, and the response is verified by [RelyingParty.Register].
@@ -104,11 +104,9 @@ func (rp *RelyingParty) NewRegistration(user User, passkeys []string) (optionsJS
 	o.ExcludeCredentials = exclude
 	o.AuthenticatorSelection.ResidentKey = "required"
 	o.AuthenticatorSelection.RequireResidentKey = true
-	if rp.requireUserVerification {
-		o.AuthenticatorSelection.UserVerification = "required"
-	} else {
-		o.AuthenticatorSelection.UserVerification = "preferred"
-	}
+	// Always "preferred" to allow conditional registration.
+	// See [RelyingParty.Login] and the "User verification" section.
+	o.AuthenticatorSelection.UserVerification = "preferred"
 	o.Attestation = "none"
 	o.Extensions.CredProps = true
 	o.Timeout = rp.timeout.Milliseconds()
@@ -147,23 +145,6 @@ type clientData struct {
 // responseJSON is the JSON serialization of the PublicKeyCredential
 // returned by navigator.credentials.create() (as produced by its
 // toJSON() method).
-//
-// Register fails if the response reports (via the credProps extension)
-// that the created credential is not discoverable. Absence of the
-// extension output is accepted: some clients (notably Safari) never
-// report it, and enforcement of discoverability rests on the client's
-// residentKey: "required" obligation.
-//
-// Register does not require the user presence or user verification
-// flags, so that conditional (automatic) passkey creation flows, in
-// which the user does not interact with a prompt, are supported. User
-// verification is enforced, per [Options.RequireUserVerification], at
-// login.
-//
-// Register verifies that the client data is well-formed JSON with type
-// "webauthn.create" and the expected origin, and that the authenticator
-// data carries the hash of the RP ID. The challenge is not verified;
-// see the Challenges section of the package documentation.
 func (rp *RelyingParty) Register(responseJSON []byte) (passkey string, err error) {
 	var resp registrationResponse
 	// TODO: use json/v2 to reject duplicates and match case-sensitive.
@@ -241,6 +222,12 @@ func (rp *RelyingParty) Register(responseJSON []byte) (passkey string, err error
 	// explicit false contradicts residentKey: "required".
 	if cp := resp.ClientExtensionResults.CredProps; cp != nil && cp.RK != nil && !*cp.RK {
 		return "", errors.New("passkey: client reports the credential is not discoverable")
+	}
+	// A record with neither UV nor BE would fail to log in.
+	// See [RelyingParty.Login] and the "User verification" section.
+	if !rp.optionalUserVerification && !r.flags.userVerified() && !r.flags.backupEligible() {
+		return "", fmt.Errorf("%w: response has neither the UV nor the BE flag "+
+			"(likely to be a security key without PIN)", ErrUserVerificationUnavailable)
 	}
 
 	return encodeRecord(ad, resp.Response.Transports), nil

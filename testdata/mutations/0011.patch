@@ -1,14 +1,15 @@
 skip signature verification in Login
 
 diff --git a/login.go b/login.go
+index a5eb233..5d7d081 100644
 --- a/login.go
 +++ b/login.go
-@@ -202,7 +202,7 @@
+@@ -238,7 +238,7 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
  		if !bytes.Equal(r.credentialID, response.credentialID) {
  			continue
  		}
 -		if verifySignature(r.key, message, response.signature) {
 +		if r.key != nil {
- 			matched = i
- 			break
- 		}
+ 			if time.Since(req.created) > rp.timeout {
+ 				return nil, fmt.Errorf("%w: request created at %v", ErrRequestExpired, req.created)
+ 			}

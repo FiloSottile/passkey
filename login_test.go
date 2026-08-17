@@ -109,7 +109,7 @@ func impostorResponse(t *testing.T, env *loginEnv) []byte {
 	return mustJSON(t, impostor.loginResponse(t, testRPID, testOrigin, env.challenge, env.user.ID, flagUP|flagUV))
 }
 
-var sentinelErrors = []error{ErrRequestExpired, ErrUnknownCredential, ErrUserVerificationRequired, ErrUnsupportedAlgorithm}
+var sentinelErrors = []error{ErrRequestExpired, ErrUnknownCredential, ErrUserVerificationUnavailable, ErrUnsupportedAlgorithm}
 
 // checkWrapped asserts that err is not a bare sentinel: they are
 // documented as always wrapped.
@@ -152,8 +152,8 @@ func checkError(t *testing.T, err error, wantIs error, wantHas string) {
 func TestLogin(t *testing.T) {
 	otherChallenge := base64.RawURLEncoding.EncodeToString(bytes.Repeat([]byte{0xCC}, 32))
 	unknownID := bytes.Repeat([]byte{0xEE}, 32)
-	uvRP := func(t *testing.T) *RelyingParty {
-		return newTestRP(t, Options{RequireUserVerification: true})
+	optionalUV := func(t *testing.T) *RelyingParty {
+		return newTestRP(t, Options{OptionalUserVerification: true})
 	}
 	expired := func(env *loginEnv) []byte {
 		return withRequestCreated(env.request, time.Now().Add(-6*time.Minute))
@@ -353,23 +353,19 @@ func TestLogin(t *testing.T) {
 			ok: true,
 		},
 		{
-			name: "user verification required",
-			setup: func(t *testing.T, env *loginEnv) (*RelyingParty, []byte, []byte) {
-				return uvRP(t), mustJSON(t, env.response(t, flagUP)), env.request
-			},
-			errIs: ErrUserVerificationRequired,
-		},
-		{
-			name: "user verification performed",
-			setup: func(t *testing.T, env *loginEnv) (*RelyingParty, []byte, []byte) {
-				return uvRP(t), mustJSON(t, env.response(t, flagUP|flagUV)), env.request
-			},
-			ok: true,
-		},
-		{
-			name: "user verification not required",
+			// The request asked for it, so a conforming client would
+			// not have returned this assertion: not the user's problem,
+			// hence no sentinel.
+			name: "user verification not performed",
 			setup: func(t *testing.T, env *loginEnv) (*RelyingParty, []byte, []byte) {
 				return env.rp, mustJSON(t, env.response(t, flagUP)), env.request
+			},
+			errHas: "client did not honor",
+		},
+		{
+			name: "user verification optional",
+			setup: func(t *testing.T, env *loginEnv) (*RelyingParty, []byte, []byte) {
+				return optionalUV(t), mustJSON(t, env.response(t, flagUP)), env.request
 			},
 			ok: true,
 		},
@@ -409,7 +405,7 @@ func TestLogin(t *testing.T) {
 		{
 			name: "expiry masks user verification",
 			setup: func(t *testing.T, env *loginEnv) (*RelyingParty, []byte, []byte) {
-				return uvRP(t), mustJSON(t, env.response(t, flagUP)), expired(env)
+				return env.rp, mustJSON(t, env.response(t, flagUP)), expired(env)
 			},
 			errIs: ErrRequestExpired,
 		},
@@ -417,7 +413,7 @@ func TestLogin(t *testing.T) {
 			name: "unknown credential masks user verification",
 			setup: func(t *testing.T, env *loginEnv) (*RelyingParty, []byte, []byte) {
 				m := withRawID(env.response(t, flagUP), unknownID)
-				return uvRP(t), mustJSON(t, m), env.request
+				return env.rp, mustJSON(t, m), env.request
 			},
 			errIs: ErrUnknownCredential,
 		},
@@ -430,15 +426,18 @@ func TestLogin(t *testing.T) {
 			if err != nil {
 				t.Fatalf("ParseResponse() = %v", err)
 			}
-			matched, err := rp.Login(resp, request, env.records)
+			result, err := rp.Login(resp, request, env.records)
 			if tt.ok {
 				if err != nil {
 					t.Fatalf("Login() = %v, want success", err)
 				}
-				if matched != 0 {
-					t.Errorf("Login() matched record %d, want 0", matched)
+				if result.Matched != 0 {
+					t.Errorf("Login() matched record %d, want 0", result.Matched)
 				}
 				return
+			}
+			if result != nil {
+				t.Errorf("Login() = %+v with error %v, want nil", result, err)
 			}
 			checkError(t, err, tt.errIs, tt.errHas)
 		})
@@ -462,6 +461,148 @@ func TestLoginNilResponse(t *testing.T) {
 	env := newLoginEnv(t)
 	_, err := env.rp.Login(nil, env.request, env.records)
 	checkError(t, err, nil, "response is nil")
+}
+
+// TestLoginUserVerification checks the user verification policy. By
+// default, Login requires user verification that can be relied upon:
+// the assertion's UV flag, backed by a record registered with the UV
+// flag (so that user verification was set up by whoever registered the
+// passkey, not by whoever later got hold of the authenticator) or with
+// the BE flag (a synced passkey). With OptionalUserVerification, Login
+// accepts any assertion and reports the same computation as
+// LoginResult.UserVerified. LoginResult.BackedUp is the assertion's BS
+// flag in either mode.
+func TestLoginUserVerification(t *testing.T) {
+	rp := newTestRP(t, Options{})
+	optionalUV := newTestRP(t, Options{OptionalUserVerification: true})
+	user := User{ID: "wxJph3ZClFxTP2xF9r2W0A", Name: "user@example.com"}
+	auth := newAuthenticator(t, algES256)
+
+	// The records differ only in their flags. Those with neither UV nor
+	// BE can't come out of Register by default, but can be imported or
+	// registered with OptionalUserVerification set.
+	record := func(flags byte) string {
+		t.Helper()
+		record, err := optionalUV.Register(mustJSON(t, auth.registrationResponse(t, testRPID, testOrigin, "AA", flags)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return record
+	}
+	recNone := record(flagUP)
+	recUV := record(flagUP | flagUV)
+	recBE := record(flagUP | flagBE)
+	recUVBE := record(flagUP | flagUV | flagBE | flagBS)
+
+	tests := []struct {
+		name         string
+		rp           *RelyingParty
+		record       string
+		assertion    byte
+		errIs        error
+		errHas       string
+		userVerified bool
+		backedUp     bool
+	}{
+		{
+			name: "UV record, UV assertion",
+			rp:   rp, record: recUV, assertion: flagUP | flagUV,
+			userVerified: true,
+		},
+		{
+			// The client did not honor userVerification: "required":
+			// nothing the user can fix, so no sentinel.
+			name: "UV record, no UV",
+			rp:   rp, record: recUV, assertion: flagUP,
+			errHas: "no user verification flag",
+		},
+		{
+			// A PIN configured after registration, possibly by a thief.
+			name: "unverified record, UV assertion",
+			rp:   rp, record: recNone, assertion: flagUP | flagUV,
+			errIs: ErrUserVerificationUnavailable, errHas: "can't be relied upon",
+		},
+		{
+			// The record is what makes this unfixable by the client, so
+			// the user is pointed at it, not at the missing flag.
+			name: "unverified record, no UV",
+			rp:   rp, record: recNone, assertion: flagUP,
+			errIs: ErrUserVerificationUnavailable, errHas: "neither the UV nor the BE flag",
+		},
+		{
+			name: "synced record, UV assertion",
+			rp:   rp, record: recBE, assertion: flagUP | flagUV | flagBE | flagBS,
+			userVerified: true, backedUp: true,
+		},
+		{
+			name: "synced record, no UV",
+			rp:   rp, record: recBE, assertion: flagUP | flagBE | flagBS,
+			errHas: "client did not honor",
+		},
+		{
+			name: "UV synced record, UV assertion",
+			rp:   rp, record: recUVBE, assertion: flagUP | flagUV | flagBE | flagBS,
+			userVerified: true, backedUp: true,
+		},
+		{
+			name: "backup eligible but not backed up",
+			rp:   rp, record: recBE, assertion: flagUP | flagUV | flagBE,
+			userVerified: true,
+		},
+
+		{
+			name: "optional, UV record, UV assertion",
+			rp:   optionalUV, record: recUV, assertion: flagUP | flagUV,
+			userVerified: true,
+		},
+		{
+			name: "optional, UV record, no UV",
+			rp:   optionalUV, record: recUV, assertion: flagUP,
+		},
+		{
+			name: "optional, unverified record, UV assertion",
+			rp:   optionalUV, record: recNone, assertion: flagUP | flagUV,
+		},
+		{
+			name: "optional, unverified record, no UV",
+			rp:   optionalUV, record: recNone, assertion: flagUP,
+		},
+		{
+			name: "optional, synced record, UV assertion",
+			rp:   optionalUV, record: recBE, assertion: flagUP | flagUV | flagBE | flagBS,
+			userVerified: true, backedUp: true,
+		},
+		{
+			name: "optional, synced record, no UV",
+			rp:   optionalUV, record: recBE, assertion: flagUP | flagBE | flagBS,
+			backedUp: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			request, requestJSON, err := tt.rp.NewLogin()
+			if err != nil {
+				t.Fatal(err)
+			}
+			resp, err := ParseResponse(mustJSON(t, auth.loginResponse(t, testRPID, testOrigin,
+				challengeOf(t, requestJSON), user.ID, tt.assertion)))
+			if err != nil {
+				t.Fatal(err)
+			}
+			result, err := tt.rp.Login(resp, request, []string{tt.record})
+			if tt.errIs != nil || tt.errHas != "" {
+				checkError(t, err, tt.errIs, tt.errHas)
+				return
+			}
+			if err != nil {
+				t.Fatalf("Login() = %v, want success", err)
+			}
+			want := &LoginResult{UserVerified: tt.userVerified, BackedUp: tt.backedUp}
+			if *result != *want {
+				t.Errorf("Login() = %+v, want %+v", result, want)
+			}
+		})
+	}
 }
 
 // TestLoginBitFlips checks that authenticatorData, clientDataJSON, and
@@ -948,7 +1089,7 @@ func TestLoginLockouts(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			matched, err := rp.Login(tt.resp, request, tt.records)
+			result, err := rp.Login(tt.resp, request, tt.records)
 			if tt.errIs != nil || tt.errHas != "" {
 				checkError(t, err, tt.errIs, tt.errHas)
 				return
@@ -956,10 +1097,45 @@ func TestLoginLockouts(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Login() = %v, want success", err)
 			}
-			if matched != tt.matched {
-				t.Errorf("Login() matched record %d, want %d", matched, tt.matched)
+			if result.Matched != tt.matched {
+				t.Errorf("Login() matched record %d, want %d", result.Matched, tt.matched)
 			}
 		})
+	}
+}
+
+// TestNewLoginUserVerification checks that login ceremonies request user
+// verification as "required" by default, so that clients prompt for it
+// rather than return an assertion Login would reject, and as
+// "preferred" with OptionalUserVerification.
+func TestNewLoginUserVerification(t *testing.T) {
+	env := newLoginEnv(t)
+	for _, tt := range []struct {
+		optional bool
+		want     string
+	}{
+		{false, "required"},
+		{true, "preferred"},
+	} {
+		rp := newTestRP(t, Options{OptionalUserVerification: tt.optional})
+		_, unscopedJSON, err := rp.NewLogin()
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, scopedJSON, err := rp.NewLoginWithCredentials(env.records)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, optionsJSON := range [][]byte{unscopedJSON, scopedJSON} {
+			var o requestOptions
+			if err := json.Unmarshal(optionsJSON, &o); err != nil {
+				t.Fatal(err)
+			}
+			if o.UserVerification != tt.want {
+				t.Errorf("OptionalUserVerification = %v: userVerification = %q, want %q",
+					tt.optional, o.UserVerification, tt.want)
+			}
+		}
 	}
 }
 

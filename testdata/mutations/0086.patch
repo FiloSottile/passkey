@@ -1,6 +1,7 @@
 Login compares the origin ignoring case
 
 diff --git a/login.go b/login.go
+index a35c6a9..ce3fca4 100644
 --- a/login.go
 +++ b/login.go
 @@ -10,6 +10,7 @@
@@ -11,12 +12,12 @@ diff --git a/login.go b/login.go
  	"time"
  
  	"filippo.io/mldsa"
-@@ -167,7 +168,7 @@
+@@ -201,7 +202,7 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
  	if response.challenge != req.challenge {
- 		return 0, errors.New("passkey: client data challenge does not match the request")
+ 		return nil, errors.New("passkey: client data challenge does not match the request")
  	}
 -	if response.origin != rp.origin {
 +	if !strings.EqualFold(response.origin, rp.origin) {
- 		return 0, fmt.Errorf("passkey: origin %q is not the expected value %q", response.origin, rp.origin)
+ 		return nil, fmt.Errorf("passkey: origin %q is not the expected value %q", response.origin, rp.origin)
  	}
  	rpIDHash := sha256.Sum256([]byte(rp.rpID))

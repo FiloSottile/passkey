@@ -12,6 +12,8 @@
 			"transports": [
 				"internal"
 			],
+			"userVerified": true,
+			"backupEligible": false,
 			"backedUp": false,
 			"registration": {
 				"options": {
@@ -168,6 +170,8 @@
 			"transports": [
 				"internal"
 			],
+			"userVerified": true,
+			"backupEligible": true,
 			"backedUp": true,
 			"registration": {
 				"options": {
@@ -265,6 +269,8 @@
 			"transports": [
 				"internal"
 			],
+			"userVerified": true,
+			"backupEligible": true,
 			"backedUp": false,
 			"registration": {
 				"options": {
@@ -387,6 +393,8 @@
 			"transports": [
 				"usb"
 			],
+			"userVerified": true,
+			"backupEligible": false,
 			"backedUp": false,
 			"registration": {
 				"options": {
@@ -484,6 +492,8 @@
 			"transports": [
 				"internal"
 			],
+			"userVerified": false,
+			"backupEligible": false,
 			"backedUp": false,
 			"registration": {
 				"options": {
@@ -581,6 +591,8 @@
 			"transports": [
 				"internal"
 			],
+			"userVerified": true,
+			"backupEligible": false,
 			"backedUp": false,
 			"registration": {
 				"options": {
@@ -679,6 +691,8 @@
 			"transports": [
 				"internal"
 			],
+			"userVerified": true,
+			"backupEligible": false,
 			"backedUp": false,
 			"registration": {
 				"options": {

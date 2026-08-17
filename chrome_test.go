@@ -25,13 +25,15 @@ type chromeRecordings struct {
 // chromeRecording is a registration and the logins that followed it,
 // performed by one authenticator.
 type chromeRecording struct {
-	Name         string   `json:"name"`
-	Description  string   `json:"description"`
-	AAGUID       hexBytes `json:"aaguid"`
-	CredentialID hexBytes `json:"credentialId"`
-	Transports   []string `json:"transports"`
-	BackedUp     bool     `json:"backedUp"`
-	Registration struct {
+	Name           string   `json:"name"`
+	Description    string   `json:"description"`
+	AAGUID         hexBytes `json:"aaguid"`
+	CredentialID   hexBytes `json:"credentialId"`
+	Transports     []string `json:"transports"`
+	UserVerified   bool     `json:"userVerified"`
+	BackupEligible bool     `json:"backupEligible"`
+	BackedUp       bool     `json:"backedUp"`
+	Registration   struct {
 		Options  json.RawMessage `json:"options"`
 		Response json.RawMessage `json:"response"`
 	} `json:"registration"`
@@ -75,26 +77,39 @@ func loadChromeRecordings(t testing.TB) chromeRecordings {
 // TestChromeRecordings replays the recorded Chrome ceremonies: every
 // registration must produce a record carrying the recorded values, and
 // every login must verify against the user's records, matching its own,
-// unless it was recorded broken. Every login is also verified against a
-// relying party requiring user verification, with a stale request, and
-// with its own record deleted, so that the sentinels are reached by a
-// real client's response.
+// unless it was recorded broken. The recordings were made with
+// OptionalUserVerification set, so that responses without user
+// verification could be captured; they are replayed under both policies,
+// with the default one accepting exactly the ceremonies whose flags allow
+// it. Every login is also verified with a stale request, and with its
+// own record deleted, so that the sentinels are reached by a real
+// client's response.
 func TestChromeRecordings(t *testing.T) {
 	f := loadChromeRecordings(t)
 	rp := newTestRP(t, Options{RPID: f.RPID, Origin: f.Origin})
-	uvRP := newTestRP(t, Options{RPID: f.RPID, Origin: f.Origin, RequireUserVerification: true})
+	optionalUV := newTestRP(t, Options{RPID: f.RPID, Origin: f.Origin, OptionalUserVerification: true})
 
 	var records []string
 	for _, rec := range f.Recordings {
-		record, err := rp.Register(rec.Registration.Response)
+		record, err := optionalUV.Register(rec.Registration.Response)
 		if err != nil {
 			t.Fatalf("%s: Register() = %v, want success", rec.Name, err)
 		}
 		records = append(records, record)
 
 		// The attestation object alone yields the same record.
-		if got, err := rp.Register(attestationObjectOnly(t, rec.Registration.Response)); err != nil || got != record {
+		if got, err := optionalUV.Register(attestationObjectOnly(t, rec.Registration.Response)); err != nil || got != record {
 			t.Errorf("%s: Register() from attestationObject = %q, %v, want %q", rec.Name, got, err, record)
+		}
+
+		// By default, only registrations with the UV or BE flag are accepted.
+		strict, err := rp.Register(rec.Registration.Response)
+		if rec.UserVerified || rec.BackupEligible {
+			if err != nil || strict != record {
+				t.Errorf("%s: Register() by default = %q, %v, want %q", rec.Name, strict, err, record)
+			}
+		} else {
+			checkError(t, err, ErrUserVerificationUnavailable, "")
 		}
 	}
 
@@ -113,6 +128,12 @@ func TestChromeRecordings(t *testing.T) {
 			}
 			if !bytes.Equal(r.credentialID, rec.CredentialID) {
 				t.Errorf("credentialID = %x, want %x", r.credentialID, rec.CredentialID)
+			}
+			if r.flags.userVerified() != rec.UserVerified {
+				t.Errorf("record UV flag = %v, want %v", r.flags.userVerified(), rec.UserVerified)
+			}
+			if r.flags.backupEligible() != rec.BackupEligible {
+				t.Errorf("record BE flag = %v, want %v", r.flags.backupEligible(), rec.BackupEligible)
 			}
 
 			for j, login := range rec.Logins {
@@ -138,12 +159,6 @@ func TestChromeRecordings(t *testing.T) {
 					if resp.UnauthenticatedUserID() != wantUserID {
 						t.Errorf("UnauthenticatedUserID() = %q, want %q", resp.UnauthenticatedUserID(), wantUserID)
 					}
-					if resp.UserVerified() != login.UserVerified {
-						t.Errorf("UserVerified() = %v, want %v", resp.UserVerified(), login.UserVerified)
-					}
-					if resp.BackedUp() != login.BackedUp {
-						t.Errorf("BackedUp() = %v, want %v", resp.BackedUp(), login.BackedUp)
-					}
 
 					// The recording is older than any timeout, so the
 					// request is verified as if it had just been created,
@@ -153,7 +168,7 @@ func TestChromeRecordings(t *testing.T) {
 
 					switch login.Error {
 					case chromeErrorSignature:
-						_, err := rp.Login(resp, request, records)
+						_, err := optionalUV.Login(resp, request, records)
 						checkError(t, err, nil, "signature verification failed")
 						return
 					case "":
@@ -161,28 +176,41 @@ func TestChromeRecordings(t *testing.T) {
 						t.Fatalf("unknown error reason %q", login.Error)
 					}
 
-					matched, err := rp.Login(resp, request, records)
+					result, err := optionalUV.Login(resp, request, records)
 					if err != nil {
 						t.Fatalf("Login() = %v, want success", err)
 					}
-					if matched != i {
-						t.Errorf("Login() matched record %d, want %d", matched, i)
+					// The assertion's UV flag is relied upon only if the
+					// record was registered with UV or BE.
+					want := &LoginResult{
+						Matched:      i,
+						UserVerified: login.UserVerified && (rec.UserVerified || rec.BackupEligible),
+						BackedUp:     login.BackedUp,
+					}
+					if *result != *want {
+						t.Errorf("Login() = %+v, want %+v", result, want)
 					}
 
-					_, err = uvRP.Login(resp, request, records)
-					if login.UserVerified {
-						if err != nil {
-							t.Errorf("Login() with RequireUserVerification = %v, want success", err)
+					// By default, Login requires reliable user verification:
+					// a record that can't back it is the user's to fix, an
+					// assertion missing the flag despite it is not.
+					strict, err := rp.Login(resp, request, records)
+					switch {
+					case want.UserVerified:
+						if err != nil || *strict != *want {
+							t.Errorf("Login() by default = %+v, %v, want %+v", strict, err, want)
 						}
-					} else {
-						checkError(t, err, ErrUserVerificationRequired, "")
+					case rec.UserVerified || rec.BackupEligible:
+						checkError(t, err, nil, "client did not honor")
+					default:
+						checkError(t, err, ErrUserVerificationUnavailable, "")
 					}
 
-					_, err = rp.Login(resp, stale, records)
+					_, err = optionalUV.Login(resp, stale, records)
 					checkError(t, err, ErrRequestExpired, "")
 
 					// The passkey was deleted from the account.
-					_, err = rp.Login(resp, request, slices.Concat(records[:i], records[i+1:]))
+					_, err = optionalUV.Login(resp, request, slices.Concat(records[:i], records[i+1:]))
 					checkError(t, err, ErrUnknownCredential, "")
 				})
 			}

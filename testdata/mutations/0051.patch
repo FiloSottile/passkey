@@ -1,11 +1,11 @@
 Register discards the sanitized transports
 
 diff --git a/register.go b/register.go
-index 4f3b674..63c4aa2 100644
+index 7781347..dc734c0 100644
 --- a/register.go
 +++ b/register.go
-@@ -224,7 +224,8 @@ func (rp *RelyingParty) Register(responseJSON []byte) (passkey string, err error
- 		return "", errors.New("passkey: client reports the credential is not discoverable")
+@@ -230,7 +230,8 @@ func (rp *RelyingParty) Register(responseJSON []byte) (passkey string, err error
+ 			"(likely to be a security key without PIN)", ErrUserVerificationUnavailable)
  	}
  
 -	return encodeRecord(ad, resp.Response.Transports), nil

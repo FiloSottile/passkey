@@ -63,13 +63,16 @@ type recording struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	// AAGUID and CredentialID are read out of the registration
-	// response, and Transports and BackedUp are how the authenticator
-	// was configured, all as expected of the record.
-	AAGUID       string   `json:"aaguid"`       // hex
-	CredentialID string   `json:"credentialId"` // hex
-	Transports   []string `json:"transports"`
-	BackedUp     bool     `json:"backedUp"`
-	Registration struct {
+	// response, and Transports, UserVerified, BackupEligible, and
+	// BackedUp are how the authenticator was configured, all as
+	// expected of the record.
+	AAGUID         string   `json:"aaguid"`       // hex
+	CredentialID   string   `json:"credentialId"` // hex
+	Transports     []string `json:"transports"`
+	UserVerified   bool     `json:"userVerified"`
+	BackupEligible bool     `json:"backupEligible"`
+	BackedUp       bool     `json:"backedUp"`
+	Registration   struct {
 		// Options is the PublicKeyCredentialCreationOptions passed to
 		// navigator.credentials.create(), and Response the toJSON()
 		// serialization of what it returned.
@@ -296,7 +299,16 @@ func newSession() *session {
 	port := listener.Addr().(*net.TCPAddr).Port
 	origin := fmt.Sprintf("http://localhost:%d", port)
 
-	rp, err := passkey.NewRelyingParty(&passkey.Options{RPID: "localhost", Origin: origin})
+	// User verification is optional, so that the ceremonies request it
+	// as "preferred" and the authenticators that clear the UV flag can
+	// be recorded: Register accepts their registrations, and Chrome
+	// returns their assertions, which it would refuse under "required".
+	// The replay verifies the recordings under both policies.
+	rp, err := passkey.NewRelyingParty(&passkey.Options{
+		RPID:                     "localhost",
+		Origin:                   origin,
+		OptionalUserVerification: true,
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -403,10 +415,12 @@ func (s *session) addAuthenticator(name, description string, opts *webauthn.Virt
 		overrides: overrides,
 		backedUp:  opts.DefaultBackupState,
 		rec: &recording{
-			Name:        name,
-			Description: description,
-			Transports:  []string{string(opts.Transport)},
-			BackedUp:    opts.DefaultBackupState,
+			Name:           name,
+			Description:    description,
+			Transports:     []string{string(opts.Transport)},
+			UserVerified:   opts.HasUserVerification && opts.IsUserVerified && (overrides == nil || !overrides.IsBadUV),
+			BackupEligible: opts.DefaultBackupEligibility,
+			BackedUp:       opts.DefaultBackupState,
 		},
 	}
 	if err := chromedp.Run(ctx,
@@ -564,13 +578,10 @@ func (a *authenticator) recordLogin(request, optionsJSON []byte, userScoped bool
 		Options:      optionsJSON,
 		Response:     responseJSON,
 		UserScoped:   userScoped,
-		UserVerified: a.opts.HasUserVerification && a.opts.IsUserVerified,
+		UserVerified: a.rec.UserVerified,
 		BackedUp:     a.backedUp,
 	}
 	if a.overrides != nil {
-		if a.overrides.IsBadUV {
-			l.UserVerified = false
-		}
 		switch {
 		case a.overrides.IsBadUP:
 			l.Error = errorUserPresence

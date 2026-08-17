@@ -1,0 +1,17 @@
+record without UV backing reported without the sentinel
+
+diff --git a/login.go b/login.go
+index 78c2e0a..5a59cdf 100644
+--- a/login.go
++++ b/login.go
+@@ -251,8 +251,8 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
+ 			}
+ 			if !rp.optionalUserVerification && !result.UserVerified {
+ 				if !uvSetUpAtRegistration {
+-					return nil, fmt.Errorf("%w: the matched record has neither the UV nor the BE flag, "+
+-						"so user verification can't be relied upon", ErrUserVerificationUnavailable)
++					return nil, errors.New("passkey: the matched record has neither the UV nor the BE flag, " +
++						"so user verification can't be relied upon")
+ 				}
+ 				return nil, errors.New("passkey: assertion has no user verification flag: " +
+ 					"the client did not honor the required user verification, or the request " +

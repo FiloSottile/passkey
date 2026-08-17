@@ -1,15 +1,15 @@
 login request expiry window extended by an hour
 
 diff --git a/login.go b/login.go
-index 9c4298c..7c02f26 100644
+index a5eb233..ee68714 100644
 --- a/login.go
 +++ b/login.go
-@@ -222,7 +222,7 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
+@@ -239,7 +239,7 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
+ 			continue
  		}
- 	}
+ 		if verifySignature(r.key, message, response.signature) {
+-			if time.Since(req.created) > rp.timeout {
++			if time.Since(req.created) > rp.timeout+time.Hour {
+ 				return nil, fmt.Errorf("%w: request created at %v", ErrRequestExpired, req.created)
+ 			}
  
--	if time.Since(req.created) > rp.timeout {
-+	if time.Since(req.created) > rp.timeout+time.Hour {
- 		return 0, fmt.Errorf("%w: request created at %v", ErrRequestExpired, req.created)
- 	}
- 	if rp.requireUserVerification && !response.userVerified {

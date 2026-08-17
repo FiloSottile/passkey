@@ -1,0 +1,15 @@
+assertion UV flag relied upon without record backing
+
+diff --git a/login.go b/login.go
+index a5eb233..cd30753 100644
+--- a/login.go
++++ b/login.go
+@@ -277,7 +277,7 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
+ 			// uvSetUpAtRegistration will almost universally be true.
+ 			//
+ 			// See https://go.dev/issue/80663.
+-			uvSetUpAtRegistration := r.flags.userVerified() || r.flags.backupEligible()
++			uvSetUpAtRegistration := true
+ 			result = &LoginResult{
+ 				Matched:      i,
+ 				UserVerified: response.flags.userVerified() && uvSetUpAtRegistration,

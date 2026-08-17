@@ -1,7 +1,7 @@
-user verification check inverted
+user verification required even when optional
 
 diff --git a/login.go b/login.go
-index 4af8d4f..09088d0 100644
+index 4af8d4f..c4334e0 100644
 --- a/login.go
 +++ b/login.go
 @@ -286,7 +286,7 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
@@ -9,7 +9,7 @@ index 4af8d4f..09088d0 100644
  				BackedUp:     response.flags.backupState(),
  			}
 -			if !rp.optionalUserVerification && !result.UserVerified {
-+			if !rp.optionalUserVerification && result.UserVerified {
++			if !result.UserVerified {
  				if !uvSetUpAtRegistration {
  					return nil, fmt.Errorf("%w: the matched record has neither the UV nor the BE flag, "+
  						"so user verification can't be relied upon", ErrUserVerificationUnavailable)

@@ -1,15 +1,15 @@
 skip RP ID hash check in Login
 
 diff --git a/login.go b/login.go
-index 8dd0ae4..36ed120 100644
+index bd4844d..74d0ab1 100644
 --- a/login.go
 +++ b/login.go
-@@ -174,9 +174,6 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
- 		return 0, fmt.Errorf("passkey: origin %q is not the expected value %q", response.origin, rp.origin)
+@@ -217,9 +217,6 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
+ 		return nil, fmt.Errorf("passkey: origin %q is not the expected value %q", response.origin, rp.origin)
  	}
  	rpIDHash := sha256.Sum256([]byte(rp.rpID))
 -	if response.rpIDHash != rpIDHash {
--		return 0, errors.New("passkey: assertion for a different RP ID")
+-		return nil, errors.New("passkey: assertion for a different RP ID")
 -	}
  
  	message := make([]byte, 0, len(response.authData)+len(response.clientDataHash))

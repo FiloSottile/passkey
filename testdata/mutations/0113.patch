@@ -1,0 +1,15 @@
+BackedUp reports backup eligibility instead of backup state
+
+diff --git a/login.go b/login.go
+index 4af8d4f..1ef3f21 100644
+--- a/login.go
++++ b/login.go
+@@ -284,7 +284,7 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
+ 			result = &LoginResult{
+ 				Matched:      i,
+ 				UserVerified: response.flags.userVerified() && uvSetUpAtRegistration,
+-				BackedUp:     response.flags.backupState(),
++				BackedUp:     response.flags.backupEligible(),
+ 			}
+ 			if !rp.optionalUserVerification && !result.UserVerified {
+ 				if !uvSetUpAtRegistration {

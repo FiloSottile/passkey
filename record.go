@@ -180,8 +180,8 @@ func parseRegistrationAuthData(r *record, b []byte) error {
 }
 
 // ErrUnsupportedAlgorithm is returned by [RelyingParty.Register] and by
-// [AAGUID], [BackedUp], and [Transports] when a passkey record has a credential
-// public key type that this package does not support.
+// [AAGUID] and [Transports] when a passkey record has a credential public
+// key type that this package does not support.
 //
 // It is always wrapped, so callers must use [errors.Is].
 var ErrUnsupportedAlgorithm = errors.New("unsupported credential public key algorithm")
@@ -326,11 +326,7 @@ func AAGUID(passkey string) ([16]byte, error) {
 }
 
 // Transports returns the transport hints recorded at registration
-// (e.g. "internal", "hybrid", "usb"). They are used to populate the
-// credential descriptors sent to clients by
-// [RelyingParty.NewRegistration] and [RelyingParty.NewLoginWithCredentials],
-// where they help the client reach the right authenticator during
-// login; they are exposed for interoperability and diagnostics.
+// (e.g. "internal", "hybrid", "usb").
 func Transports(passkey string) ([]string, error) {
 	r, err := parseRecord(passkey)
 	if err != nil {

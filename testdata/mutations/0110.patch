@@ -1,0 +1,15 @@
+registration ceremony requests required user verification
+
+diff --git a/register.go b/register.go
+index 5d1c661..dfcd478 100644
+--- a/register.go
++++ b/register.go
+@@ -106,7 +106,7 @@ func (rp *RelyingParty) NewRegistration(user User, passkeys []string) (optionsJS
+ 	o.AuthenticatorSelection.RequireResidentKey = true
+ 	// Always "preferred" to allow conditional registration.
+ 	// See [RelyingParty.Login] and the "User verification" section.
+-	o.AuthenticatorSelection.UserVerification = "preferred"
++	o.AuthenticatorSelection.UserVerification = "required"
+ 	o.Attestation = "none"
+ 	o.Extensions.CredProps = true
+ 	o.Timeout = rp.timeout.Milliseconds()

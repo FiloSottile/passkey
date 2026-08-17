@@ -1,6 +1,10 @@
 // Package passkey implements the server (Relying Party) side of WebAuthn
 // for discoverable credentials (passkeys).
 //
+// Although WebAuthn supports a range of purposes and policies, this package
+// is designed for password-less authentication with discoverable credentials:
+// i.e. logging into an account with a passkey.
+//
 // The package is built around [passkey records]: opaque strings, handled
 // like prefixed password hashes, that encode everything the server needs
 // to store about a credential.
@@ -8,9 +12,9 @@
 //	$webauthn$v=1$transports=hybrid+internal$<base64 authenticator data>
 //
 // Records are immutable: they are produced by [RelyingParty.Register] and never
-// change afterwards. Mutable authenticator state (like backup state and User
-// Verification) is not tracked; per-login values can be read from the assertion
-// response with [Response.BackedUp] and [Response.UserVerified].
+// change afterwards. Mutable authenticator state (like backup state) is not
+// tracked; per-login values are reported by [RelyingParty.Login] as
+// [LoginResult.BackedUp] and [LoginResult.UserVerified].
 //
 // # Storage model
 //
@@ -83,6 +87,82 @@
 // the registration endpoint with their usual session and cross-site request
 // forgery defenses, like any other authenticated endpoint.)
 //
+// # WebAuthn interface details
+//
+// Registration options request a discoverable credential
+// (residentKey: "required") with user verification "preferred",
+// attestation "none", and the credProps extension.
+//
+// The requested algorithms are, in order of preference, ML-DSA-44, ES256, and RS256.
+//
+// The user name is also sent as the displayName, which credential providers
+// ignore in practice.
+//
+// Register fails if the response reports (via the credProps extension)
+// that the created credential is not discoverable. Absence of the
+// extension output is accepted: some clients (notably Safari) never
+// report it, and enforcement of discoverability rests on the client's
+// residentKey: "required" obligation.
+//
+// Register does not require the user presence flag, so that conditional
+// (automatic) passkey creation flows, in which the user does not
+// interact with a prompt, are supported.
+//
+// Register verifies that the client data is well-formed JSON with type
+// "webauthn.create", the expected origin, and crossOrigin absent or false;
+// that the authenticator data carries the hash of the RP ID; and, unless
+// [Options.OptionalUserVerification] is set, that user verification is set
+// up on the authenticator (see the User verification section below). The
+// challenge is not verified; see the Challenges section above.
+//
+// Login options request user verification "required", or "preferred" if
+// [Options.OptionalUserVerification] is set. [RelyingParty.NewLogin] sends
+// an empty allowCredentials list; [RelyingParty.NewLoginWithCredentials]
+// populates it with the user's credentials instead.
+//
+// Credential descriptors, in excludeCredentials at registration and in
+// allowCredentials at login, carry the transports recorded at registration
+// (see [Transports]), which help the client reach the right authenticator.
+//
+// Both registration and login options carry [Options.Timeout] as the
+// ceremony timeout hint.
+//
+// Login verifies that the signature is valid, with the matched record's
+// public key, over the authenticator data and the hash of the client
+// data; that the client data is well-formed JSON with type
+// "webauthn.get", the request's challenge, the expected origin, and
+// crossOrigin absent or false; that the authenticator data carries the
+// hash of the RP ID (as does the matched record) and has the user
+// presence flag set; that the request has not expired; and, unless
+// [Options.OptionalUserVerification] is set, that user verification was
+// performed and can be relied upon (see the User verification section
+// below).
+//
+// The signature counter is not checked (it is zero for the major
+// passkey providers).
+//
+// # User verification
+//
+// The UV flag of a login assertion is relied upon (and
+// [LoginResult.UserVerified] is set) only if the matched record has the UV or
+// the BE flag, i.e. if user verification was performed at registration or the
+// credential is a synced passkey. Otherwise, it suggests the credential was
+// stored on an external authenticator without UV set up, and an attacker that
+// were to steal it could have set up their own PIN to enable UV.
+//
+// By default, login options request user verification "required", and Login
+// fails unless [LoginResult.UserVerified] would be true: with
+// [ErrUserVerificationUnavailable] if the record has neither the UV nor the BE
+// flag (likely a security key without a PIN), and with a generic error
+// otherwise. Registration options request "preferred", to allow conditional
+// (automatic) passkey creation, but Register fails with
+// [ErrUserVerificationUnavailable] if the response has neither the UV nor the
+// BE flag, as the credential could never log in.
+//
+// If [Options.OptionalUserVerification] is set, login options request
+// "preferred", Register and Login accept responses regardless of the flags,
+// and [LoginResult.UserVerified] retains the same semantics.
+//
 // [passkey records]: https://c2sp.org/passkey-record
 package passkey
 
@@ -103,53 +183,42 @@ type Options struct {
 	// good RP ID.
 	RPID string
 
-	// Origin is the origin from which registrations and logins are accepted. It
-	// gates where ceremonies may be performed, and can change freely, for
-	// example when sign-in moves to a different subdomain.
+	// Origin is the origin from which registrations and logins are expected and
+	// allowed. It can change over time or across endpoints.
 	//
 	// It must match exactly the origin of the page that calls
 	// navigator.credentials.create() or navigator.credentials.get(), or the
-	// platform-specific equivalent. NewRelyingParty rejects many values that
-	// could never match a serialized origin, such as ones that are not
-	// lowercase or that have a path.
+	// platform-specific equivalent.
 	//
-	// Examples of valid origins are "https://accounts.example.com" and
-	// "https://example.com:8443" and "android:apk-key-hash:...".
+	// Examples of valid origins are "https://example.com" and
+	// "https://accounts.example.com:8443" and "android:apk-key-hash:...".
 	//
 	// Origin may be outside the RP ID's domain, if authorized through Related
 	// Origin Requests (the /.well-known/webauthn document, which the
 	// application is responsible for serving).
 	//
-	// If the application accepts ceremonies from multiple origins, it
-	// creates a RelyingParty per origin with the same RPID, selected by
-	// the endpoint handling the request, never from request headers.
-	// The same pattern serves any per-context setting: RelyingParty
-	// values are cheap, e.g. make one with RequireUserVerification set
-	// for re-authentication prompts.
+	// To accept ceremonies from multiple origins, create a RelyingParty per
+	// origin, and select it based on the endpoint handling the request.
 	Origin string
 
-	// RequireUserVerification causes Login to fail with
-	// [ErrUserVerificationRequired] unless the authenticator performed
-	// user verification (e.g. PIN or biometrics). NewLogin and
-	// NewLoginWithCredentials then request userVerification: "required", so
-	// clients prompt for verification rather than return an assertion
-	// that would be rejected. It also causes NewRegistration to request
-	// userVerification: "required", so that clients fail credential
-	// creation on authenticators that can't satisfy it, rather than
-	// registering a credential that can never log in. Register itself
-	// does not check the user verification flag, so that conditional
-	// (automatic) passkey creation keeps working.
+	// OptionalUserVerification disables the user verification (e.g. PIN or
+	// biometrics) requirement. This is mostly appropriate if a passkey is a
+	// second factor used alongside e.g. a password.
 	//
-	// If false (the default), user verification is requested but not
-	// required, and its result can be checked with
-	// [Response.UserVerified].
-	RequireUserVerification bool
+	// By default, login ceremonies require user verification and Login fails
+	// unless it was performed and can be relied upon.
+	// If OptionalUserVerification is true, login ceremonies request user
+	// verification but don't require it. Applications can consult
+	// [LoginResult.UserVerified], which retains the same semantics.
+	//
+	// Registration ceremonies never require user verification, but by default
+	// Register rejects credentials that are not capable of it.
+	// If OptionalUserVerification is true, Register will accept some rare
+	// credentials that will only work for logins with OptionalUserVerification.
+	OptionalUserVerification bool
 
 	// Timeout is how long a request returned by NewLogin or
-	// NewLoginWithCredentials remains valid: Login rejects responses to
-	// expired requests. It is also communicated to the client as a
-	// ceremony timeout hint (for both registration and login), and is
-	// the recommended lifetime for requests stored by the application.
+	// NewLoginWithCredentials remains valid.
 	//
 	// If zero, it defaults to five minutes. Conditional UI (autofill)
 	// logins may warrant a longer timeout, as the prompt can sit idle
@@ -157,15 +226,15 @@ type Options struct {
 	Timeout time.Duration
 }
 
-// RelyingParty verifies registrations and logins. It holds no state about
+// A RelyingParty verifies registrations and logins. It holds no state about
 // registered passkeys or ongoing login ceremonies.
 //
 // Its methods are safe for concurrent use by multiple goroutines.
 type RelyingParty struct {
-	rpID                    string
-	origin                  string
-	requireUserVerification bool
-	timeout                 time.Duration
+	rpID                     string
+	origin                   string
+	optionalUserVerification bool
+	timeout                  time.Duration
 }
 
 // NewRelyingParty returns a RelyingParty configured with the given options.
@@ -236,9 +305,9 @@ func NewRelyingParty(opts *Options) (*RelyingParty, error) {
 	}
 
 	return &RelyingParty{
-		rpID:                    opts.RPID,
-		origin:                  opts.Origin,
-		requireUserVerification: opts.RequireUserVerification,
-		timeout:                 timeout,
+		rpID:                     opts.RPID,
+		origin:                   opts.Origin,
+		optionalUserVerification: opts.OptionalUserVerification,
+		timeout:                  timeout,
 	}, nil
 }

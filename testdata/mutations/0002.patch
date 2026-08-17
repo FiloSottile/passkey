@@ -1,16 +1,22 @@
 skip user verification requirement check
 
 diff --git a/login.go b/login.go
-index 9c4298c..c6a0a13 100644
+index 78c2e0a..53dd3d1 100644
 --- a/login.go
 +++ b/login.go
-@@ -225,9 +225,6 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
- 	if time.Since(req.created) > rp.timeout {
- 		return 0, fmt.Errorf("%w: request created at %v", ErrRequestExpired, req.created)
- 	}
--	if rp.requireUserVerification && !response.userVerified {
--		return 0, fmt.Errorf("%w", ErrUserVerificationRequired)
--	}
+@@ -249,15 +249,6 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
+ 				UserVerified: response.flags.userVerified() && uvSetUpAtRegistration,
+ 				BackedUp:     response.flags.backupState(),
+ 			}
+-			if !rp.optionalUserVerification && !result.UserVerified {
+-				if !uvSetUpAtRegistration {
+-					return nil, fmt.Errorf("%w: the matched record has neither the UV nor the BE flag, "+
+-						"so user verification can't be relied upon", ErrUserVerificationUnavailable)
+-				}
+-				return nil, errors.New("passkey: assertion has no user verification flag: " +
+-					"the client did not honor the required user verification, or the request " +
+-					"options were produced with a different OptionalUserVerification setting")
+-			}
  
- 	return matched, nil
- }
+ 			return result, nil
+ 		}

@@ -35,6 +35,8 @@ type webauthnVector struct {
 		AttestationObject hexBytes `json:"attestationObject"`
 		CrossOrigin       bool     `json:"crossOrigin"`
 		TopOrigin         string   `json:"topOrigin"`
+		UserVerified      bool     `json:"userVerified"`
+		BackupEligible    bool     `json:"backupEligible"`
 		BackedUp          bool     `json:"backedUp"`
 	} `json:"registration"`
 	Authentication struct {
@@ -73,10 +75,11 @@ const (
 )
 
 // webauthnVectorOutcome returns substrings of the errors this package
-// must reject the vector's ceremonies with, if any: no cross-origin
-// ceremonies (marked by crossOrigin or by topOrigin), only ES256, RS256
-// and ML-DSA-44 credentials, and only 32-byte assertion challenges. The
-// cases are in check order, so a vector that trips two expects the first.
+// must reject the vector's ceremonies with, if any, regardless of the
+// user verification policy: no cross-origin ceremonies (marked by
+// crossOrigin or by topOrigin), only ES256, RS256 and ML-DSA-44
+// credentials, and only 32-byte assertion challenges. The cases are in
+// check order, so a vector that trips two expects the first.
 func webauthnVectorOutcome(v webauthnVector) (registerErr, parseErr string) {
 	switch {
 	case v.Registration.CrossOrigin || v.Registration.TopOrigin != "":
@@ -110,24 +113,29 @@ func loadWebAuthnVectors(t testing.TB) webauthnVectorFile {
 // TestWebAuthnVectors replays the §16 ceremonies: registrations must
 // produce records carrying the vector's values, and the assertions,
 // signed by the same credentials, must verify against those records.
+// The vectors were not produced under this package's user verification
+// policy, so they are replayed with OptionalUserVerification set, and
+// the default policy is checked against the flags they carry: Register
+// accepts a registration iff it has the UV or the BE flag, and Login
+// accepts an assertion iff its UV flag is set and backed by the record.
 func TestWebAuthnVectors(t *testing.T) {
 	f := loadWebAuthnVectors(t)
-	rp, err := NewRelyingParty(&Options{RPID: f.RPID, Origin: f.Origin})
-	if err != nil {
-		t.Fatal(err)
-	}
+	rp := newTestRP(t, Options{RPID: f.RPID, Origin: f.Origin})
+	optionalUV := newTestRP(t, Options{RPID: f.RPID, Origin: f.Origin, OptionalUserVerification: true})
 	for _, v := range f.Vectors {
 		t.Run(v.Name, func(t *testing.T) {
-			testWebAuthnVector(t, rp, v)
+			testWebAuthnVector(t, rp, optionalUV, v)
 		})
 	}
 }
 
-func testWebAuthnVector(t *testing.T, rp *RelyingParty, v webauthnVector) {
+func testWebAuthnVector(t *testing.T, rp, optionalUV *RelyingParty, v webauthnVector) {
 	b64 := base64.RawURLEncoding.EncodeToString
 	wantRegisterErr, wantParseErr := webauthnVectorOutcome(v)
+	// Whether the record can back the UV flag of the vector's assertion.
+	reliableUV := v.Registration.UserVerified || v.Registration.BackupEligible
 
-	record, err := rp.Register(mustJSON(t, map[string]any{
+	registrationJSON := mustJSON(t, map[string]any{
 		"id":    b64(v.CredentialID),
 		"rawId": b64(v.CredentialID),
 		"type":  "public-key",
@@ -137,7 +145,8 @@ func testWebAuthnVector(t *testing.T, rp *RelyingParty, v webauthnVector) {
 		},
 		// No credProps output, which is accepted: not every client reports it.
 		"clientExtensionResults": map[string]any{},
-	}))
+	})
+	record, err := optionalUV.Register(registrationJSON)
 	switch {
 	case wantRegisterErr != "":
 		if err == nil {
@@ -165,6 +174,20 @@ func testWebAuthnVector(t *testing.T, rp *RelyingParty, v webauthnVector) {
 		}
 		if !bytes.Equal(r.credentialID, v.CredentialID) {
 			t.Errorf("credentialID = %x, want %x", r.credentialID, v.CredentialID)
+		}
+		if r.flags.userVerified() != v.Registration.UserVerified {
+			t.Errorf("record UV flag = %v, want %v", r.flags.userVerified(), v.Registration.UserVerified)
+		}
+		if r.flags.backupEligible() != v.Registration.BackupEligible {
+			t.Errorf("record BE flag = %v, want %v", r.flags.backupEligible(), v.Registration.BackupEligible)
+		}
+		strict, err := rp.Register(registrationJSON)
+		if reliableUV {
+			if err != nil || strict != record {
+				t.Errorf("Register() by default = %q, %v, want %q", strict, err, record)
+			}
+		} else {
+			checkError(t, err, ErrUserVerificationUnavailable, "")
 		}
 	}
 
@@ -196,12 +219,6 @@ func testWebAuthnVector(t *testing.T, rp *RelyingParty, v webauthnVector) {
 	if err != nil {
 		t.Fatalf("ParseResponse() = %v, want success", err)
 	}
-	if resp.UserVerified() != v.Authentication.UserVerified {
-		t.Errorf("UserVerified() = %v, want %v", resp.UserVerified(), v.Authentication.UserVerified)
-	}
-	if resp.BackedUp() != v.Authentication.BackedUp {
-		t.Errorf("BackedUp() = %v, want %v", resp.BackedUp(), v.Authentication.BackedUp)
-	}
 	wantUserID := userID
 	if userScoped([32]byte(v.Authentication.Challenge)) {
 		wantUserID = ""
@@ -223,11 +240,24 @@ func testWebAuthnVector(t *testing.T, rp *RelyingParty, v webauthnVector) {
 	if resp.RequestID() != RequestID(request) {
 		t.Errorf("Response.RequestID() = %q, want %q", resp.RequestID(), RequestID(request))
 	}
-	matched, err := rp.Login(resp, request, []string{record})
+	result, err := optionalUV.Login(resp, request, []string{record})
 	if err != nil {
 		t.Fatalf("Login() = %v, want success", err)
 	}
-	if matched != 0 {
-		t.Errorf("Login() matched record %d, want 0", matched)
+	want := &LoginResult{Matched: 0, UserVerified: v.Authentication.UserVerified && reliableUV,
+		BackedUp: v.Authentication.BackedUp}
+	if *result != *want {
+		t.Errorf("Login() = %+v, want %+v", result, want)
+	}
+	strict, err := rp.Login(resp, request, []string{record})
+	switch {
+	case want.UserVerified:
+		if err != nil || *strict != *want {
+			t.Errorf("Login() by default = %+v, %v, want %+v", strict, err, want)
+		}
+	case reliableUV:
+		checkError(t, err, nil, "client did not honor")
+	default:
+		checkError(t, err, ErrUserVerificationUnavailable, "")
 	}
 }

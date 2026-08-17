@@ -1,0 +1,19 @@
+missing UV flag reported as ErrUserVerificationUnavailable
+
+diff --git a/login.go b/login.go
+index 78c2e0a..1a043fa 100644
+--- a/login.go
++++ b/login.go
+@@ -254,9 +254,9 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
+ 					return nil, fmt.Errorf("%w: the matched record has neither the UV nor the BE flag, "+
+ 						"so user verification can't be relied upon", ErrUserVerificationUnavailable)
+ 				}
+-				return nil, errors.New("passkey: assertion has no user verification flag: " +
+-					"the client did not honor the required user verification, or the request " +
+-					"options were produced with a different OptionalUserVerification setting")
++				return nil, fmt.Errorf("%w: assertion has no user verification flag: "+
++					"the client did not honor the required user verification, or the request "+
++					"options were produced with a different OptionalUserVerification setting", ErrUserVerificationUnavailable)
+ 			}
+ 
+ 			return result, nil

@@ -7,7 +7,6 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/binary"
-	"errors"
 	"slices"
 	"strings"
 	"testing"
@@ -148,8 +147,9 @@ func FuzzRecordRoundTrip(f *testing.F) {
 	})
 }
 
-// FuzzRegister checks that every record Register produces parses: a
-// record only the encoder accepts locks the user out at the next login.
+// FuzzRegister checks that every record Register produces parses (a
+// record only the encoder accepts locks the user out at the next login)
+// and can back user verification, as documented for the default policy.
 func FuzzRegister(f *testing.F) {
 	rp := newTestRP(f, Options{})
 	for _, alg := range fuzzAlgorithms {
@@ -179,6 +179,9 @@ func FuzzRegister(f *testing.F) {
 		}
 		if r.rpIDHash != sha256.Sum256([]byte(testRPID)) {
 			t.Error("Register() produced a record for a different RP ID")
+		}
+		if !r.flags.userVerified() && !r.flags.backupEligible() {
+			t.Error("Register() produced a record with neither the UV nor the BE flag")
 		}
 		checkRecord(t, s, r)
 	})
@@ -313,11 +316,8 @@ func FuzzParseResponse(f *testing.F) {
 		if fl.backupState() && !fl.backupEligible() {
 			t.Error("response is backed up but not backup eligible")
 		}
-		if r.UserVerified() != fl.userVerified() {
-			t.Errorf("UserVerified() = %v, want %v", r.UserVerified(), fl.userVerified())
-		}
-		if r.BackedUp() != fl.backupState() {
-			t.Errorf("BackedUp() = %v, want %v", r.BackedUp(), fl.backupState())
+		if r.flags != fl {
+			t.Errorf("flags = %08b, want the authenticator data's %08b", r.flags, fl)
 		}
 		if n := len(r.UnauthenticatedUserID()); n > 64 {
 			t.Errorf("user ID is %d bytes, want at most 64", n)
@@ -461,7 +461,7 @@ func FuzzLogin(f *testing.F) {
 	// would stop at the expiry check.
 	opts := Options{Timeout: 30 * 24 * time.Hour}
 	c := newFuzzCeremony(f, algES256, opts)
-	uvRP := newTestRP(f, Options{RequireUserVerification: true, Timeout: opts.Timeout})
+	optionalUV := newTestRP(f, Options{OptionalUserVerification: true, Timeout: opts.Timeout})
 
 	// A record with the ceremony's credential ID but another key, which
 	// the record scan has to look past.
@@ -474,9 +474,14 @@ func FuzzLogin(f *testing.F) {
 	}
 	passkeys := []string{"$webauthn$v=1$", impostorRecord, c.record}
 
+	// The same ceremony without user verification, signed by the same
+	// credential, so that the policy check is reachable.
+	unverifiedAuthData := c.auth.authData(testRPID, false, flagUP)
+
 	f.Add(c.request, c.responseJSON)
 	f.Add(withRequestCreated(c.request, time.Unix(1, 0)), c.responseJSON)
 	f.Add(c.request, mustJSON(f, c.auth.signedLoginResponse(f, c.authData, c.clientData, "")))
+	f.Add(c.request, mustJSON(f, c.auth.signedLoginResponse(f, unverifiedAuthData, c.clientData, c.user.ID)))
 	f.Add([]byte(nil), c.responseJSON)
 
 	f.Fuzz(func(t *testing.T, request, responseJSON []byte) {
@@ -484,28 +489,54 @@ func FuzzLogin(f *testing.F) {
 		if err != nil {
 			return
 		}
-		matched, err := c.rp.Login(response, request, passkeys)
+		result, err := c.rp.Login(response, request, passkeys)
+		optionalResult, optionalErr := optionalUV.Login(response, request, passkeys)
 		if err != nil {
-			if matched != 0 {
-				t.Errorf("Login() = %d with error %v, want 0", matched, err)
+			if result != nil {
+				t.Errorf("Login() = %+v with error %v, want nil", result, err)
 			}
 			checkWrapped(t, err)
-			return
+			// User verification is the only difference between the two
+			// relying parties: with it optional, Login reports it
+			// instead of requiring it, so a login only the optional one
+			// accepts was rejected for it, and can't have been reliably
+			// verified.
+			if optionalErr != nil {
+				return
+			}
+			if !strings.Contains(err.Error(), "user verification") || optionalResult.UserVerified {
+				t.Errorf("Login() = %v, but with OptionalUserVerification = %+v", err, optionalResult)
+			}
+			result = optionalResult
+		} else {
+			if !result.UserVerified {
+				t.Errorf("Login() = %+v, want reliable user verification", result)
+			}
+			if optionalErr != nil || *optionalResult != *result {
+				t.Errorf("Login() with OptionalUserVerification = %+v, %v, want %+v",
+					optionalResult, optionalErr, result)
+			}
 		}
 
 		// The signed regions are the ceremony's, because the mutator
 		// cannot produce a signature over anything else.
-		if !bytes.Equal(response.authData, c.authData) {
+		if !bytes.Equal(response.authData, c.authData) && !bytes.Equal(response.authData, unverifiedAuthData) {
 			t.Error("Login() accepted mutated authenticator data")
+		}
+		if result.UserVerified != bytes.Equal(response.authData, c.authData) {
+			t.Errorf("Login() reported UserVerified = %v for authenticator data %x", result.UserVerified, response.authData)
 		}
 		if response.clientDataHash != sha256.Sum256(c.clientData) {
 			t.Error("Login() accepted mutated client data")
 		}
-		if matched < 0 || matched >= len(passkeys) {
-			t.Fatalf("Login() = %d, want an index into %d records", matched, len(passkeys))
+		if result.Matched < 0 || result.Matched >= len(passkeys) {
+			t.Fatalf("Login() matched record %d, want an index into %d records", result.Matched, len(passkeys))
 		}
-		if passkeys[matched] != c.record {
-			t.Errorf("Login() matched record %d, want the one holding the signing key", matched)
+		if passkeys[result.Matched] != c.record {
+			t.Errorf("Login() matched record %d, want the one holding the signing key", result.Matched)
+		}
+		if result.BackedUp {
+			t.Error("Login() reported BackedUp for a credential that is not")
 		}
 		if response.RequestID() != RequestID(request) {
 			t.Errorf("Login() accepted a response for a different request: %q, want %q",
@@ -513,15 +544,6 @@ func FuzzLogin(f *testing.F) {
 		}
 		if created := RequestCreation(request); time.Since(created) > opts.Timeout {
 			t.Errorf("Login() accepted a request created at %v", created)
-		}
-
-		// User verification is gated on the response's flag alone.
-		_, uvErr := uvRP.Login(response, request, passkeys)
-		if uvErr == nil && !response.UserVerified() {
-			t.Error("Login() accepted an unverified response with RequireUserVerification")
-		}
-		if errors.Is(uvErr, ErrUserVerificationRequired) && response.UserVerified() {
-			t.Errorf("Login() = %v for a user-verified response", uvErr)
 		}
 	})
 }

@@ -107,7 +107,14 @@ out.textContent = "Signed in as " + await res.text() + "."
 		responseJSON, _ := io.ReadAll(r.Body)
 		record, err := rp.Register(responseJSON)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			switch {
+			case errors.Is(err, passkey.ErrUserVerificationUnavailable):
+				http.Error(w, "this passkey can't verify it's you: set up a PIN "+
+					"on your security key, or use a different authenticator",
+					http.StatusBadRequest)
+			default:
+				http.Error(w, "registration failed", http.StatusBadRequest)
+			}
 			return
 		}
 		u.passkeys = append(u.passkeys, record)

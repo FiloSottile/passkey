@@ -70,7 +70,7 @@ func testE2E(t *testing.T, alg int32) {
 		t.Errorf("excludeCredentials = %+v, want one entry with ID %q", creation.ExcludeCredentials, wantID)
 	}
 	rec2, err := rp.Register(mustJSON(t, auth2.registrationResponse(t, testRPID, testOrigin,
-		challengeOf(t, optionsJSON), flagUP)))
+		challengeOf(t, optionsJSON), flagUP|flagUV)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,18 +124,12 @@ func testE2E(t *testing.T, alg int32) {
 	if got := resp.UnauthenticatedUserID(); got != user.ID {
 		t.Errorf("UnauthenticatedUserID() = %q, want %q", got, user.ID)
 	}
-	matched, err := rp.Login(resp, request, records)
+	result, err := rp.Login(resp, request, records)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if matched != 1 {
-		t.Errorf("Login() matched record %d, want 1", matched)
-	}
-	if !resp.UserVerified() {
-		t.Error("UserVerified() = false, want true")
-	}
-	if resp.BackedUp() {
-		t.Error("BackedUp() = true, want false")
+	if want := (&LoginResult{Matched: 1, UserVerified: true}); *result != *want {
+		t.Errorf("Login() = %+v, want %+v", result, want)
 	}
 
 	// User-scoped login, with the first passkey. The response asserts
@@ -164,7 +158,7 @@ func testE2E(t *testing.T, alg int32) {
 		t.Errorf("allowCredentials IDs = %q, want %q", gotIDs, wantIDs)
 	}
 	resp, err = ParseResponse(mustJSON(t, auth1.loginResponse(t, testRPID, testOrigin,
-		challengeOf(t, optionsJSON), user.ID, flagUP|flagBE|flagBS)))
+		challengeOf(t, optionsJSON), user.ID, flagUP|flagUV|flagBE|flagBS)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -174,18 +168,12 @@ func testE2E(t *testing.T, alg int32) {
 	if got := resp.UnauthenticatedUserID(); got != "" {
 		t.Errorf("UnauthenticatedUserID() = %q, want empty", got)
 	}
-	matched, err = rp.Login(resp, request, records)
+	result, err = rp.Login(resp, request, records)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if matched != 0 {
-		t.Errorf("Login() matched record %d, want 0", matched)
-	}
-	if resp.UserVerified() {
-		t.Error("UserVerified() = true, want false")
-	}
-	if !resp.BackedUp() {
-		t.Error("BackedUp() = false, want true")
+	if want := (&LoginResult{Matched: 0, UserVerified: true, BackedUp: true}); *result != *want {
+		t.Errorf("Login() = %+v, want %+v", result, want)
 	}
 }
 
