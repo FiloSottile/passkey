@@ -1,16 +1,15 @@
-NewLoginWithCredentials accepts an empty records list
+an empty AllowCredentials list begins a user-scoped ceremony
 
 diff --git a/login.go b/login.go
-index 4af8d4f..0e917ac 100644
+index 3d91e43..416042e 100644
 --- a/login.go
 +++ b/login.go
-@@ -51,9 +51,6 @@ func (rp *RelyingParty) NewLogin() (request, optionsJSON []byte, err error) {
- // The optionsJSON discloses the user's credential IDs to whoever receives it,
- // so NewLogin should be used instead for a fully unauthenticated username.
- func (rp *RelyingParty) NewLoginWithCredentials(passkeys []string) (request, optionsJSON []byte, err error) {
--	if len(passkeys) == 0 {
--		return nil, nil, errors.New("passkey: no passkey records")
--	}
- 	return rp.newLogin(true, passkeys)
- }
- 
+@@ -74,7 +74,7 @@ func (rp *RelyingParty) NewLoginWithOptions(options *LoginOptions) (request, opt
+ 		options = &LoginOptions{}
+ 	}
+ 	allowed := credentialDescriptors(options.AllowCredentials)
+-	r := newLoginRequest(len(options.AllowCredentials) > 0)
++	r := newLoginRequest(options.AllowCredentials != nil)
+ 	uv := "required"
+ 	if rp.optionalUserVerification {
+ 		uv = "preferred"

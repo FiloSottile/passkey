@@ -115,7 +115,7 @@ type ceremony struct {
 	// for registrations; "required" or "preferred" for logins, by
 	// which policy produced them.
 	UserVerification string `json:"userVerification"`
-	// UserScoped reports a login begun with NewLoginWithCredentials.
+	// UserScoped reports a login begun with LoginOptions.AllowCredentials.
 	UserScoped bool `json:"userScoped,omitempty"`
 
 	// Options is what the package emitted, and Response what
@@ -592,7 +592,7 @@ func (s *server) loginOptions(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "register a passkey first", http.StatusBadRequest)
 			return
 		}
-		request, options, err = rp.NewLoginWithCredentials(sess.records)
+		request, options, err = rp.NewLoginWithOptions(&passkey.LoginOptions{AllowCredentials: sess.records})
 	} else {
 		request, options, err = rp.NewLogin()
 	}

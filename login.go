@@ -33,28 +33,28 @@ import (
 //
 // [Challenges]: #hdr-Challenges
 func (rp *RelyingParty) NewLogin() (request, optionsJSON []byte, err error) {
-	return rp.newLogin(false, nil)
+	return rp.NewLoginWithOptions(nil)
 }
 
-// NewLoginWithCredentials begins a login ceremony for a user the application has
-// already identified, such as a re-authentication prompt before a sensitive
-// operation in a signed-in session.
+// LoginOptions configures the behavior of [RelyingParty.NewLoginWithOptions].
 //
-// The user's passkey records are communicated to the client so it
-// offers only that user's credentials instead of an account picker.
-// The user is identified by the application, not by the response:
-// [Response.UnauthenticatedUserID] is empty for these ceremonies, and the
-// application must look up the user's records the same way it did to begin
-// the ceremony (e.g. from the session) and pass them to [RelyingParty.Login].
-// Otherwise, NewLoginWithCredentials behaves like [RelyingParty.NewLogin].
-//
-// The optionsJSON discloses the user's credential IDs to whoever receives it,
-// so NewLogin should be used instead for a fully unauthenticated username.
-func (rp *RelyingParty) NewLoginWithCredentials(passkeys []string) (request, optionsJSON []byte, err error) {
-	if len(passkeys) == 0 {
-		return nil, nil, errors.New("passkey: no passkey records")
-	}
-	return rp.newLogin(true, passkeys)
+// The zero value is a valid configuration, and is equivalent to calling [RelyingParty.NewLogin].
+type LoginOptions struct {
+	// AllowCredentials is a list of passkey records for a user that the application
+	// has already identified. It can be used e.g. for a re-authentication
+	// prompt before a sensitive operation in a signed-in session.
+	//
+	// The user's passkey records are communicated to the client so it
+	// offers only that user's credentials instead of an account picker.
+	// The user is identified by the application, not by the response:
+	// [Response.UnauthenticatedUserID] is empty when AllowCredentials is set,
+	// and the application must look up the user's records the same way
+	// it did to populate this field (e.g. from the session) and pass
+	// them to [RelyingParty.Login].
+	//
+	// The login options disclose the user's credential IDs to whoever receives it,
+	// so this field should be nil for a fully unauthenticated username.
+	AllowCredentials []string
 }
 
 type requestOptions struct {
@@ -65,9 +65,16 @@ type requestOptions struct {
 	Timeout          int64                  `json:"timeout"`
 }
 
-func (rp *RelyingParty) newLogin(scoped bool, passkeys []string) (request, optionsJSON []byte, err error) {
-	allowed := credentialDescriptors(passkeys)
-	r := newLoginRequest(scoped)
+// NewLoginWithOptions begins a login ceremony with the given options.
+//
+// If options is nil or the zero value, it is equivalent to calling
+// [RelyingParty.NewLogin].
+func (rp *RelyingParty) NewLoginWithOptions(options *LoginOptions) (request, optionsJSON []byte, err error) {
+	if options == nil {
+		options = &LoginOptions{}
+	}
+	allowed := credentialDescriptors(options.AllowCredentials)
+	r := newLoginRequest(len(options.AllowCredentials) > 0)
 	uv := "required"
 	if rp.optionalUserVerification {
 		uv = "preferred"

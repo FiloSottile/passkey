@@ -1,15 +1,15 @@
-NewLoginWithCredentials begins an unscoped ceremony
+a login with AllowCredentials begins an unscoped ceremony
 
 diff --git a/login.go b/login.go
-index 8dd0ae4..a37ab71 100644
+index 3d91e43..d15bb56 100644
 --- a/login.go
 +++ b/login.go
-@@ -53,7 +53,7 @@ func (rp *RelyingParty) NewLoginWithCredentials(passkeys []string) (request, opt
- 	if len(passkeys) == 0 {
- 		return nil, nil, errors.New("passkey: no passkey records")
+@@ -74,7 +74,7 @@ func (rp *RelyingParty) NewLoginWithOptions(options *LoginOptions) (request, opt
+ 		options = &LoginOptions{}
  	}
--	return rp.newLogin(true, passkeys)
-+	return rp.newLogin(false, passkeys)
- }
- 
- type requestOptions struct {
+ 	allowed := credentialDescriptors(options.AllowCredentials)
+-	r := newLoginRequest(len(options.AllowCredentials) > 0)
++	r := newLoginRequest(false)
+ 	uv := "required"
+ 	if rp.optionalUserVerification {
+ 		uv = "preferred"

@@ -58,7 +58,7 @@
 //
 // # Challenges
 //
-// [RelyingParty.NewLogin] and [RelyingParty.NewLoginWithCredentials] return an
+// [RelyingParty.NewLogin] and [RelyingParty.NewLoginWithOptions] return an
 // opaque request value that must be presented back to [RelyingParty.Login].
 //
 // The application must:
@@ -117,8 +117,8 @@
 //
 // Login options request user verification "required", or "preferred" if
 // [Options.OptionalUserVerification] is set. [RelyingParty.NewLogin] sends
-// an empty allowCredentials list; [RelyingParty.NewLoginWithCredentials]
-// populates it with the user's credentials instead.
+// an empty allowCredentials list; [LoginOptions.AllowCredentials] populates
+// it with the user's credentials instead.
 //
 // Credential descriptors, in excludeCredentials at registration and in
 // allowCredentials at login, carry the transports recorded at registration,
@@ -218,7 +218,7 @@ type Options struct {
 	OptionalUserVerification bool
 
 	// Timeout is how long a request returned by NewLogin or
-	// NewLoginWithCredentials remains valid.
+	// NewLoginWithOptions remains valid.
 	//
 	// If zero, it defaults to five minutes. Conditional UI (autofill)
 	// logins may warrant a longer timeout, as the prompt can sit idle

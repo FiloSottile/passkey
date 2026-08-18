@@ -1,15 +1,15 @@
-NewLogin begins a user-scoped ceremony
+a login without AllowCredentials begins a user-scoped ceremony
 
 diff --git a/login.go b/login.go
-index 8dd0ae4..c76e316 100644
+index 3d91e43..0a37423 100644
 --- a/login.go
 +++ b/login.go
-@@ -30,7 +30,7 @@
- //
- // [Challenges]: #hdr-Challenges
- func (rp *RelyingParty) NewLogin() (request, optionsJSON []byte, err error) {
--	return rp.newLogin(false, nil)
-+	return rp.newLogin(true, nil)
- }
- 
- // NewLoginWithCredentials begins a login ceremony for a user the application has
+@@ -74,7 +74,7 @@ func (rp *RelyingParty) NewLoginWithOptions(options *LoginOptions) (request, opt
+ 		options = &LoginOptions{}
+ 	}
+ 	allowed := credentialDescriptors(options.AllowCredentials)
+-	r := newLoginRequest(len(options.AllowCredentials) > 0)
++	r := newLoginRequest(true)
+ 	uv := "required"
+ 	if rp.optionalUserVerification {
+ 		uv = "preferred"

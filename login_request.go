@@ -38,8 +38,8 @@ const (
 	// challengeUnscoped is a ceremony begun by [RelyingParty.NewLogin]: the
 	// response identifies the user.
 	challengeUnscoped = 0
-	// challengeUserScoped is a ceremony begun by
-	// [RelyingParty.NewLoginWithCredentials]: the application identified the
+	// challengeUserScoped is a ceremony begun with
+	// [LoginOptions.AllowCredentials]: the application identified the
 	// user, and the response's user handle is disregarded.
 	challengeUserScoped = 1
 )
@@ -89,7 +89,7 @@ func (r *loginRequest) Bytes() []byte {
 }
 
 // RequestCreation returns the creation time of a request returned by
-// [RelyingParty.NewLogin] or [RelyingParty.NewLoginWithCredentials].
+// [RelyingParty.NewLogin] or [RelyingParty.NewLoginWithOptions].
 //
 // A request expires [Options.Timeout] after creation.
 //
@@ -103,7 +103,7 @@ func RequestCreation(request []byte) time.Time {
 }
 
 // RequestID returns a unique identifier for a request returned by
-// [RelyingParty.NewLogin] or [RelyingParty.NewLoginWithCredentials], to be used
+// [RelyingParty.NewLogin] or [RelyingParty.NewLoginWithOptions], to be used
 // as a storage key. The same value is returned by [Response.RequestID]
 // for the corresponding response.
 //

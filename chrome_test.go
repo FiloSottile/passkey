@@ -42,8 +42,8 @@ type chromeRecording struct {
 
 // chromeLogin is a login ceremony: the stored request, the request
 // options, and the response, along with whether it was begun with
-// NewLoginWithCredentials, the flags it must report and, if the authenticator
-// was configured to break it, why it must be rejected.
+// LoginOptions.AllowCredentials, the flags it must report and, if the
+// authenticator was configured to break it, why it must be rejected.
 type chromeLogin struct {
 	Request      hexBytes        `json:"request"`
 	Options      json.RawMessage `json:"options"`

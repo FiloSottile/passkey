@@ -14,8 +14,8 @@ import (
 
 // testChallenge and testScopedChallenge are base64url challenges for
 // ceremonies that don't need a request, such as ParseResponse tests: the
-// first of a NewLogin ceremony, the second of a NewLoginWithCredentials
-// one.
+// first of a NewLogin ceremony, the second of one begun with
+// LoginOptions.AllowCredentials.
 var (
 	testChallenge       = base64.RawURLEncoding.EncodeToString(bytes.Repeat([]byte{0x42}, 32))
 	testScopedChallenge = base64.RawURLEncoding.EncodeToString(append([]byte{challengeUserScoped}, bytes.Repeat([]byte{0x42}, 31)...))
@@ -220,7 +220,7 @@ func TestLogin(t *testing.T) {
 			// the records passed to Login identify the user.
 			name: "scoped login with another user's handle",
 			setup: func(t *testing.T, env *loginEnv) (*RelyingParty, []byte, []byte) {
-				request, requestJSON, err := env.rp.NewLoginWithCredentials(env.records)
+				request, requestJSON, err := env.rp.NewLoginWithOptions(&LoginOptions{AllowCredentials: env.records})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -232,7 +232,7 @@ func TestLogin(t *testing.T) {
 		{
 			name: "scoped login without user handle",
 			setup: func(t *testing.T, env *loginEnv) (*RelyingParty, []byte, []byte) {
-				request, requestJSON, err := env.rp.NewLoginWithCredentials(env.records)
+				request, requestJSON, err := env.rp.NewLoginWithOptions(&LoginOptions{AllowCredentials: env.records})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -245,7 +245,7 @@ func TestLogin(t *testing.T) {
 			// An empty user handle is equivalent to an absent one.
 			name: "scoped login with empty user handle",
 			setup: func(t *testing.T, env *loginEnv) (*RelyingParty, []byte, []byte) {
-				request, requestJSON, err := env.rp.NewLoginWithCredentials(env.records)
+				request, requestJSON, err := env.rp.NewLoginWithOptions(&LoginOptions{AllowCredentials: env.records})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -260,7 +260,9 @@ func TestLogin(t *testing.T) {
 			// rather than failing the ceremony.
 			name: "scoped login with malformed record",
 			setup: func(t *testing.T, env *loginEnv) (*RelyingParty, []byte, []byte) {
-				request, requestJSON, err := env.rp.NewLoginWithCredentials([]string{"not a passkey record", env.record})
+				request, requestJSON, err := env.rp.NewLoginWithOptions(&LoginOptions{
+					AllowCredentials: []string{"not a passkey record", env.record},
+				})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -1122,7 +1124,7 @@ func TestNewLoginUserVerification(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, scopedJSON, err := rp.NewLoginWithCredentials(env.records)
+		_, scopedJSON, err := rp.NewLoginWithOptions(&LoginOptions{AllowCredentials: env.records})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1140,15 +1142,36 @@ func TestNewLoginUserVerification(t *testing.T) {
 }
 
 func TestUserScopedLogin(t *testing.T) {
-	rp := newTestRP(t, Options{})
-	for _, passkeys := range [][]string{nil, {}} {
-		if _, _, err := rp.NewLoginWithCredentials(passkeys); err == nil {
-			t.Errorf("NewLoginWithCredentials(%#v) succeeded, want error", passkeys)
+	env := newLoginEnv(t)
+
+	// Nil options, and nil or empty AllowCredentials, begin an unscoped
+	// ceremony like NewLogin does: allowCredentials is empty on the wire,
+	// and the response identifies the user.
+	for _, options := range []*LoginOptions{nil, {}, {AllowCredentials: []string{}}} {
+		request, requestJSON, err := env.rp.NewLoginWithOptions(options)
+		if err != nil {
+			t.Fatalf("NewLoginWithOptions(%#v) = %v", options, err)
+		}
+		if !strings.Contains(string(requestJSON), `"allowCredentials":[]`) {
+			t.Errorf("NewLoginWithOptions(%#v) options = %s, want an empty allowCredentials list", options, requestJSON)
+		}
+		m := env.auth.loginResponse(t, testRPID, testOrigin, challengeOf(t, requestJSON), env.user.ID, flagUP|flagUV)
+		resp, err := ParseResponse(mustJSON(t, m))
+		if err != nil {
+			t.Fatalf("ParseResponse() = %v", err)
+		}
+		if got := resp.UnauthenticatedUserID(); got != env.user.ID {
+			t.Errorf("NewLoginWithOptions(%#v): UnauthenticatedUserID() = %q, want %q", options, got, env.user.ID)
+		}
+		if resp.RequestID() != RequestID(request) {
+			t.Errorf("NewLoginWithOptions(%#v): Response.RequestID() = %q, want %q", options, resp.RequestID(), RequestID(request))
+		}
+		if _, err := env.rp.Login(resp, request, env.records); err != nil {
+			t.Errorf("NewLoginWithOptions(%#v): Login() = %v, want success", options, err)
 		}
 	}
 
-	env := newLoginEnv(t)
-	request, requestJSON, err := env.rp.NewLoginWithCredentials(env.records)
+	request, requestJSON, err := env.rp.NewLoginWithOptions(&LoginOptions{AllowCredentials: env.records})
 	if err != nil {
 		t.Fatal(err)
 	}

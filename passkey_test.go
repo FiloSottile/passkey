@@ -136,7 +136,7 @@ func testE2E(t *testing.T, alg int32) {
 	// the user handle, as clients generally do even with
 	// allowCredentials, but the application already identified the
 	// user, so it is not exposed.
-	request, optionsJSON, err = rp.NewLoginWithCredentials(records)
+	request, optionsJSON, err = rp.NewLoginWithOptions(&LoginOptions{AllowCredentials: records})
 	if err != nil {
 		t.Fatal(err)
 	}

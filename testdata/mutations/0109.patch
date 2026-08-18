@@ -1,13 +1,13 @@
 login ceremony requests preferred user verification by default
 
 diff --git a/login.go b/login.go
-index bd4844d..e7e8e23 100644
+index 3d91e43..72fd392 100644
 --- a/login.go
 +++ b/login.go
-@@ -70,9 +70,9 @@ type requestOptions struct {
- func (rp *RelyingParty) newLogin(scoped bool, passkeys []string) (request, optionsJSON []byte, err error) {
- 	allowed := credentialDescriptors(passkeys)
- 	r := newLoginRequest(scoped)
+@@ -75,9 +75,9 @@ func (rp *RelyingParty) NewLoginWithOptions(options *LoginOptions) (request, opt
+ 	}
+ 	allowed := credentialDescriptors(options.AllowCredentials)
+ 	r := newLoginRequest(len(options.AllowCredentials) > 0)
 -	uv := "required"
 +	uv := "preferred"
  	if rp.optionalUserVerification {

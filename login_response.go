@@ -167,9 +167,10 @@ func (r *Response) RequestID() string {
 // This user ID is attacker-controlled, and must not be used for anything but
 // looking up the user's passkey records.
 //
-// It is empty if and only if [RelyingParty.NewLoginWithCredentials] initiated
-// the ceremony, in which case the application already identified the user
-// before, and must look up their records the same way, not from the response.
+// It is empty if and only if the ceremony was initiated with
+// [LoginOptions.AllowCredentials], in which case the application already
+// identified the user before, and must look up their records the same way,
+// not from the response.
 func (r *Response) UnauthenticatedUserID() string {
 	return r.userID
 }

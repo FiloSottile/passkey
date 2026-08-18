@@ -85,10 +85,10 @@ type recording struct {
 // login is a login ceremony: the request value the application would
 // have stored, the PublicKeyCredentialRequestOptions passed to
 // navigator.credentials.get(), and the toJSON() serialization of what it
-// returned, along with whether the ceremony was begun with
-// NewLoginWithCredentials, the flags the authenticator was configured to report
-// and, for responses the authenticator was configured to break, the
-// reason they must be rejected.
+// returned, along with whether the ceremony was initiated with
+// LoginOptions.AllowCredentials, the flags the authenticator was configured
+// to report and, for responses the authenticator was configured to break,
+// the reason they must be rejected.
 type login struct {
 	Request      string          `json:"request"` // hex
 	Options      json.RawMessage `json:"options"`
@@ -115,7 +115,7 @@ func main() {
 
 	// A platform authenticator with user verification, and the shape of
 	// the counter incrementing across logins. The last login is
-	// user-scoped: it answers a NewLoginWithCredentials ceremony.
+	// user-scoped: it answers a ceremony begun with LoginOptions.AllowCredentials.
 	a := s.addAuthenticator("platform",
 		"A CTAP2.1 platform authenticator with user verification, "+
 			"whose credentials are not backup eligible; "+
@@ -561,7 +561,7 @@ func (a *authenticator) login() {
 // loginWithCredentials runs a user-scoped login ceremony and records the
 // exchange.
 func (a *authenticator) loginWithCredentials() {
-	request, optionsJSON, err := a.s.rp.NewLoginWithCredentials([]string{a.record})
+	request, optionsJSON, err := a.s.rp.NewLoginWithOptions(&passkey.LoginOptions{AllowCredentials: []string{a.record}})
 	if err != nil {
 		a.s.fatalf("%v", err)
 	}
