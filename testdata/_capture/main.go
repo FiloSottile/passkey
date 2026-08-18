@@ -269,8 +269,9 @@ type session struct {
 	mu   sync.Mutex
 	rec  *recording
 	path string
-	// password is the one the visitor saves in their password manager
-	// for a conditional registration; it lives only in memory.
+	// password is the one the visitor saved in their password manager
+	// for a conditional registration, whatever they submitted; it lives
+	// only in memory.
 	password string
 	// conditionalSignIn reports that the visitor completed the password
 	// sign-in which makes a conditional registration meaningful. It remains
@@ -391,9 +392,8 @@ func (s *server) newSession(w http.ResponseWriter, r *http.Request) {
 			Previous:      req.Previous,
 			Ceremonies:    []*ceremony{},
 		},
-		path:     filepath.Join(s.data, id+".json"),
-		password: rand.Text(),
-		pending:  make(map[string]*pendingLogin),
+		path:    filepath.Join(s.data, id+".json"),
+		pending: make(map[string]*pendingLogin),
 	}
 	if err := sess.save(); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -433,13 +433,9 @@ func (s *server) getSession(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, sess.view())
 }
 
-// view is what the page sees of a session: the recording, plus the
-// password of the sign-in form of the conditional registration flow.
+// view is what the page sees of a session: the recording.
 func (sess *session) view() any {
-	return struct {
-		*recording
-		SignInPassword string `json:"signInPassword"`
-	}{sess.rec, sess.password}
+	return sess.rec
 }
 
 // annotate records the contributor's notes: on the session, or on a
@@ -703,9 +699,14 @@ func (c *ceremony) summary() string {
 }
 
 // password is the sign-in form of the conditional registration flow: a
-// real form submission, so that the browser's password manager offers to
-// save the password, and later autofills it. It redirects back to the
-// page, which then asks for a conditional registration.
+// real form submission, so that the password manager offers to save the
+// password, and later autofills it. The save step keeps whatever
+// password was submitted — the visitor's, or one the manager generated,
+// since managers only offer to save what was typed or filled — and the
+// sign-in step checks it. Only the password is checked: some managers
+// fill the username of the login item they hold for the site, which may
+// be an earlier session's. It redirects back to the page, which then
+// asks for a conditional registration.
 func (s *server) password(w http.ResponseWriter, r *http.Request) {
 	id := r.PostFormValue("session")
 	s.mu.Lock()
@@ -718,25 +719,29 @@ func (s *server) password(w http.ResponseWriter, r *http.Request) {
 	// The page reads the outcome from the pw parameter: saved, signedin,
 	// or wrong.
 	var outcome string
+	password := r.PostFormValue("password")
+	sess.mu.Lock()
 	switch r.PostFormValue("step") {
 	case "save":
 		outcome = "saved"
+		if password == "" {
+			outcome = "wrong"
+		} else {
+			sess.password = clip(password, 200)
+		}
 	case "signin":
 		outcome = "signedin"
+		if sess.password == "" || subtle.ConstantTimeCompare([]byte(password), []byte(sess.password)) != 1 {
+			outcome = "wrong"
+		} else {
+			sess.conditionalSignIn = true
+		}
 	default:
+		sess.mu.Unlock()
 		http.Error(w, "bad step", http.StatusBadRequest)
 		return
 	}
-	sess.mu.Lock()
-	ok := r.PostFormValue("username") == sess.rec.UserName &&
-		subtle.ConstantTimeCompare([]byte(r.PostFormValue("password")), []byte(sess.password)) == 1
-	if ok && outcome == "signedin" {
-		sess.conditionalSignIn = true
-	}
 	sess.mu.Unlock()
-	if !ok {
-		outcome = "wrong"
-	}
 	q := url.Values{"s": {id}, "pw": {outcome}}
 	if s.token != "" {
 		q.Set("t", s.token)

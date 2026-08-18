@@ -89,23 +89,16 @@ footer { color:var(--muted); font-size:.9rem; }
 <div id="unsupported" class="error" hidden></div>
 
 <div id="conditional-intro" hidden>
-<p>This session records a <b>conditional registration</b>: a passkey created automatically, without prompting, right after you sign in with a password your password manager filled in. Whether it happens is up to whatever handles passkeys on this page: the browser's own manager (Google Password Manager in Chrome, Apple Passwords in Safari), a third-party provider on iOS or macOS, or a browser extension like 1Password that takes over WebAuthn calls and can apply its own policy. Any answer is a useful recording. It works in two steps, each a real form submission.</p>
-<div id="pw-save" class="pw-form">
-<b>1. Save a password.</b> Submit this form and accept your browser's offer to save the password.
+<p>This session records a <i>conditional registration</i>: a passkey created automatically, without prompting, right after you sign in with a password your password manager filled in.</p>
+<p><b>Most password managers don't support this yet</b>, so a refusal is not unexpected for many setups.</p>
+<p>However, if your password manager won't save the password or fills it in wrong, please say so in the notes at the bottom.</p>
+<div id="pw-form" class="pw-form">
+<b id="pw-title"></b> <span id="pw-desc"></span>
 <form method="post" action="/password">
-<input type="hidden" name="session"><input type="hidden" name="step" value="save"><input type="hidden" name="t">
+<input type="hidden" name="session"><input type="hidden" name="step"><input type="hidden" name="t">
 <label>Username</label><input type="text" name="username" autocomplete="username">
-<label>Password</label><input type="password" name="password" autocomplete="new-password">
-<button type="submit">Save this password</button>
-</form>
-</div>
-<div id="pw-signin" class="pw-form" hidden>
-<b>2. Sign in with it.</b> Let the browser's password manager fill the password (don't type it), then submit. The page will then immediately ask the browser to create a passkey without prompting you.
-<form method="post" action="/password">
-<input type="hidden" name="session"><input type="hidden" name="step" value="signin"><input type="hidden" name="t">
-<label>Username</label><input type="text" name="username" autocomplete="username">
-<label>Password</label><input type="password" name="password" autocomplete="current-password">
-<button type="submit">Sign in</button>
+<label>Password</label><input type="password" name="password">
+<button type="submit" id="pw-button"></button>
 </form>
 <div id="pw-error" class="error"></div>
 </div>
@@ -146,7 +139,8 @@ footer { color:var(--muted); font-size:.9rem; }
 </ol>
 
 <div class="done" id="done" hidden>
-<b>Thank you.</b> Anything to add? <a id="edit-notes" href="#">Edit the notes.</a>
+<b>Thank you.</b> Anything to add — something that didn't work, or that you had to do differently?
+<div class="prompt" style="margin-top:.6rem"><input id="notes-input" type="text" placeholder="Notes for this session"><button type="button" id="notes-save">Save</button></div>
 <div id="conditional-offer">
 <p>If a password manager fills passwords for you in this browser — the built-in one, or an extension like 1Password — you can also record a <b>conditional registration</b>: the silent passkey creation some of them do right after a password sign-in. It's the rarest example we need. Two more minutes.</p>
 <button id="start-conditional" class="secondary">Record a conditional registration</button>
@@ -342,6 +336,9 @@ function render(stepName, index, c) {
   let head;
   if (c.clientError) {
     head = `<span class="bad">The client refused: ${esc(c.clientError.name)}: ${esc(c.clientError.message)}</span>`;
+    if (c.type === 'registration' && c.conditional) {
+      head += ' <span class="hint">— expected with many password managers today.</span>';
+    }
   } else {
     const p = c.properties || {};
     const flags = [p.userPresent && 'UP', p.userVerified && 'UV', p.backupEligible && 'BE', p.backedUp && 'BS', p.extensionData && 'ED'].filter(Boolean).join(' ') || 'none';
@@ -398,21 +395,36 @@ function show() {
   const registered = session.ceremonies.some(c => c.type === 'registration');
   const registerStep = document.querySelector('.step[data-step="register"]');
   if (conditional) {
-    document.querySelectorAll('.pw-form input[name=session]').forEach(i => i.value = sid);
-    document.querySelectorAll('.pw-form input[name=t]').forEach(i => i.value = token);
-    document.querySelectorAll('.pw-form input[name=username]').forEach(i => i.value = session.userName);
-    $('#pw-save input[name=password]').value = session.signInPassword;
+    // One form, in the DOM only until the registration is attempted:
+    // password managers fill whatever password field they find,
+    // including a hidden one. The password is the contributor's (or
+    // the manager's, generated), never set by the page: managers only
+    // offer to save what was typed or filled.
     const pw = params.get('pw');
-    $('#pw-save').hidden = registered || pw === 'saved' || pw === 'signedin';
-    $('#pw-signin').hidden = registered || !(pw === 'saved' || pw === 'wrong');
-    $('#pw-error').textContent = pw === 'wrong' ? "That wasn't the saved password. Let the password manager fill it and try again." : '';
+    const signin = pw === 'saved' || pw === 'wrong';
+    const form = $('#pw-form');
+    form.hidden = registered || pw === 'signedin';
+    form.querySelector('input[name=session]').value = sid;
+    form.querySelector('input[name=t]').value = token;
+    form.querySelector('input[name=username]').value = session.userName;
+    form.querySelector('input[name=step]').value = signin ? 'signin' : 'save';
+    form.querySelector('input[name=password]').autocomplete = signin ? 'current-password' : 'new-password';
+    $('#pw-title').textContent = signin ? '2. Sign in with it.' : '1. Save a password.';
+    $('#pw-desc').textContent = signin
+      ? "Let the password manager fill the password (don't type it), then submit. The page will then immediately ask the browser to create a passkey without prompting you."
+      : 'Type any throwaway password, or let your password manager generate one, submit, and accept the offer to save it. It is not recorded.';
+    $('#pw-button').textContent = signin ? 'Sign in' : 'Save this password';
+    $('#pw-error').textContent = pw === 'wrong'
+      ? (signin ? "That wasn't the saved password: the manager may have filled a different one, or nothing. Try again; if it keeps happening, say so in the notes below." : 'The password was empty. Type any throwaway password and submit again.')
+      : '';
     // The registration step is the conditional one, run by the page
     // itself right after the sign-in; the button only retries it.
     registerStep.hidden = !(registered || pw === 'signedin');
     registerStep.querySelector('b').textContent = 'Conditional registration';
-    registerStep.querySelector('.step-desc').textContent = 'The page asks the browser to create a passkey without prompting, right after the password sign-in, and gives up after 20 seconds. If it was refused, you can sign in again, or retry here.';
+    registerStep.querySelector('.step-desc').textContent = 'The page asks the browser to create a passkey without prompting, right after the autofilled password sign-in, and gives up after 20 seconds. This is not supported by many password managers today. You can sign in again, or retry here.';
     registerStep.querySelector('button').textContent = 'Retry';
   }
+  $('#notes-input').value = session.notes || '';
   $('#done').hidden = session.ceremonies.length === 0;
   const hasRecord = session.ceremonies.some(c => c.type === 'registration' && c.record);
   for (const [name, step] of Object.entries(steps)) {
@@ -457,12 +469,15 @@ $('#start-conditional').onclick = async () => {
   location.href = `/?s=${encodeURIComponent(s.id)}&flow=conditional${token ? '&t=' + encodeURIComponent(token) : ''}`;
 };
 
-$('#edit-notes').onclick = async e => {
-  e.preventDefault();
-  const text = prompt('Notes for this session:', session.notes || '');
-  if (text === null) return;
-  session = await api(`/api/session/${sid}/annotate`, {text});
+$('#notes-save').onclick = async () => {
+  const button = $('#notes-save');
+  button.disabled = true;
+  try { session = await api(`/api/session/${sid}/annotate`, {text: $('#notes-input').value}); button.textContent = 'Saved'; }
+  catch (e) { button.textContent = 'Failed'; }
+  finally { setTimeout(() => { button.textContent = 'Save'; button.disabled = false; }, 1200); }
 };
+
+
 
 $('#setup-form').addEventListener('submit', async e => {
   e.preventDefault();
