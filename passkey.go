@@ -121,8 +121,8 @@
 // populates it with the user's credentials instead.
 //
 // Credential descriptors, in excludeCredentials at registration and in
-// allowCredentials at login, carry the transports recorded at registration
-// (see [Transports]), which help the client reach the right authenticator.
+// allowCredentials at login, carry the transports recorded at registration,
+// which help the client reach the right authenticator.
 //
 // Both registration and login options carry [Options.Timeout] as the
 // ceremony timeout hint.

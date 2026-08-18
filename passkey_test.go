@@ -81,17 +81,17 @@ func testE2E(t *testing.T, alg int32) {
 	if aaguid, err := AAGUID(rec1); err != nil || aaguid != auth1.aaguid {
 		t.Errorf("AAGUID(rec1) = %x, %v, want %x", aaguid, err, auth1.aaguid)
 	}
-	if transports, err := Transports(rec1); err != nil || !slices.Equal(transports, []string{"hybrid", "internal"}) {
-		t.Errorf("Transports(rec1) = %q, %v, want [hybrid internal]", transports, err)
-	}
-	if transports, err := Transports(rec2); err != nil || transports != nil {
-		t.Errorf("Transports(rec2) = %q, %v, want none", transports, err)
-	}
 	r1 := mustParseRecord(t, rec1)
+	if !slices.Equal(r1.transports, []string{"hybrid", "internal"}) {
+		t.Errorf("rec1 transports = %q, want [hybrid internal]", r1.transports)
+	}
 	if !r1.flags.backupState() {
 		t.Error("rec1 backup state = false, want true")
 	}
 	r2 := mustParseRecord(t, rec2)
+	if r2.transports != nil {
+		t.Errorf("rec2 transports = %q, want none", r2.transports)
+	}
 	if r2.flags.backupState() {
 		t.Error("rec2 backup state = true, want false")
 	}

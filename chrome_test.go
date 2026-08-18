@@ -119,10 +119,10 @@ func TestChromeRecordings(t *testing.T) {
 			if aaguid, err := AAGUID(record); err != nil || !bytes.Equal(aaguid[:], rec.AAGUID) {
 				t.Errorf("AAGUID() = %x, %v, want %x", aaguid, err, rec.AAGUID)
 			}
-			if transports, err := Transports(record); err != nil || !slices.Equal(transports, rec.Transports) {
-				t.Errorf("Transports() = %q, %v, want %q", transports, err, rec.Transports)
-			}
 			r := mustParseRecord(t, record)
+			if !slices.Equal(r.transports, rec.Transports) {
+				t.Errorf("transports = %q, want %q", r.transports, rec.Transports)
+			}
 			if backedUp := r.flags.backupState(); backedUp != rec.BackedUp {
 				t.Errorf("backup state = %v, want %v", backedUp, rec.BackedUp)
 			}

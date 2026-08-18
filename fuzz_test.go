@@ -98,12 +98,10 @@ func FuzzParseRecord(f *testing.F) {
 		r, err := parseRecord(s)
 
 		_, aaguidErr := AAGUID(s)
-		_, transportsErr := Transports(s)
 		descriptors := credentialDescriptors([]string{s})
 		if err != nil {
-			if aaguidErr == nil || transportsErr == nil {
-				t.Errorf("parseRecord() = %v, but AAGUID() = %v, Transports() = %v",
-					err, aaguidErr, transportsErr)
+			if aaguidErr == nil {
+				t.Errorf("parseRecord() = %v, but AAGUID() = %v", err, aaguidErr)
 			}
 			if len(descriptors) != 0 {
 				t.Errorf("parseRecord() = %v, but credentialDescriptors() returned %d descriptors",
@@ -245,9 +243,6 @@ func checkRecord(t *testing.T, s string, r *record) {
 
 	if aaguid, err := AAGUID(s); err != nil || aaguid != r.aaguid {
 		t.Errorf("AAGUID() = %x, %v, want %x", aaguid, err, r.aaguid)
-	}
-	if transports, err := Transports(s); err != nil || !slices.Equal(transports, r.transports) {
-		t.Errorf("Transports() = %q, %v, want %q", transports, err, r.transports)
 	}
 	descriptors := credentialDescriptors([]string{s})
 	if len(descriptors) != 1 {

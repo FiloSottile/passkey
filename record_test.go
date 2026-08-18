@@ -143,14 +143,10 @@ func TestRecordVectors(t *testing.T) {
 			if got := hex.EncodeToString(aaguid[:]); got != v.AAGUID {
 				t.Errorf("AAGUID() = %s, want %s", got, v.AAGUID)
 			}
-			transports, err := Transports(v.Record)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !slices.Equal(transports, *v.Transports) {
-				t.Errorf("Transports() = %q, want %q", transports, *v.Transports)
-			}
 			r := mustParseRecord(t, v.Record)
+			if !slices.Equal(r.transports, *v.Transports) {
+				t.Errorf("transports = %q, want %q", r.transports, *v.Transports)
+			}
 			decoded := recordFlags{
 				UP: r.flags.userPresent(),
 				UV: r.flags.userVerified(),
@@ -174,7 +170,7 @@ func TestRecordVectors(t *testing.T) {
 			if v.Canonical != "" {
 				want = v.Canonical
 			}
-			if got := encodeRecord(ad, transports); got != want {
+			if got := encodeRecord(ad, r.transports); got != want {
 				t.Errorf("re-encoded record = %q, want %q", got, want)
 			}
 		})

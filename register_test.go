@@ -640,12 +640,9 @@ func TestRegisterTransports(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			transports, err := Transports(record)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !slices.Equal(transports, tt.want) {
-				t.Errorf("Transports() = %q, want %q", transports, tt.want)
+			r := mustParseRecord(t, record)
+			if !slices.Equal(r.transports, tt.want) {
+				t.Errorf("transports = %q, want %q", r.transports, tt.want)
 			}
 			if tt.want == nil {
 				rest := strings.TrimPrefix(record, "$webauthn$v=1$")
