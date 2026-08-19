@@ -12,7 +12,7 @@ import (
 // regJSON returns a valid registration response for the test RP.
 func regJSON(t *testing.T, a *authenticator, flags byte) []byte {
 	t.Helper()
-	return mustJSON(t, a.registrationResponse(t, testRPID, testOrigin, "AA", flags))
+	return mustJSON(t, a.registrationResponse(t, testRPID, testOrigin, testChallenge, flags))
 }
 
 func authDataOf(t testing.TB, m map[string]any) []byte {
@@ -46,7 +46,7 @@ func attestationObjectOnly(t testing.TB, responseJSON []byte) []byte {
 // carrying object as its attestationObject, and no authenticatorData.
 func attestationObjectJSON(t *testing.T, a *authenticator, object []byte) []byte {
 	t.Helper()
-	m := a.registrationResponse(t, testRPID, testOrigin, "AA", flagUP|flagUV)
+	m := a.registrationResponse(t, testRPID, testOrigin, testChallenge, flagUP|flagUV)
 	m["response"].(map[string]any)["attestationObject"] = base64.RawURLEncoding.EncodeToString(object)
 	return attestationObjectOnly(t, mustJSON(t, m))
 }
@@ -89,7 +89,7 @@ func TestRegister(t *testing.T) {
 		{
 			name: "client data encoding",
 			resp: func(t *testing.T, a *authenticator) []byte {
-				m := a.registrationResponse(t, testRPID, testOrigin, "AA", flagUP|flagUV)
+				m := a.registrationResponse(t, testRPID, testOrigin, testChallenge, flagUP|flagUV)
 				m["response"].(map[string]any)["clientDataJSON"] = "!!!"
 				return mustJSON(t, m)
 			},
@@ -98,7 +98,7 @@ func TestRegister(t *testing.T) {
 		{
 			name: "client data JSON",
 			resp: func(t *testing.T, a *authenticator) []byte {
-				m := a.registrationResponse(t, testRPID, testOrigin, "AA", flagUP|flagUV)
+				m := a.registrationResponse(t, testRPID, testOrigin, testChallenge, flagUP|flagUV)
 				notJSON := base64.RawURLEncoding.EncodeToString([]byte("not json"))
 				m["response"].(map[string]any)["clientDataJSON"] = notJSON
 				return mustJSON(t, m)
@@ -116,7 +116,7 @@ func TestRegister(t *testing.T) {
 		{
 			name: "wrong origin",
 			resp: func(t *testing.T, a *authenticator) []byte {
-				return mustJSON(t, a.registrationResponse(t, testRPID, "https://attacker.example", "AA", flagUP|flagUV))
+				return mustJSON(t, a.registrationResponse(t, testRPID, "https://attacker.example", testChallenge, flagUP|flagUV))
 			},
 			errHas: "is not the expected one",
 		},
@@ -165,7 +165,7 @@ func TestRegister(t *testing.T) {
 		{
 			name: "authenticator data encoding",
 			resp: func(t *testing.T, a *authenticator) []byte {
-				m := a.registrationResponse(t, testRPID, testOrigin, "AA", flagUP|flagUV)
+				m := a.registrationResponse(t, testRPID, testOrigin, testChallenge, flagUP|flagUV)
 				m["response"].(map[string]any)["authenticatorData"] = "!!!"
 				return mustJSON(t, m)
 			},
@@ -183,7 +183,7 @@ func TestRegister(t *testing.T) {
 		{
 			name: "neither authenticator data nor attestation object",
 			resp: func(t *testing.T, a *authenticator) []byte {
-				m := a.registrationResponse(t, testRPID, testOrigin, "AA", flagUP|flagUV)
+				m := a.registrationResponse(t, testRPID, testOrigin, testChallenge, flagUP|flagUV)
 				delete(m["response"].(map[string]any), "attestationObject")
 				return attestationObjectOnly(t, mustJSON(t, m))
 			},
@@ -192,7 +192,7 @@ func TestRegister(t *testing.T) {
 		{
 			name: "attestation object encoding",
 			resp: func(t *testing.T, a *authenticator) []byte {
-				m := a.registrationResponse(t, testRPID, testOrigin, "AA", flagUP|flagUV)
+				m := a.registrationResponse(t, testRPID, testOrigin, testChallenge, flagUP|flagUV)
 				m["response"].(map[string]any)["attestationObject"] = "!!!"
 				return attestationObjectOnly(t, mustJSON(t, m))
 			},
@@ -297,7 +297,7 @@ func TestRegister(t *testing.T) {
 		{
 			name: "authenticator data too short",
 			resp: func(t *testing.T, a *authenticator) []byte {
-				m := a.registrationResponse(t, testRPID, testOrigin, "AA", flagUP|flagUV)
+				m := a.registrationResponse(t, testRPID, testOrigin, testChallenge, flagUP|flagUV)
 				return mustJSON(t, setAuthData(m, make([]byte, 54)))
 			},
 			errHas: "expected at least 55",
@@ -313,7 +313,7 @@ func TestRegister(t *testing.T) {
 		{
 			name: "no attested credential data",
 			resp: func(t *testing.T, a *authenticator) []byte {
-				m := a.registrationResponse(t, testRPID, testOrigin, "AA", flagUP|flagUV)
+				m := a.registrationResponse(t, testRPID, testOrigin, testChallenge, flagUP|flagUV)
 				// Extension data pads the assertion-shaped authenticator
 				// data past the 55-byte minimum, so that only the AT
 				// flag check fails.
@@ -371,7 +371,7 @@ func TestRegister(t *testing.T) {
 		{
 			name: "truncated credential ID",
 			resp: func(t *testing.T, a *authenticator) []byte {
-				m := a.registrationResponse(t, testRPID, testOrigin, "AA", flagUP|flagUV)
+				m := a.registrationResponse(t, testRPID, testOrigin, testChallenge, flagUP|flagUV)
 				ad := authDataOf(t, m)
 				return mustJSON(t, setAuthData(m, ad[:32+1+4+16+2+8]))
 			},
@@ -425,7 +425,7 @@ func TestRegister(t *testing.T) {
 			name: "trailing bytes without extension flag",
 			resp: func(t *testing.T, a *authenticator) []byte {
 				a.extensions = []byte{0x01, 0x02, 0x03}
-				m := a.registrationResponse(t, testRPID, testOrigin, "AA", flagUP|flagUV)
+				m := a.registrationResponse(t, testRPID, testOrigin, testChallenge, flagUP|flagUV)
 				ad := authDataOf(t, m)
 				ad[32] &^= flagED
 				return mustJSON(t, setAuthData(m, ad))
@@ -443,7 +443,7 @@ func TestRegister(t *testing.T) {
 		{
 			name: "wrong RP ID",
 			resp: func(t *testing.T, a *authenticator) []byte {
-				return mustJSON(t, a.registrationResponse(t, "attacker.example", testOrigin, "AA", flagUP|flagUV))
+				return mustJSON(t, a.registrationResponse(t, "attacker.example", testOrigin, testChallenge, flagUP|flagUV))
 			},
 			errHas: "registration for a different RP ID",
 		},
@@ -452,7 +452,7 @@ func TestRegister(t *testing.T) {
 			// compared, so a parse failure masks the RP ID check.
 			name: "malformed authenticator data masks wrong RP ID",
 			resp: func(t *testing.T, a *authenticator) []byte {
-				m := a.registrationResponse(t, "attacker.example", testOrigin, "AA", flagUP|flagUV)
+				m := a.registrationResponse(t, "attacker.example", testOrigin, testChallenge, flagUP|flagUV)
 				ad := authDataOf(t, m)
 				return mustJSON(t, setAuthData(m, ad[:54]))
 			},
@@ -461,7 +461,7 @@ func TestRegister(t *testing.T) {
 		{
 			name: "credProps rk false",
 			resp: func(t *testing.T, a *authenticator) []byte {
-				m := a.registrationResponse(t, testRPID, testOrigin, "AA", flagUP|flagUV)
+				m := a.registrationResponse(t, testRPID, testOrigin, testChallenge, flagUP|flagUV)
 				m["clientExtensionResults"] = map[string]any{"credProps": map[string]any{"rk": false}}
 				return mustJSON(t, m)
 			},
@@ -470,7 +470,7 @@ func TestRegister(t *testing.T) {
 		{
 			name: "credProps rk absent",
 			resp: func(t *testing.T, a *authenticator) []byte {
-				m := a.registrationResponse(t, testRPID, testOrigin, "AA", flagUP|flagUV)
+				m := a.registrationResponse(t, testRPID, testOrigin, testChallenge, flagUP|flagUV)
 				m["clientExtensionResults"] = map[string]any{"credProps": map[string]any{}}
 				return mustJSON(t, m)
 			},
@@ -479,7 +479,7 @@ func TestRegister(t *testing.T) {
 		{
 			name: "credProps absent",
 			resp: func(t *testing.T, a *authenticator) []byte {
-				m := a.registrationResponse(t, testRPID, testOrigin, "AA", flagUP|flagUV)
+				m := a.registrationResponse(t, testRPID, testOrigin, testChallenge, flagUP|flagUV)
 				m["clientExtensionResults"] = map[string]any{}
 				return mustJSON(t, m)
 			},
@@ -488,7 +488,7 @@ func TestRegister(t *testing.T) {
 		{
 			name: "clientExtensionResults absent",
 			resp: func(t *testing.T, a *authenticator) []byte {
-				m := a.registrationResponse(t, testRPID, testOrigin, "AA", flagUP|flagUV)
+				m := a.registrationResponse(t, testRPID, testOrigin, testChallenge, flagUP|flagUV)
 				delete(m, "clientExtensionResults")
 				return mustJSON(t, m)
 			},
@@ -526,7 +526,7 @@ func TestRegister(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		m := a.registrationResponse(t, testRPID, testOrigin, "AA", flagUP|flagUV)
+		m := a.registrationResponse(t, testRPID, testOrigin, testChallenge, flagUP|flagUV)
 		m["response"].(map[string]any)["attestationObject"] = "!!!"
 		if got, err := rp.Register(mustJSON(t, m)); err != nil || got != want {
 			t.Errorf("Register() = %q, %v, want %q", got, err, want)
@@ -537,7 +537,7 @@ func TestRegister(t *testing.T) {
 		t.Run("lookalike origin "+origin, func(t *testing.T) {
 			rp := newTestRP(t, Options{})
 			a := newAuthenticator(t, algES256)
-			_, err := rp.Register(mustJSON(t, a.registrationResponse(t, testRPID, origin, "AA", flagUP|flagUV)))
+			_, err := rp.Register(mustJSON(t, a.registrationResponse(t, testRPID, origin, testChallenge, flagUP|flagUV)))
 			checkError(t, err, nil, "is not the expected one")
 		})
 	}
@@ -657,10 +657,11 @@ func TestRegisterTransports(t *testing.T) {
 // TestNewRegistration checks the creation options production: user IDs
 // are 1 to 64 arbitrary bytes, user names reject control and
 // bidirectional formatting characters, malformed records are dropped
-// from excludeCredentials rather than failing the ceremony, and user
-// verification is requested as "preferred" regardless of the policy
-// (which Register enforces), so that synced passkeys can be created
-// without a prompt.
+// from excludeCredentials rather than failing the ceremony, the
+// challenge is 32 random bytes fresh for every registration (unverified,
+// but some clients enforce a minimum length), and user verification is
+// requested as "preferred" regardless of the policy (which Register
+// enforces), so that synced passkeys can be created without a prompt.
 func TestNewRegistration(t *testing.T) {
 	rp := newTestRP(t, Options{})
 	valid := User{ID: "user-id", Name: "user@example.com"}
@@ -696,6 +697,21 @@ func TestNewRegistration(t *testing.T) {
 	}
 	if !strings.Contains(string(creationJSON), `"rp":{"id":"`+testRPID+`","name":"`+testRPID+`"}`) {
 		t.Errorf("options = %s, want the RP ID as the RP name", creationJSON)
+	}
+	var challenges []string
+	for range 2 {
+		creationJSON, err := rp.NewRegistration(valid, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		challenge := challengeOf(t, creationJSON)
+		if b, err := base64.RawURLEncoding.DecodeString(challenge); err != nil || len(b) != 32 {
+			t.Errorf("challenge = %q, %v, want 32 base64url bytes", challenge, err)
+		}
+		challenges = append(challenges, challenge)
+	}
+	if challenges[0] == challenges[1] {
+		t.Errorf("challenge %q repeated across registrations", challenges[0])
 	}
 	if _, err := rp.NewRegistration(User{ID: "user-id", Name: ""}, nil); err == nil {
 		t.Error("NewRegistration() with an empty name succeeded, want error")

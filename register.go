@@ -1,6 +1,7 @@
 package passkey
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
@@ -99,7 +100,12 @@ func (rp *RelyingParty) NewRegistration(user User, passkeys []string) (optionsJS
 	o.User.ID = base64.RawURLEncoding.EncodeToString([]byte(user.ID))
 	o.User.Name = user.Name
 	o.User.DisplayName = user.Name
-	o.Challenge = base64.RawURLEncoding.EncodeToString([]byte{0})
+	// The challenge is never verified (see the "Challenges" section), but
+	// some clients refuse one shorter than the 16 bytes the specification
+	// recommends.
+	challenge := make([]byte, 32)
+	rand.Read(challenge)
+	o.Challenge = base64.RawURLEncoding.EncodeToString(challenge)
 	o.PubKeyCredParams = supportedAlgorithms
 	o.ExcludeCredentials = exclude
 	o.AuthenticatorSelection.ResidentKey = "required"

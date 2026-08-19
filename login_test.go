@@ -13,9 +13,9 @@ import (
 )
 
 // testChallenge and testScopedChallenge are base64url challenges for
-// ceremonies that don't need a request, such as ParseResponse tests: the
-// first of a NewLogin ceremony, the second of one begun with
-// LoginOptions.AllowCredentials.
+// ceremonies that don't need a request, such as Register and ParseResponse
+// tests: the first of a registration or NewLogin ceremony, the second of
+// one begun with LoginOptions.AllowCredentials.
 var (
 	testChallenge       = base64.RawURLEncoding.EncodeToString(bytes.Repeat([]byte{0x42}, 32))
 	testScopedChallenge = base64.RawURLEncoding.EncodeToString(append([]byte{challengeUserScoped}, bytes.Repeat([]byte{0x42}, 31)...))
