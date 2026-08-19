@@ -229,8 +229,8 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
 			// separate mutable boolean per record, or updating the record upon
 			// (certain) logins, and 2. it defeats the point of UV-less
 			// conditional registration. (If a UV+password login is required to
-			// "upgrade" the record to a passwordless credential, then might as
-			// well just require UV at registration.)
+			// "upgrade" the record to a passwordless credential, then you might
+			// as well just require UV at registration.)
 			//
 			// Ideally, a credProps field would be introduced to communicate
 			// what actually matters for security: whether the authenticator has
@@ -241,13 +241,10 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
 			// Backup Eligible credentials, which can't be produced by external
 			// authenticators.
 			//
-			// We could also rely on the fact that registering resident
-			// credentials requires UV on most external authenticators (and/or
-			// is enforced by most browsers when using external authenticators),
-			// but 1. that's not guaranteed by the specification, and 2. a
-			// record could be imported from a system that does not require
-			// resident credentials. On the other hand, this fact means
-			// uvSetUpAtRegistration will almost universally be true.
+			// uvSetUpAtRegistration will rarely be false: Chrome (but not
+			// Safari and Firefox) forces setting up a PIN before storing a
+			// resident credential, and [RelyingParty.Register] refuses to
+			// return such a record without [Options.OptionalUserVerification].
 			//
 			// See https://go.dev/issue/80663.
 			uvSetUpAtRegistration := r.flags.userVerified() || r.flags.backupEligible()
