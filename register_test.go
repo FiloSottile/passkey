@@ -547,7 +547,9 @@ func TestRegister(t *testing.T) {
 // verification policy. By default, Register requires the UV or the BE
 // flag, so that the record can back the UV flag of future assertions
 // (see LoginResult.UserVerified) and the credential is able to log in.
-// With OptionalUserVerification, any flags are accepted.
+// With OptionalUserVerification, any flags are accepted, and
+// UserVerificationAvailable reports whether the record has the UV or
+// the BE flag.
 func TestRegisterUserVerification(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -584,6 +586,11 @@ func TestRegisterUserVerification(t *testing.T) {
 				t.Errorf("parseRecord(Register()) = %v, want success", err)
 			} else if byte(r.flags) != tt.flags|flagAT {
 				t.Errorf("record flags = %08b, want %08b", r.flags, tt.flags|flagAT)
+			}
+			if available, err := UserVerificationAvailable(record); err != nil {
+				t.Errorf("UserVerificationAvailable() = %v, want success", err)
+			} else if want := tt.flags&(flagUV|flagBE) != 0; available != want {
+				t.Errorf("UserVerificationAvailable() = %v, want %v", available, want)
 			}
 		})
 	}

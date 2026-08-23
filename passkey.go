@@ -149,6 +149,7 @@
 // credential is a synced passkey. Otherwise, it suggests the credential was
 // stored on an external authenticator without UV set up, and an attacker that
 // were to steal it could have set up their own PIN to enable UV.
+// [UserVerificationAvailable] reports this property of a record.
 //
 // By default, login options request user verification "required", and Login
 // fails unless [LoginResult.UserVerified] would be true: with

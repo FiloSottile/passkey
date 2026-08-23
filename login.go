@@ -215,46 +215,13 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
 			if time.Since(req.created) > rp.timeout {
 				return nil, fmt.Errorf("%w: request created at %v", ErrRequestExpired, req.created)
 			}
-
-			// WebAuthn L3, Section 4 (see uvInitialized) insists that the UV
-			// flag can be relied upon only if the credential was previously
-			// observed with UV in a trusted context, either at registration or
-			// during a login with an additional factor.
-			//
-			// The reason is to prevent an attack where an authenticator did not
-			// have UV at registration, and then the attacker steals it and
-			// configures their own PIN.
-			//
-			// The problem with this is that 1. it would require storing a
-			// separate mutable boolean per record, or updating the record upon
-			// (certain) logins, and 2. it defeats the point of UV-less
-			// conditional registration. (If a UV+password login is required to
-			// "upgrade" the record to a passwordless credential, then you might
-			// as well just require UV at registration.)
-			//
-			// Ideally, a credProps field would be introduced to communicate
-			// what actually matters for security: whether the authenticator has
-			// UV *set up*, not whether UV was obtained during registration.
-			//
-			// In the meantime, since the attack scenario only affects external
-			// authenticators (security keys), we relax the requirement for
-			// Backup Eligible credentials, which can't be produced by external
-			// authenticators.
-			//
-			// uvSetUpAtRegistration will rarely be false: Chrome (but not
-			// Safari and Firefox) forces setting up a PIN before storing a
-			// resident credential, and [RelyingParty.Register] refuses to
-			// return such a record without [Options.OptionalUserVerification].
-			//
-			// See https://go.dev/issue/80663.
-			uvSetUpAtRegistration := r.flags.userVerified() || r.flags.backupEligible()
 			result = &LoginResult{
 				Matched:      i,
-				UserVerified: response.flags.userVerified() && uvSetUpAtRegistration,
+				UserVerified: userVerificationAvailable(r) && response.flags.userVerified(),
 				BackedUp:     response.flags.backupState(),
 			}
 			if !rp.optionalUserVerification && !result.UserVerified {
-				if !uvSetUpAtRegistration {
+				if !userVerificationAvailable(r) {
 					return nil, fmt.Errorf("%w: the matched record has neither the UV nor the BE flag, "+
 						"so user verification can't be relied upon", ErrUserVerificationUnavailable)
 				}

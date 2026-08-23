@@ -325,6 +325,54 @@ func AAGUID(passkey string) ([16]byte, error) {
 	return r.aaguid, nil
 }
 
+// UserVerificationAvailable reports whether the passkey can provide user
+// verification (e.g. PIN or biometrics) that can be relied upon.
+//
+// If false, [RelyingParty.Login] with this record returns
+// [ErrUserVerificationUnavailable] unless [Options.OptionalUserVerification] is set.
+func UserVerificationAvailable(passkey string) (bool, error) {
+	r, err := parseRecord(passkey)
+	if err != nil {
+		return false, err
+	}
+	return userVerificationAvailable(r), nil
+}
+
+func userVerificationAvailable(r *record) bool {
+	// WebAuthn L3, Section 4 (see uvInitialized) insists that the UV
+	// flag can be relied upon only if the credential was previously
+	// observed with UV in a trusted context, either at registration or
+	// during a login with an additional factor.
+	//
+	// The reason is to prevent an attack where an authenticator did not
+	// have UV at registration, and then the attacker steals it and
+	// configures their own PIN.
+	//
+	// The problem with this is that 1. it would require storing a
+	// separate mutable boolean per record, or updating the record upon
+	// (certain) logins, and 2. it defeats the point of UV-less
+	// conditional registration. (If a UV+password login is required to
+	// "upgrade" the record to a passwordless credential, then you might
+	// as well just require UV at registration.)
+	//
+	// Ideally, a credProps field would be introduced to communicate
+	// what actually matters for security: whether the authenticator has
+	// UV *set up*, not whether UV was obtained during registration.
+	//
+	// In the meantime, since the attack scenario only affects external
+	// authenticators (security keys), we relax the requirement for
+	// Backup Eligible credentials, which can't be produced by external
+	// authenticators.
+	//
+	// userVerificationAvailable will rarely be false: Chrome (but not
+	// Safari and Firefox) forces setting up a PIN before storing a
+	// resident credential, and [RelyingParty.Register] refuses to
+	// return such a record without [Options.OptionalUserVerification].
+	//
+	// See https://go.dev/issue/80663.
+	return r.flags.userVerified() || r.flags.backupEligible()
+}
+
 // credentialDescriptor is the client-side description of a credential, used
 // for both excludeCredentials and allowCredentials.
 type credentialDescriptor struct {

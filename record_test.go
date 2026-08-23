@@ -158,6 +158,11 @@ func TestRecordVectors(t *testing.T) {
 			if decoded != *v.Flags {
 				t.Errorf("flags = %+v, want %+v", decoded, *v.Flags)
 			}
+			if available, err := UserVerificationAvailable(v.Record); err != nil {
+				t.Errorf("UserVerificationAvailable() = %v, want success", err)
+			} else if want := v.Flags.UV || v.Flags.BE; available != want {
+				t.Errorf("UserVerificationAvailable() = %v, want %v", available, want)
+			}
 			if got := hex.EncodeToString(r.credentialID); got != v.CredentialID {
 				t.Errorf("credentialID = %s, want %s", got, v.CredentialID)
 			}

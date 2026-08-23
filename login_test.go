@@ -474,6 +474,12 @@ func TestLoginNilResponse(t *testing.T) {
 // accepts any assertion and reports the same computation as
 // LoginResult.UserVerified. LoginResult.BackedUp is the assertion's BS
 // flag in either mode.
+//
+// UserVerificationAvailable exposes the record side of the policy, so
+// it must agree with Login: by default ErrUserVerificationUnavailable
+// singles out exactly the records it reports false for, and a login
+// is UserVerified exactly when it reports true and the assertion has
+// the UV flag.
 func TestLoginUserVerification(t *testing.T) {
 	rp := newTestRP(t, Options{})
 	optionalUV := newTestRP(t, Options{OptionalUserVerification: true})
@@ -592,6 +598,13 @@ func TestLoginUserVerification(t *testing.T) {
 				t.Fatal(err)
 			}
 			result, err := tt.rp.Login(resp, request, []string{tt.record})
+			available, uvErr := UserVerificationAvailable(tt.record)
+			if uvErr != nil {
+				t.Fatal(uvErr)
+			}
+			if tt.rp == rp && errors.Is(err, ErrUserVerificationUnavailable) != !available {
+				t.Errorf("UserVerificationAvailable() = %v, but Login() = %v", available, err)
+			}
 			if tt.errIs != nil || tt.errHas != "" {
 				checkError(t, err, tt.errIs, tt.errHas)
 				return
@@ -602,6 +615,10 @@ func TestLoginUserVerification(t *testing.T) {
 			want := &LoginResult{UserVerified: tt.userVerified, BackedUp: tt.backedUp}
 			if *result != *want {
 				t.Errorf("Login() = %+v, want %+v", result, want)
+			}
+			if verified := available && tt.assertion&flagUV != 0; result.UserVerified != verified {
+				t.Errorf("UserVerified = %v, but UserVerificationAvailable() = %v with assertion flags %08b",
+					result.UserVerified, available, tt.assertion)
 			}
 		})
 	}

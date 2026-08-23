@@ -98,16 +98,21 @@ func FuzzParseRecord(f *testing.F) {
 		r, err := parseRecord(s)
 
 		_, aaguidErr := AAGUID(s)
+		_, uvErr := UserVerificationAvailable(s)
 		descriptors := credentialDescriptors([]string{s})
 		if err != nil {
 			if aaguidErr == nil {
 				t.Errorf("parseRecord() = %v, but AAGUID() = %v", err, aaguidErr)
+			}
+			if uvErr == nil {
+				t.Errorf("parseRecord() = %v, but UserVerificationAvailable() = %v", err, uvErr)
 			}
 			if len(descriptors) != 0 {
 				t.Errorf("parseRecord() = %v, but credentialDescriptors() returned %d descriptors",
 					err, len(descriptors))
 			}
 			checkWrapped(t, aaguidErr)
+			checkWrapped(t, uvErr)
 			return
 		}
 		checkRecord(t, s, r)
@@ -243,6 +248,10 @@ func checkRecord(t *testing.T, s string, r *record) {
 
 	if aaguid, err := AAGUID(s); err != nil || aaguid != r.aaguid {
 		t.Errorf("AAGUID() = %x, %v, want %x", aaguid, err, r.aaguid)
+	}
+	uvAvailable := r.flags.userVerified() || r.flags.backupEligible()
+	if available, err := UserVerificationAvailable(s); err != nil || available != uvAvailable {
+		t.Errorf("UserVerificationAvailable() = %v, %v, want %v", available, err, uvAvailable)
 	}
 	descriptors := credentialDescriptors([]string{s})
 	if len(descriptors) != 1 {
