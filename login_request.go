@@ -89,7 +89,7 @@ func (r *loginRequest) Bytes() []byte {
 }
 
 // RequestCreation returns the creation time of a request returned by
-// [RelyingParty.NewLogin] or [RelyingParty.NewLoginWithOptions].
+// [RelyingParty.NewLogin].
 //
 // A request expires [Options.Timeout] after creation.
 //
@@ -103,9 +103,8 @@ func RequestCreation(request []byte) time.Time {
 }
 
 // RequestID returns a unique identifier for a request returned by
-// [RelyingParty.NewLogin] or [RelyingParty.NewLoginWithOptions], to be used
-// as a storage key. The same value is returned by [Response.RequestID]
-// for the corresponding response.
+// [RelyingParty.NewLogin], to be used as a storage key. The same value is
+// returned by [Response.RequestID] for the corresponding response.
 //
 // If the request is invalid, RequestID returns an empty string.
 func RequestID(request []byte) string {

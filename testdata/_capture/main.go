@@ -247,11 +247,11 @@ type server struct {
 }
 
 func newServer(rpID, origin, data, token string) (*server, error) {
-	strict, err := passkey.NewRelyingParty(&passkey.Options{RPID: rpID, Origin: origin})
+	strict, err := passkey.NewRelyingParty(rpID, origin, passkey.Options{})
 	if err != nil {
 		return nil, err
 	}
-	lax, err := passkey.NewRelyingParty(&passkey.Options{RPID: rpID, Origin: origin, OptionalUserVerification: true})
+	lax, err := passkey.NewRelyingParty(rpID, origin, passkey.Options{OptionalUserVerification: true})
 	if err != nil {
 		return nil, err
 	}
@@ -491,7 +491,7 @@ func (s *server) registrationOptions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user := passkey.User{ID: sess.rec.UserID, Name: sess.rec.UserName}
-	options, err := s.lax.NewRegistration(user, sess.records)
+	options, err := s.lax.NewRegistration(user, passkey.RegistrationOptions{ExcludeCredentials: sess.records})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -592,9 +592,9 @@ func (s *server) loginOptions(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "register a passkey first", http.StatusBadRequest)
 			return
 		}
-		request, options, err = rp.NewLoginWithOptions(&passkey.LoginOptions{AllowCredentials: sess.records})
+		request, options, err = rp.NewLogin(passkey.LoginOptions{AllowCredentials: sess.records})
 	} else {
-		request, options, err = rp.NewLogin()
+		request, options, err = rp.NewLogin(passkey.LoginOptions{})
 	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

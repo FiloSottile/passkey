@@ -65,13 +65,21 @@ type creationOptions struct {
 	Timeout int64 `json:"timeout"`
 }
 
-// NewRegistration begins the registration of a new passkey for user.
+// RegistrationOptions configures a registration ceremony begun by
+// [RelyingParty.NewRegistration].
 //
-// passkeys is the user's full list of existing passkey records, or nil
-// if the user has none. They are communicated to the client as
-// excludeCredentials, so an authenticator that already holds one of
-// them for this RP will refuse to create a new credential, and the
-// user won't end up with duplicate passkeys on the same authenticator.
+// The zero value is a valid configuration.
+type RegistrationOptions struct {
+	// ExcludeCredentials is the user's full list of existing passkey
+	// records, or nil if the user has none. They are communicated to the
+	// client as excludeCredentials, so an authenticator that already holds
+	// one of them for this RP will refuse to create a new credential, and
+	// the user won't end up with duplicate passkeys on the same
+	// authenticator.
+	ExcludeCredentials []string
+}
+
+// NewRegistration begins the registration of a new passkey for user.
 //
 // optionsJSON is a PublicKeyCredentialCreationOptions object to be
 //
@@ -83,7 +91,7 @@ type creationOptions struct {
 //
 // Registration is stateless for the server: there is no request value
 // to store, and the response is verified by [RelyingParty.Register].
-func (rp *RelyingParty) NewRegistration(user User, passkeys []string) (optionsJSON []byte, err error) {
+func (rp *RelyingParty) NewRegistration(user User, opts RegistrationOptions) (optionsJSON []byte, err error) {
 	if len(user.ID) == 0 || len(user.ID) > 64 {
 		return nil, errors.New("passkey: invalid user ID")
 	}
@@ -93,7 +101,7 @@ func (rp *RelyingParty) NewRegistration(user User, passkeys []string) (optionsJS
 	if strings.ContainsFunc(user.Name, disallowedNameRune) {
 		return nil, errors.New("passkey: user name contains disallowed characters")
 	}
-	exclude := credentialDescriptors(passkeys)
+	exclude := credentialDescriptors(opts.ExcludeCredentials)
 	var o creationOptions
 	o.RP.ID = rp.rpID
 	o.RP.Name = rp.rpID

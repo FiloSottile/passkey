@@ -23,13 +23,13 @@ var (
 
 func newTestRP(t testing.TB, opts Options) *RelyingParty {
 	t.Helper()
-	if opts.RPID == "" {
-		opts.RPID = testRPID
-	}
-	if opts.Origin == "" {
-		opts.Origin = testOrigin
-	}
-	rp, err := NewRelyingParty(&opts)
+	return newTestRPFor(t, testRPID, testOrigin, opts)
+}
+
+// newTestRPFor is newTestRP for a different RP ID and origin.
+func newTestRPFor(t testing.TB, rpID, origin string, opts Options) *RelyingParty {
+	t.Helper()
+	rp, err := NewRelyingParty(rpID, origin, opts)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +54,7 @@ func newLoginEnv(t *testing.T) *loginEnv {
 	rp := newTestRP(t, Options{})
 	user := User{ID: "wxJph3ZClFxTP2xF9r2W0A", Name: "user@example.com"}
 	auth := newAuthenticator(t, algES256)
-	creationJSON, err := rp.NewRegistration(user, nil)
+	creationJSON, err := rp.NewRegistration(user, RegistrationOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +63,7 @@ func newLoginEnv(t *testing.T) *loginEnv {
 	if err != nil {
 		t.Fatal(err)
 	}
-	request, requestJSON, err := rp.NewLogin()
+	request, requestJSON, err := rp.NewLogin(LoginOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -220,7 +220,7 @@ func TestLogin(t *testing.T) {
 			// the records passed to Login identify the user.
 			name: "scoped login with another user's handle",
 			setup: func(t *testing.T, env *loginEnv) (*RelyingParty, []byte, []byte) {
-				request, requestJSON, err := env.rp.NewLoginWithOptions(&LoginOptions{AllowCredentials: env.records})
+				request, requestJSON, err := env.rp.NewLogin(LoginOptions{AllowCredentials: env.records})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -232,7 +232,7 @@ func TestLogin(t *testing.T) {
 		{
 			name: "scoped login without user handle",
 			setup: func(t *testing.T, env *loginEnv) (*RelyingParty, []byte, []byte) {
-				request, requestJSON, err := env.rp.NewLoginWithOptions(&LoginOptions{AllowCredentials: env.records})
+				request, requestJSON, err := env.rp.NewLogin(LoginOptions{AllowCredentials: env.records})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -245,7 +245,7 @@ func TestLogin(t *testing.T) {
 			// An empty user handle is equivalent to an absent one.
 			name: "scoped login with empty user handle",
 			setup: func(t *testing.T, env *loginEnv) (*RelyingParty, []byte, []byte) {
-				request, requestJSON, err := env.rp.NewLoginWithOptions(&LoginOptions{AllowCredentials: env.records})
+				request, requestJSON, err := env.rp.NewLogin(LoginOptions{AllowCredentials: env.records})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -260,7 +260,7 @@ func TestLogin(t *testing.T) {
 			// rather than failing the ceremony.
 			name: "scoped login with malformed record",
 			setup: func(t *testing.T, env *loginEnv) (*RelyingParty, []byte, []byte) {
-				request, requestJSON, err := env.rp.NewLoginWithOptions(&LoginOptions{
+				request, requestJSON, err := env.rp.NewLogin(LoginOptions{
 					AllowCredentials: []string{"not a passkey record", env.record},
 				})
 				if err != nil {
@@ -307,8 +307,8 @@ func TestLogin(t *testing.T) {
 			// candidate.
 			name: "record for a different RP ID",
 			setup: func(t *testing.T, env *loginEnv) (*RelyingParty, []byte, []byte) {
-				otherRP := newTestRP(t, Options{RPID: "other.example"})
-				creationJSON, err := otherRP.NewRegistration(env.user, nil)
+				otherRP := newTestRPFor(t, "other.example", testOrigin, Options{})
+				creationJSON, err := otherRP.NewRegistration(env.user, RegistrationOptions{})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -588,7 +588,7 @@ func TestLoginUserVerification(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			request, requestJSON, err := tt.rp.NewLogin()
+			request, requestJSON, err := tt.rp.NewLogin(LoginOptions{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -998,7 +998,7 @@ func TestLoginLockouts(t *testing.T) {
 	authC.credentialID = authA.credentialID
 
 	register := func(rp *RelyingParty, rpID string, a *authenticator) string {
-		creationJSON, err := rp.NewRegistration(user, nil)
+		creationJSON, err := rp.NewRegistration(user, RegistrationOptions{})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1011,10 +1011,10 @@ func TestLoginLockouts(t *testing.T) {
 	}
 	recA, recB := register(rp, testRPID, authA), register(rp, testRPID, authB)
 	// authA's credential registered under another RP ID.
-	otherRP := register(newTestRP(t, Options{RPID: "other.example"}), "other.example", authA)
+	otherRP := register(newTestRPFor(t, "other.example", testOrigin, Options{}), "other.example", authA)
 	malformed := "$webauthn$v=1$AAAA"
 
-	request, requestJSON, err := rp.NewLogin()
+	request, requestJSON, err := rp.NewLogin(LoginOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1137,11 +1137,11 @@ func TestNewLoginUserVerification(t *testing.T) {
 		{true, "preferred"},
 	} {
 		rp := newTestRP(t, Options{OptionalUserVerification: tt.optional})
-		_, unscopedJSON, err := rp.NewLogin()
+		_, unscopedJSON, err := rp.NewLogin(LoginOptions{})
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, scopedJSON, err := rp.NewLoginWithOptions(&LoginOptions{AllowCredentials: env.records})
+		_, scopedJSON, err := rp.NewLogin(LoginOptions{AllowCredentials: env.records})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1161,16 +1161,16 @@ func TestNewLoginUserVerification(t *testing.T) {
 func TestUserScopedLogin(t *testing.T) {
 	env := newLoginEnv(t)
 
-	// Nil options, and nil or empty AllowCredentials, begin an unscoped
-	// ceremony like NewLogin does: allowCredentials is empty on the wire,
-	// and the response identifies the user.
-	for _, options := range []*LoginOptions{nil, {}, {AllowCredentials: []string{}}} {
-		request, requestJSON, err := env.rp.NewLoginWithOptions(options)
+	// Nil or empty AllowCredentials begin an unscoped ceremony:
+	// allowCredentials is empty on the wire, and the response identifies
+	// the user.
+	for _, options := range []LoginOptions{{}, {AllowCredentials: []string{}}} {
+		request, requestJSON, err := env.rp.NewLogin(options)
 		if err != nil {
-			t.Fatalf("NewLoginWithOptions(%#v) = %v", options, err)
+			t.Fatalf("NewLogin(%#v) = %v", options, err)
 		}
 		if !strings.Contains(string(requestJSON), `"allowCredentials":[]`) {
-			t.Errorf("NewLoginWithOptions(%#v) options = %s, want an empty allowCredentials list", options, requestJSON)
+			t.Errorf("NewLogin(%#v) options = %s, want an empty allowCredentials list", options, requestJSON)
 		}
 		m := env.auth.loginResponse(t, testRPID, testOrigin, challengeOf(t, requestJSON), env.user.ID, flagUP|flagUV)
 		resp, err := ParseResponse(mustJSON(t, m))
@@ -1178,17 +1178,17 @@ func TestUserScopedLogin(t *testing.T) {
 			t.Fatalf("ParseResponse() = %v", err)
 		}
 		if got := resp.UnauthenticatedUserID(); got != env.user.ID {
-			t.Errorf("NewLoginWithOptions(%#v): UnauthenticatedUserID() = %q, want %q", options, got, env.user.ID)
+			t.Errorf("NewLogin(%#v): UnauthenticatedUserID() = %q, want %q", options, got, env.user.ID)
 		}
 		if resp.RequestID() != RequestID(request) {
-			t.Errorf("NewLoginWithOptions(%#v): Response.RequestID() = %q, want %q", options, resp.RequestID(), RequestID(request))
+			t.Errorf("NewLogin(%#v): Response.RequestID() = %q, want %q", options, resp.RequestID(), RequestID(request))
 		}
 		if _, err := env.rp.Login(resp, request, env.records); err != nil {
-			t.Errorf("NewLoginWithOptions(%#v): Login() = %v, want success", options, err)
+			t.Errorf("NewLogin(%#v): Login() = %v, want success", options, err)
 		}
 	}
 
-	request, requestJSON, err := env.rp.NewLoginWithOptions(&LoginOptions{AllowCredentials: env.records})
+	request, requestJSON, err := env.rp.NewLogin(LoginOptions{AllowCredentials: env.records})
 	if err != nil {
 		t.Fatal(err)
 	}

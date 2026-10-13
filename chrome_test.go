@@ -86,8 +86,8 @@ func loadChromeRecordings(t testing.TB) chromeRecordings {
 // client's response.
 func TestChromeRecordings(t *testing.T) {
 	f := loadChromeRecordings(t)
-	rp := newTestRP(t, Options{RPID: f.RPID, Origin: f.Origin})
-	optionalUV := newTestRP(t, Options{RPID: f.RPID, Origin: f.Origin, OptionalUserVerification: true})
+	rp := newTestRPFor(t, f.RPID, f.Origin, Options{})
+	optionalUV := newTestRPFor(t, f.RPID, f.Origin, Options{OptionalUserVerification: true})
 
 	var records []string
 	for _, rec := range f.Recordings {

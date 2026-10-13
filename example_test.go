@@ -51,12 +51,10 @@ out.textContent = "Signed in as " + await res.text() + "."
 </script>
 `
 
-	rp, err := passkey.NewRelyingParty(&passkey.Options{
-		// The RP ID is the site's registrable domain, so passkeys keep
-		// working if sign-in later moves to a different origin.
-		RPID:   "example.com",
-		Origin: "https://login.example.com",
-	})
+	// The RP ID is the site's registrable domain, so passkeys keep
+	// working if sign-in later moves to a different origin.
+	rp, err := passkey.NewRelyingParty("example.com", "https://login.example.com",
+		passkey.Options{})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -90,7 +88,8 @@ out.textContent = "Signed in as " + await res.text() + "."
 		}
 		sessionSignIn(w, u.username)
 		optionsJSON, err := rp.NewRegistration(
-			passkey.User{ID: u.passkeyUserID, Name: u.username}, nil)
+			passkey.User{ID: u.passkeyUserID, Name: u.username},
+			passkey.RegistrationOptions{})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -121,7 +120,7 @@ out.textContent = "Signed in as " + await res.text() + "."
 	})
 
 	mux.HandleFunc("POST /login/options", func(w http.ResponseWriter, r *http.Request) {
-		request, optionsJSON, err := rp.NewLogin()
+		request, optionsJSON, err := rp.NewLogin(passkey.LoginOptions{})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

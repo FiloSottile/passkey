@@ -34,7 +34,7 @@ func TestE2E(t *testing.T) {
 // testE2E runs full registration and login ceremonies for two passkeys
 // of the same algorithm, through the exported API only.
 func testE2E(t *testing.T, alg int32) {
-	rp, err := NewRelyingParty(&Options{RPID: testRPID, Origin: testOrigin})
+	rp, err := NewRelyingParty(testRPID, testOrigin, Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +42,7 @@ func testE2E(t *testing.T, alg int32) {
 
 	// Register a first passkey, from a backed-up credential.
 	auth1 := newAuthenticator(t, alg)
-	optionsJSON, err := rp.NewRegistration(user, nil)
+	optionsJSON, err := rp.NewRegistration(user, RegistrationOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +55,7 @@ func testE2E(t *testing.T, alg int32) {
 	// Register a second passkey, excluding the first.
 	auth2 := newAuthenticator(t, alg)
 	auth2.transports = nil
-	optionsJSON, err = rp.NewRegistration(user, []string{rec1})
+	optionsJSON, err = rp.NewRegistration(user, RegistrationOptions{ExcludeCredentials: []string{rec1}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,7 +98,7 @@ func testE2E(t *testing.T, alg int32) {
 
 	// Unscoped login, with the second passkey. allowCredentials serializes
 	// as an empty array, not null.
-	request, optionsJSON, err := rp.NewLogin()
+	request, optionsJSON, err := rp.NewLogin(LoginOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,7 +136,7 @@ func testE2E(t *testing.T, alg int32) {
 	// the user handle, as clients generally do even with
 	// allowCredentials, but the application already identified the
 	// user, so it is not exposed.
-	request, optionsJSON, err = rp.NewLoginWithOptions(&LoginOptions{AllowCredentials: records})
+	request, optionsJSON, err = rp.NewLogin(LoginOptions{AllowCredentials: records})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,12 +177,6 @@ func testE2E(t *testing.T, alg int32) {
 	}
 }
 
-func TestNewRelyingPartyNilOptions(t *testing.T) {
-	if _, err := NewRelyingParty(nil); err == nil {
-		t.Error("NewRelyingParty(nil) succeeded, want error")
-	}
-}
-
 // TestNewRelyingPartyOrigin checks the Origin validation against real
 // origin shapes. The check is a character-set footgun check, not a
 // parser: values that could never match a serialized origin are
@@ -208,12 +202,12 @@ func TestNewRelyingPartyOrigin(t *testing.T) {
 		"https://exa mple.com",
 	}
 	for _, origin := range valid {
-		if _, err := NewRelyingParty(&Options{RPID: "example.com", Origin: origin}); err != nil {
+		if _, err := NewRelyingParty("example.com", origin, Options{}); err != nil {
 			t.Errorf("NewRelyingParty(Origin: %q) = %v, want success", origin, err)
 		}
 	}
 	for _, origin := range invalid {
-		if _, err := NewRelyingParty(&Options{RPID: "example.com", Origin: origin}); err == nil {
+		if _, err := NewRelyingParty("example.com", origin, Options{}); err == nil {
 			t.Errorf("NewRelyingParty(Origin: %q) succeeded, want error", origin)
 		}
 	}
@@ -240,12 +234,12 @@ func TestNewRelyingPartyRPID(t *testing.T) {
 		strings.Repeat("a", 256),
 	}
 	for _, rpID := range valid {
-		if _, err := NewRelyingParty(&Options{RPID: rpID, Origin: "https://example.com"}); err != nil {
+		if _, err := NewRelyingParty(rpID, "https://example.com", Options{}); err != nil {
 			t.Errorf("NewRelyingParty(RPID: %q) = %v, want success", rpID, err)
 		}
 	}
 	for _, rpID := range invalid {
-		if _, err := NewRelyingParty(&Options{RPID: rpID, Origin: "https://example.com"}); err == nil {
+		if _, err := NewRelyingParty(rpID, "https://example.com", Options{}); err == nil {
 			t.Errorf("NewRelyingParty(RPID: %q) succeeded, want error", rpID)
 		}
 	}
@@ -255,16 +249,16 @@ func TestNewRelyingPartyRPID(t *testing.T) {
 // negative value is rejected, zero defaults to five minutes, and values
 // above the WebIDL unsigned long range are rejected.
 func TestNewRelyingPartyTimeout(t *testing.T) {
-	if _, err := NewRelyingParty(&Options{RPID: "example.com", Origin: "https://example.com",
-		Timeout: -1}); err == nil {
+	if _, err := NewRelyingParty("example.com", "https://example.com",
+		Options{Timeout: -1}); err == nil {
 		t.Error("NewRelyingParty(Timeout: -1) succeeded, want error")
 	}
-	if _, err := NewRelyingParty(&Options{RPID: "example.com", Origin: "https://example.com",
-		Timeout: (math.MaxUint32 + 1) * time.Millisecond}); err == nil {
+	if _, err := NewRelyingParty("example.com", "https://example.com",
+		Options{Timeout: (math.MaxUint32 + 1) * time.Millisecond}); err == nil {
 		t.Error("NewRelyingParty() with an oversized Timeout succeeded, want error")
 	}
 
-	rp, err := NewRelyingParty(&Options{RPID: "example.com", Origin: "https://example.com"})
+	rp, err := NewRelyingParty("example.com", "https://example.com", Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -272,8 +266,8 @@ func TestNewRelyingPartyTimeout(t *testing.T) {
 		t.Errorf("timeout = %v, want the 5 minute default", rp.timeout)
 	}
 
-	rp, err = NewRelyingParty(&Options{RPID: "example.com", Origin: "https://example.com",
-		Timeout: 10 * time.Second})
+	rp, err = NewRelyingParty("example.com", "https://example.com",
+		Options{Timeout: 10 * time.Second})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -281,8 +275,8 @@ func TestNewRelyingPartyTimeout(t *testing.T) {
 		t.Errorf("timeout = %v, want 10s", rp.timeout)
 	}
 
-	if _, err := NewRelyingParty(&Options{RPID: "example.com", Origin: "https://example.com",
-		Timeout: math.MaxUint32 * time.Millisecond}); err != nil {
+	if _, err := NewRelyingParty("example.com", "https://example.com",
+		Options{Timeout: math.MaxUint32 * time.Millisecond}); err != nil {
 		t.Errorf("NewRelyingParty() with the maximum Timeout = %v, want success", err)
 	}
 }

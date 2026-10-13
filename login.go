@@ -28,17 +28,34 @@ import (
 // request is an opaque value to be stored by the application (see
 // [Challenges], and [RequestID] for a storage key) and passed to Login.
 //
-// Note that a login ceremony is not started for a specific user: the
-// user is identified by the response, using [Response.UnauthenticatedUserID].
+// Note that, unless [LoginOptions.AllowCredentials] is set, a login ceremony
+// is not started for a specific user: the user is identified by the response,
+// using [Response.UnauthenticatedUserID].
 //
 // [Challenges]: #hdr-Challenges
-func (rp *RelyingParty) NewLogin() (request, optionsJSON []byte, err error) {
-	return rp.NewLoginWithOptions(nil)
+func (rp *RelyingParty) NewLogin(opts LoginOptions) (request, optionsJSON []byte, err error) {
+	allowed := credentialDescriptors(opts.AllowCredentials)
+	r := newLoginRequest(len(opts.AllowCredentials) > 0)
+	uv := "required"
+	if rp.optionalUserVerification {
+		uv = "preferred"
+	}
+	optionsJSON, err = json.Marshal(requestOptions{
+		Challenge:        base64.RawURLEncoding.EncodeToString(r.challenge[:]),
+		RPID:             rp.rpID,
+		AllowCredentials: allowed,
+		UserVerification: uv,
+		Timeout:          rp.timeout.Milliseconds(),
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("passkey: error encoding JSON: %w", err)
+	}
+	return r.Bytes(), optionsJSON, nil
 }
 
-// LoginOptions configures the behavior of [RelyingParty.NewLoginWithOptions].
+// LoginOptions configures a login ceremony begun by [RelyingParty.NewLogin].
 //
-// The zero value is a valid configuration, and is equivalent to calling [RelyingParty.NewLogin].
+// The zero value is a valid, common configuration.
 type LoginOptions struct {
 	// AllowCredentials is a list of passkey records for a user that the application
 	// has already identified. It can be used e.g. for a re-authentication
@@ -63,33 +80,6 @@ type requestOptions struct {
 	AllowCredentials []credentialDescriptor `json:"allowCredentials"`
 	UserVerification string                 `json:"userVerification"`
 	Timeout          int64                  `json:"timeout"`
-}
-
-// NewLoginWithOptions begins a login ceremony with the given options.
-//
-// If options is nil or the zero value, it is equivalent to calling
-// [RelyingParty.NewLogin].
-func (rp *RelyingParty) NewLoginWithOptions(options *LoginOptions) (request, optionsJSON []byte, err error) {
-	if options == nil {
-		options = &LoginOptions{}
-	}
-	allowed := credentialDescriptors(options.AllowCredentials)
-	r := newLoginRequest(len(options.AllowCredentials) > 0)
-	uv := "required"
-	if rp.optionalUserVerification {
-		uv = "preferred"
-	}
-	optionsJSON, err = json.Marshal(requestOptions{
-		Challenge:        base64.RawURLEncoding.EncodeToString(r.challenge[:]),
-		RPID:             rp.rpID,
-		AllowCredentials: allowed,
-		UserVerification: uv,
-		Timeout:          rp.timeout.Milliseconds(),
-	})
-	if err != nil {
-		return nil, nil, fmt.Errorf("passkey: error encoding JSON: %w", err)
-	}
-	return r.Bytes(), optionsJSON, nil
 }
 
 // ErrRequestExpired is returned by [RelyingParty.Login] when the

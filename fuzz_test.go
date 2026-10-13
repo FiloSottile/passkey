@@ -43,7 +43,7 @@ func newFuzzCeremony(f *testing.F, alg int32, opts Options) *fuzzCeremony {
 		user: User{ID: "wxJph3ZClFxTP2xF9r2W0A", Name: "user@example.com"},
 	}
 
-	creationJSON, err := c.rp.NewRegistration(c.user, nil)
+	creationJSON, err := c.rp.NewRegistration(c.user, RegistrationOptions{})
 	if err != nil {
 		f.Fatal(err)
 	}
@@ -55,7 +55,7 @@ func newFuzzCeremony(f *testing.F, alg int32, opts Options) *fuzzCeremony {
 		f.Fatal(err)
 	}
 
-	request, requestJSON, err := c.rp.NewLogin()
+	request, requestJSON, err := c.rp.NewLogin(LoginOptions{})
 	if err != nil {
 		f.Fatal(err)
 	}

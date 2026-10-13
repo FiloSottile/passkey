@@ -304,9 +304,7 @@ func newSession() *session {
 	// be recorded: Register accepts their registrations, and Chrome
 	// returns their assertions, which it would refuse under "required".
 	// The replay verifies the recordings under both policies.
-	rp, err := passkey.NewRelyingParty(&passkey.Options{
-		RPID:                     "localhost",
-		Origin:                   origin,
+	rp, err := passkey.NewRelyingParty("localhost", origin, passkey.Options{
 		OptionalUserVerification: true,
 	})
 	if err != nil {
@@ -490,7 +488,7 @@ func exceptionName(err error) string {
 // passkeys, and returns the creation options along with the serialized
 // response, exactly as PublicKeyCredential.toJSON() produced it.
 func (a *authenticator) create(passkeys []string) (optionsJSON, responseJSON []byte, err error) {
-	optionsJSON, err = a.s.rp.NewRegistration(a.s.user, passkeys)
+	optionsJSON, err = a.s.rp.NewRegistration(a.s.user, passkey.RegistrationOptions{ExcludeCredentials: passkeys})
 	if err != nil {
 		a.s.fatalf("%v", err)
 	}
@@ -551,7 +549,7 @@ func (a *authenticator) register() {
 
 // login runs a login ceremony and records the exchange.
 func (a *authenticator) login() {
-	request, optionsJSON, err := a.s.rp.NewLogin()
+	request, optionsJSON, err := a.s.rp.NewLogin(passkey.LoginOptions{})
 	if err != nil {
 		a.s.fatalf("%v", err)
 	}
@@ -561,7 +559,7 @@ func (a *authenticator) login() {
 // loginWithCredentials runs a user-scoped login ceremony and records the
 // exchange.
 func (a *authenticator) loginWithCredentials() {
-	request, optionsJSON, err := a.s.rp.NewLoginWithOptions(&passkey.LoginOptions{AllowCredentials: []string{a.record}})
+	request, optionsJSON, err := a.s.rp.NewLogin(passkey.LoginOptions{AllowCredentials: []string{a.record}})
 	if err != nil {
 		a.s.fatalf("%v", err)
 	}

@@ -120,8 +120,8 @@ func loadWebAuthnVectors(t testing.TB) webauthnVectorFile {
 // accepts an assertion iff its UV flag is set and backed by the record.
 func TestWebAuthnVectors(t *testing.T) {
 	f := loadWebAuthnVectors(t)
-	rp := newTestRP(t, Options{RPID: f.RPID, Origin: f.Origin})
-	optionalUV := newTestRP(t, Options{RPID: f.RPID, Origin: f.Origin, OptionalUserVerification: true})
+	rp := newTestRPFor(t, f.RPID, f.Origin, Options{})
+	optionalUV := newTestRPFor(t, f.RPID, f.Origin, Options{OptionalUserVerification: true})
 	for _, v := range f.Vectors {
 		t.Run(v.Name, func(t *testing.T) {
 			testWebAuthnVector(t, rp, optionalUV, v)

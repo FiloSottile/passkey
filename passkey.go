@@ -58,8 +58,8 @@
 //
 // # Challenges
 //
-// [RelyingParty.NewLogin] and [RelyingParty.NewLoginWithOptions] return an
-// opaque request value that must be presented back to [RelyingParty.Login].
+// [RelyingParty.NewLogin] returns an opaque request value that must be
+// presented back to [RelyingParty.Login].
 //
 // The application must:
 //
@@ -117,8 +117,8 @@
 //
 // Login options request user verification "required", or "preferred" if
 // [Options.OptionalUserVerification] is set. [RelyingParty.NewLogin] sends
-// an empty allowCredentials list; [LoginOptions.AllowCredentials] populates
-// it with the user's credentials instead.
+// an empty allowCredentials list, unless [LoginOptions.AllowCredentials]
+// populates it with the user's credentials.
 //
 // Credential descriptors, in excludeCredentials at registration and in
 // allowCredentials at login, carry the transports recorded at registration,
@@ -176,32 +176,9 @@ import (
 )
 
 // Options configures a [RelyingParty].
+//
+// The zero value is a valid, common configuration.
 type Options struct {
-	// RPID is the Relying Party ID. The RP ID scopes which credentials exist
-	// for an origin, it is stored in every credential, and it can never change.
-	//
-	// Generally, the registrable domain of the site (e.g. example.com) is a
-	// good RP ID.
-	RPID string
-
-	// Origin is the origin from which registrations and logins are expected and
-	// allowed. It can change over time or across endpoints.
-	//
-	// It must match exactly the origin of the page that calls
-	// navigator.credentials.create() or navigator.credentials.get(), or the
-	// platform-specific equivalent.
-	//
-	// Examples of valid origins are "https://example.com" and
-	// "https://accounts.example.com:8443" and "android:apk-key-hash:...".
-	//
-	// Origin may be outside the RP ID's domain, if authorized through Related
-	// Origin Requests (the /.well-known/webauthn document, which the
-	// application is responsible for serving).
-	//
-	// To accept ceremonies from multiple origins, create a RelyingParty per
-	// origin, and select it based on the endpoint handling the request.
-	Origin string
-
 	// OptionalUserVerification disables the user verification (e.g. PIN or
 	// biometrics) requirement. This is mostly appropriate if a passkey is a
 	// second factor used alongside e.g. a password.
@@ -218,8 +195,7 @@ type Options struct {
 	// credentials that will only work for logins with OptionalUserVerification.
 	OptionalUserVerification bool
 
-	// Timeout is how long a request returned by NewLogin or
-	// NewLoginWithOptions remains valid.
+	// Timeout is how long a request returned by NewLogin remains valid.
 	//
 	// If zero, it defaults to five minutes. Conditional UI (autofill)
 	// logins may warrant a longer timeout, as the prompt can sit idle
@@ -238,21 +214,39 @@ type RelyingParty struct {
 	timeout                  time.Duration
 }
 
-// NewRelyingParty returns a RelyingParty configured with the given options.
+// NewRelyingParty returns a RelyingParty for the given RP ID and origin,
+// configured with the given options.
 //
-// [Options.RPID] and [Options.Origin] must be set.
-func NewRelyingParty(opts *Options) (*RelyingParty, error) {
-	if opts == nil {
-		return nil, errors.New("passkey: Options is nil")
-	}
-
-	if opts.RPID == "" {
+// rpID is the Relying Party ID. The RP ID scopes which credentials exist for
+// an origin, it is stored in every credential, and it can never change.
+//
+// Generally, the registrable domain of the site (e.g. example.com) is a good
+// RP ID.
+//
+// origin is the origin from which registrations and logins are expected and
+// allowed. It can change over time or across endpoints.
+//
+// It must match exactly the origin of the page that calls
+// navigator.credentials.create() or navigator.credentials.get(), or the
+// platform-specific equivalent.
+//
+// Examples of valid origins are "https://example.com" and
+// "https://accounts.example.com:8443" and "android:apk-key-hash:...".
+//
+// The origin may be outside the RP ID's domain, if authorized through Related
+// Origin Requests (the /.well-known/webauthn document, which the application
+// is responsible for serving).
+//
+// To accept ceremonies from multiple origins, create a RelyingParty per
+// origin, and select it based on the endpoint handling the request.
+func NewRelyingParty(rpID, origin string, opts Options) (*RelyingParty, error) {
+	if rpID == "" {
 		return nil, errors.New("passkey: RP ID is empty")
 	}
-	if len(opts.RPID) > 255 {
+	if len(rpID) > 255 {
 		return nil, errors.New("passkey: RP ID is too long")
 	}
-	for label := range strings.SplitSeq(opts.RPID, ".") {
+	for label := range strings.SplitSeq(rpID, ".") {
 		if label == "" {
 			return nil, errors.New("passkey: invalid RP ID")
 		}
@@ -265,21 +259,21 @@ func NewRelyingParty(opts *Options) (*RelyingParty, error) {
 			}
 		}
 	}
-	if net.ParseIP(opts.RPID) != nil {
+	if net.ParseIP(rpID) != nil {
 		return nil, errors.New("passkey: invalid RP ID; " +
 			"it must be a domain, not an IP address")
 	}
 
-	if opts.Origin == "" {
+	if origin == "" {
 		return nil, errors.New("passkey: Origin is empty")
 	}
-	if !strings.ContainsRune(opts.Origin, ':') {
+	if !strings.ContainsRune(origin, ':') {
 		return nil, errors.New("passkey: invalid Origin; it must include an origin")
 	}
-	if strings.ContainsRune(opts.Origin, '*') {
+	if strings.ContainsRune(origin, '*') {
 		return nil, errors.New(`passkey: Origin contains "*": wildcard origins are not supported`)
 	}
-	if scheme, rest, ok := strings.Cut(opts.Origin, "://"); ok {
+	if scheme, rest, ok := strings.Cut(origin, "://"); ok {
 		if scheme == "" || rest == "" {
 			return nil, errors.New("passkey: invalid Origin; " +
 				"it must be canonical, without path")
@@ -306,8 +300,8 @@ func NewRelyingParty(opts *Options) (*RelyingParty, error) {
 	}
 
 	return &RelyingParty{
-		rpID:                     opts.RPID,
-		origin:                   opts.Origin,
+		rpID:                     rpID,
+		origin:                   origin,
 		optionalUserVerification: opts.OptionalUserVerification,
 		timeout:                  timeout,
 	}, nil

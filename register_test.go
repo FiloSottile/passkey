@@ -674,7 +674,7 @@ func TestNewRegistration(t *testing.T) {
 	valid := User{ID: "user-id", Name: "user@example.com"}
 
 	for _, optional := range []bool{false, true} {
-		creationJSON, err := newTestRP(t, Options{OptionalUserVerification: optional}).NewRegistration(valid, nil)
+		creationJSON, err := newTestRP(t, Options{OptionalUserVerification: optional}).NewRegistration(valid, RegistrationOptions{})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -690,7 +690,7 @@ func TestNewRegistration(t *testing.T) {
 		}
 	}
 
-	creationJSON, err := rp.NewRegistration(valid, []string{"not a passkey record"})
+	creationJSON, err := rp.NewRegistration(valid, RegistrationOptions{ExcludeCredentials: []string{"not a passkey record"}})
 	if err != nil {
 		t.Fatalf("NewRegistration() with a malformed record = %v, want success", err)
 	}
@@ -698,7 +698,7 @@ func TestNewRegistration(t *testing.T) {
 		t.Errorf("options = %s, want an empty excludeCredentials list", creationJSON)
 	}
 
-	creationJSON, err = rp.NewRegistration(valid, nil)
+	creationJSON, err = rp.NewRegistration(valid, RegistrationOptions{})
 	if err != nil {
 		t.Errorf("NewRegistration() = %v, want success", err)
 	}
@@ -707,7 +707,7 @@ func TestNewRegistration(t *testing.T) {
 	}
 	var challenges []string
 	for range 2 {
-		creationJSON, err := rp.NewRegistration(valid, nil)
+		creationJSON, err := rp.NewRegistration(valid, RegistrationOptions{})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -720,28 +720,28 @@ func TestNewRegistration(t *testing.T) {
 	if challenges[0] == challenges[1] {
 		t.Errorf("challenge %q repeated across registrations", challenges[0])
 	}
-	if _, err := rp.NewRegistration(User{ID: "user-id", Name: ""}, nil); err == nil {
+	if _, err := rp.NewRegistration(User{ID: "user-id", Name: ""}, RegistrationOptions{}); err == nil {
 		t.Error("NewRegistration() with an empty name succeeded, want error")
 	}
-	if _, err := rp.NewRegistration(User{ID: "\x00\xff\x80", Name: "n"}, nil); err != nil {
+	if _, err := rp.NewRegistration(User{ID: "\x00\xff\x80", Name: "n"}, RegistrationOptions{}); err != nil {
 		t.Errorf("NewRegistration() with an arbitrary-bytes user ID = %v, want success", err)
 	}
-	if _, err := rp.NewRegistration(User{ID: strings.Repeat("a", 64), Name: "n"}, nil); err != nil {
+	if _, err := rp.NewRegistration(User{ID: strings.Repeat("a", 64), Name: "n"}, RegistrationOptions{}); err != nil {
 		t.Errorf("NewRegistration() with a 64-byte user ID = %v, want success", err)
 	}
-	if _, err := rp.NewRegistration(User{ID: "", Name: "n"}, nil); err == nil {
+	if _, err := rp.NewRegistration(User{ID: "", Name: "n"}, RegistrationOptions{}); err == nil {
 		t.Error("NewRegistration() with an empty user ID succeeded, want error")
 	}
-	if _, err := rp.NewRegistration(User{ID: strings.Repeat("a", 65), Name: "n"}, nil); err == nil {
+	if _, err := rp.NewRegistration(User{ID: strings.Repeat("a", 65), Name: "n"}, RegistrationOptions{}); err == nil {
 		t.Error("NewRegistration() with a 65-byte user ID succeeded, want error")
 	}
-	if _, err := rp.NewRegistration(User{ID: "user-id", Name: "a\nb"}, nil); err == nil {
+	if _, err := rp.NewRegistration(User{ID: "user-id", Name: "a\nb"}, RegistrationOptions{}); err == nil {
 		t.Error("NewRegistration() with a control character in the name succeeded, want error")
 	}
-	if _, err := rp.NewRegistration(User{ID: "user-id", Name: "a\u202eb"}, nil); err == nil {
+	if _, err := rp.NewRegistration(User{ID: "user-id", Name: "a\u202eb"}, RegistrationOptions{}); err == nil {
 		t.Error("NewRegistration() with a bidi override in the name succeeded, want error")
 	}
-	if _, err := rp.NewRegistration(User{ID: "user-id", Name: "émoji 🎉"}, nil); err != nil {
+	if _, err := rp.NewRegistration(User{ID: "user-id", Name: "émoji 🎉"}, RegistrationOptions{}); err != nil {
 		t.Errorf("NewRegistration() with a Unicode name = %v, want success", err)
 	}
 }
