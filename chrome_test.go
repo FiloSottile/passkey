@@ -58,6 +58,7 @@ type chromeLogin struct {
 // The reasons a recorded login is rejected for.
 const (
 	chromeErrorUserPresence = "user-presence" // ParseResponse rejects it
+	chromeErrorBackupState  = "backup-state"  // ParseResponse rejects it
 	chromeErrorSignature    = "signature"     // Login fails, without a sentinel
 )
 
@@ -144,8 +145,12 @@ func TestChromeRecordings(t *testing.T) {
 			for j, login := range rec.Logins {
 				t.Run(fmt.Sprintf("login%d", j), func(t *testing.T) {
 					resp, err := ParseResponse(login.Response)
-					if login.Error == chromeErrorUserPresence {
+					switch login.Error {
+					case chromeErrorUserPresence:
 						checkError(t, err, nil, "user presence flag not set")
+						return
+					case chromeErrorBackupState:
+						checkError(t, err, nil, "backed up but not backup eligible")
 						return
 					}
 					if err != nil {

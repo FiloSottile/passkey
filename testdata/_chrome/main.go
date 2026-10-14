@@ -31,13 +31,14 @@ import (
 	"net/http/httptest"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"time"
 
 	"filippo.io/passkey"
 	"github.com/chromedp/cdproto/browser"
+	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/page"
-	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/cdproto/webauthn"
 	"github.com/chromedp/chromedp"
 )
@@ -62,10 +63,11 @@ type recordings struct {
 type recording struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
-	// AAGUID and CredentialID are read out of the registration
-	// response, and Transports, UserVerified, BackupEligible, and
-	// BackedUp are how the authenticator was configured, all as
-	// expected of the record.
+	// AAGUID, CredentialID, and Transports are read out of the
+	// registration response (the transports as the record stores them,
+	// sorted and deduplicated), and UserVerified, BackupEligible, and
+	// BackedUp are how the authenticator was configured at
+	// registration, all as expected of the record.
 	AAGUID         string   `json:"aaguid"`       // hex
 	CredentialID   string   `json:"credentialId"` // hex
 	Transports     []string `json:"transports"`
@@ -86,9 +88,9 @@ type recording struct {
 // have stored, the PublicKeyCredentialRequestOptions passed to
 // navigator.credentials.get(), and the toJSON() serialization of what it
 // returned, along with whether the ceremony was initiated with
-// LoginOptions.AllowCredentials, the flags the authenticator was configured
-// to report and, for responses the authenticator was configured to break,
-// the reason they must be rejected.
+// LoginOptions.AllowCredentials, the flags the authenticator was
+// configured to report at the time and, for responses the authenticator
+// was configured to break, the reason they must be rejected.
 type login struct {
 	Request      string          `json:"request"` // hex
 	Options      json.RawMessage `json:"options"`
@@ -103,6 +105,7 @@ type login struct {
 const (
 	errorUserPresence = "user-presence" // the user presence flag is clear
 	errorSignature    = "signature"     // the signature is bogus
+	errorBackupState  = "backup-state"  // backed up, but not backup eligible
 )
 
 func main() {
@@ -114,36 +117,35 @@ func main() {
 	defer s.close()
 
 	// A platform authenticator with user verification, and the shape of
-	// the counter incrementing across logins. The last login is
-	// user-scoped: it answers a ceremony begun with LoginOptions.AllowCredentials.
+	// the counter incrementing across logins, then reset. The third
+	// login is user-scoped: it answers a ceremony begun with
+	// LoginOptions.AllowCredentials.
 	a := s.addAuthenticator("platform",
 		"A CTAP2.1 platform authenticator with user verification, "+
 			"whose credentials are not backup eligible; "+
-			"the last login is user-scoped.",
-		platformAuthenticator(), nil)
+			"the third login is user-scoped, and the signature counter "+
+			"is reset to zero before the last.",
+		platformAuthenticator())
 	a.register()
 	a.login()
 	a.login()
 	a.loginWithCredentials()
+	a.setSignCount(0)
+	a.login()
 	// Chrome must honor excludeCredentials: an authenticator that holds
 	// one of the excluded credentials refuses to create another.
-	if _, _, err := a.create([]string{a.record}); err == nil {
-		s.fatalf("a registration excluding the authenticator's credential succeeded")
-	} else if got := exceptionName(err); got != "InvalidStateError" {
-		s.fatalf("registration with an excluded credential failed with %v, want InvalidStateError", err)
-	} else {
-		log.Printf("excluded credential refused by the client, as expected: %v", err)
-	}
+	a.expectCreateRefused("a registration excluding the authenticator's credential",
+		"InvalidStateError", []string{a.record})
 	a.close()
 
 	// Backup flags: a synced credential, and one that gets synced after
-	// its registration.
+	// its registration, and unsynced again.
 	opts := platformAuthenticator()
 	opts.DefaultBackupEligibility = true
 	opts.DefaultBackupState = true
 	a = s.addAuthenticator("synced",
 		"A CTAP2.1 platform authenticator whose credentials are "+
-			"backup eligible and backed up.", opts, nil)
+			"backup eligible and backed up.", opts)
 	a.register()
 	a.login()
 	a.close()
@@ -153,66 +155,127 @@ func main() {
 	a = s.addAuthenticator("backup-eligible",
 		"A CTAP2.1 platform authenticator whose credentials are "+
 			"backup eligible but not backed up; the credential is "+
-			"backed up between the first and the second login.", opts, nil)
+			"backed up between the first and the second login, and "+
+			"not backed up again before the third.", opts)
 	a.register()
 	a.login()
-	a.setBackupState(true)
+	a.setBackupFlags(true, true)
+	a.login()
+	a.setBackupFlags(true, false)
 	a.login()
 	a.close()
 
-	// A roaming authenticator, for which Chrome zeroes the AAGUID.
+	// Roaming authenticators. Chrome zeroes the AAGUID of the USB one,
+	// but not of the hybrid one.
 	opts = platformAuthenticator()
 	opts.Transport = webauthn.AuthenticatorTransportUsb
 	a = s.addAuthenticator("security-key",
-		"A CTAP2.1 USB authenticator with user verification.", opts, nil)
+		"A CTAP2.1 USB authenticator with user verification.", opts)
 	a.register()
 	a.login()
+	a.close()
+
+	opts = platformAuthenticator()
+	opts.Transport = webauthn.AuthenticatorTransportHybrid
+	opts.DefaultBackupEligibility = true
+	opts.DefaultBackupState = true
+	a = s.addAuthenticator("hybrid",
+		"A CTAP2.1 authenticator reached over the hybrid transport "+
+			"(a phone), with user verification, whose credentials are "+
+			"backup eligible and backed up.", opts)
+	a.register()
+	a.login()
+	a.close()
+
+	// A platform authenticator that can't verify the user: Chrome
+	// creates the discoverable credential anyway, as registration
+	// requests user verification "preferred" (it refuses to on a
+	// security key, see below), but honors "required" at login by
+	// refusing to assert it.
+	opts = platformAuthenticator()
+	opts.HasUserVerification = false
+	opts.IsUserVerified = false
+	a = s.addAuthenticator("no-user-verification",
+		"A CTAP2.1 platform authenticator without user verification: "+
+			"Chrome creates the credential, but refuses to assert it "+
+			"with user verification required, so there are no logins.", opts)
+	a.register()
+	a.expectGetRefused("a login on an authenticator without user verification", "NotAllowedError")
 	a.close()
 
 	// Responses altered by the response override bits of the DevTools
 	// protocol, which clear the user verification or user presence flag,
-	// or zero the signature, in every response. (Chrome won't create a
-	// discoverable credential on an authenticator that can't verify the
-	// user, so clearing the flag is the only way to record an assertion
-	// without user verification.)
-	a = s.addAuthenticator("no-user-verification",
-		"A CTAP2.1 platform authenticator that clears the user "+
-			"verification flag in every response.", platformAuthenticator(),
-		webauthn.SetResponseOverrideBits("").WithIsBadUV(true))
+	// or zero the signature. Chrome applies them after its own checks,
+	// so the responses reach the page even though the options request
+	// user verification, and the replay checks that the package refuses
+	// them.
+	a = s.addAuthenticator("uv-cleared-after-registration",
+		"A CTAP2.1 platform authenticator that verifies the user at "+
+			"registration, then clears the user verification flag in its "+
+			"assertions: a client not honoring the user verification "+
+			"requirement.", platformAuthenticator())
 	a.register()
+	a.setOverrides(overrides{badUV: true})
+	a.login()
+	a.close()
+
+	a = s.addAuthenticator("uv-set-up-after-registration",
+		"A CTAP2.1 platform authenticator that clears the user "+
+			"verification flag at registration, then verifies the user in "+
+			"its assertions: a security key whose PIN was set up after "+
+			"registration, possibly by whoever took it.", platformAuthenticator())
+	a.setOverrides(overrides{badUV: true})
+	a.register()
+	a.setOverrides(overrides{})
 	a.login()
 	a.close()
 
 	a = s.addAuthenticator("no-user-presence",
 		"A CTAP2.1 platform authenticator that clears the user presence "+
-			"flag in every response.", platformAuthenticator(),
-		webauthn.SetResponseOverrideBits("").WithIsBadUP(true))
+			"flag in every response.", platformAuthenticator())
+	a.setOverrides(overrides{badUP: true})
 	a.register()
 	a.login()
 	a.close()
 
 	a = s.addAuthenticator("bogus-signature",
 		"A CTAP2.1 platform authenticator whose assertion signatures "+
-			"are zeroed.", platformAuthenticator(),
-		webauthn.SetResponseOverrideBits("").WithIsBogusSignature(true))
+			"are zeroed.", platformAuthenticator())
+	a.setOverrides(overrides{bogusSignature: true})
 	a.register()
 	a.login()
 	a.close()
 
+	// A credential that claims to be backed up without being backup
+	// eligible, which the flags' definition rules out.
+	a = s.addAuthenticator("backed-up-not-eligible",
+		"A CTAP2.1 platform authenticator whose credential is marked "+
+			"backed up but not backup eligible after registration.",
+		platformAuthenticator())
+	a.register()
+	a.setBackupFlags(false, true)
+	a.login()
+	a.close()
+
 	// Chrome must honor residentKey: "required", which a U2F
-	// authenticator can't satisfy.
+	// authenticator can't satisfy, and it won't store a discoverable
+	// credential on a security key that can't verify the user (one
+	// without a PIN), as its PIN would protect the credential.
 	a = s.addAuthenticator("u2f", "", &webauthn.VirtualAuthenticatorOptions{
 		Protocol:                    webauthn.AuthenticatorProtocolU2f,
 		Transport:                   webauthn.AuthenticatorTransportUsb,
 		AutomaticPresenceSimulation: true,
-	}, nil)
-	if _, _, err := a.create(nil); err == nil {
-		s.fatalf("a U2F authenticator created a discoverable credential")
-	} else if got := exceptionName(err); got != "NotAllowedError" {
-		s.fatalf("U2F registration failed with %v, want NotAllowedError", err)
-	} else {
-		log.Printf("U2F registration refused by the client, as expected: %v", err)
-	}
+	})
+	a.expectCreateRefused("a U2F registration", "NotAllowedError", nil)
+	a.discard()
+
+	opts = platformAuthenticator()
+	opts.Transport = webauthn.AuthenticatorTransportUsb
+	opts.HasUserVerification = false
+	opts.IsUserVerified = false
+	a = s.addAuthenticator("security-key-without-pin", "", opts)
+	a.expectCreateRefused("a registration on a security key without user verification",
+		"NotAllowedError", nil)
 	a.discard()
 
 	s.write(*output)
@@ -312,6 +375,8 @@ func newSession() *session {
 	)
 	ctx, cancelAllocator := chromedp.NewExecAllocator(context.Background(), allocatorOpts...)
 	ctx, cancelBrowser := chromedp.NewContext(ctx)
+	// The browser is started on this context, so the timeout bounds the
+	// whole run.
 	ctx, cancelTimeout := context.WithTimeout(ctx, 2*time.Minute)
 	cancel := func() {
 		cancelTimeout()
@@ -320,15 +385,12 @@ func newSession() *session {
 	}
 
 	// Start the browser, and read its version.
-	var product string
-	if err := chromedp.Run(ctx, chromedp.ActionFunc(func(ctx context.Context) error {
-		_, product, _, _, _, err = browser.GetVersion().Do(ctx)
-		return err
-	})); err != nil {
+	version, err := chromedp.CallBrowser(ctx, browser.GetVersion, cdp.Empty{})
+	if err != nil {
 		cancel()
 		log.Fatal(err)
 	}
-	log.Printf("recording with %s at %s", product, origin)
+	log.Printf("recording with %s at %s", version.Product, origin)
 
 	s := &session{
 		rp:     rp,
@@ -338,7 +400,7 @@ func newSession() *session {
 		ctx:    ctx,
 		cancel: cancel,
 	}
-	s.out.Browser = product
+	s.out.Browser = version.Product
 	s.out.RPID = "localhost"
 	s.out.Origin = origin
 	s.out.UserID = s.user.ID
@@ -370,6 +432,12 @@ func (s *session) write(path string) {
 	log.Printf("wrote %d recordings to %s", len(s.out.Recordings), path)
 }
 
+// overrides are the response override bits of the DevTools protocol:
+// each one breaks the responses of an authenticator in one way.
+type overrides struct {
+	badUV, badUP, bogusSignature bool
+}
+
 // authenticator is a virtual authenticator in a tab of its own, and the
 // recording of the ceremonies it performs.
 type authenticator struct {
@@ -378,74 +446,64 @@ type authenticator struct {
 	cancel context.CancelFunc
 	id     webauthn.AuthenticatorID
 	opts   *webauthn.VirtualAuthenticatorOptions
-	// overrides are the response override bits set on the authenticator,
-	// if any.
-	overrides *webauthn.SetResponseOverrideBitsParams
+	// overrides are the response override bits in effect.
+	overrides overrides
 
 	rec *recording
-	// record is the passkey record of the registered credential,
-	// credentialID its credential ID, and backedUp its current backup
-	// state.
-	record       string
-	credentialID []byte
-	backedUp     bool
+	// record is the passkey record of the registered credential (empty
+	// if Register refused it), credentialID its credential ID, and
+	// backupEligible and backedUp its current backup flags.
+	record         string
+	credentialID   []byte
+	backupEligible bool
+	backedUp       bool
 }
 
 // addAuthenticator opens a tab on the page and adds a virtual
-// authenticator to it, with the given options and response overrides.
-// The tab is scoped to the authenticator, so that a login ceremony sees
-// exactly one authenticator: it is closed by close or discard.
-func (s *session) addAuthenticator(name, description string, opts *webauthn.VirtualAuthenticatorOptions,
-	overrides *webauthn.SetResponseOverrideBitsParams) *authenticator {
+// authenticator to it, with the given options. The tab is scoped to the
+// authenticator, so that a login ceremony sees exactly one
+// authenticator: it is closed by close or discard.
+func (s *session) addAuthenticator(name, description string, opts *webauthn.VirtualAuthenticatorOptions) *authenticator {
 	ctx, cancel := chromedp.NewContext(s.ctx)
 	a := &authenticator{
-		s:         s,
-		ctx:       ctx,
-		cancel:    cancel,
-		opts:      opts,
-		overrides: overrides,
-		backedUp:  opts.DefaultBackupState,
+		s:              s,
+		ctx:            ctx,
+		cancel:         cancel,
+		opts:           opts,
+		backupEligible: opts.DefaultBackupEligibility,
+		backedUp:       opts.DefaultBackupState,
 		rec: &recording{
 			Name:           name,
 			Description:    description,
-			Transports:     []string{string(opts.Transport)},
-			UserVerified:   opts.HasUserVerification && opts.IsUserVerified && (overrides == nil || !overrides.IsBadUV),
 			BackupEligible: opts.DefaultBackupEligibility,
 			BackedUp:       opts.DefaultBackupState,
 		},
 	}
-	if err := chromedp.Run(ctx,
-		chromedp.Navigate(s.url),
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			// WebAuthn ceremonies require the document to be focused,
-			// which a background tab is not.
-			if err := page.BringToFront().Do(ctx); err != nil {
-				return fmt.Errorf("focusing the tab: %w", err)
-			}
-			if err := webauthn.Enable().Do(ctx); err != nil {
-				return fmt.Errorf("enabling the WebAuthn domain: %w", err)
-			}
-			id, err := webauthn.AddVirtualAuthenticator(opts).Do(ctx)
-			if err != nil {
-				return fmt.Errorf("adding a virtual authenticator: %w", err)
-			}
-			a.id = id
-			if overrides != nil {
-				overrides.AuthenticatorID = id
-				if err := overrides.Do(ctx); err != nil {
-					return fmt.Errorf("setting the response overrides: %w", err)
-				}
-			}
-			return nil
-		}),
-	); err != nil {
+	if err := chromedp.Do(ctx, chromedp.Navigate(s.url)); err != nil {
 		s.fatalf("%s: %v", name, err)
 	}
+	// WebAuthn ceremonies require the document to be focused, which a
+	// background tab is not.
+	if _, err := chromedp.Call(ctx, page.BringToFront, cdp.Empty{}); err != nil {
+		s.fatalf("%s: focusing the tab: %v", name, err)
+	}
+	if _, err := chromedp.Call(ctx, webauthn.Enable, webauthn.EnableParams{}); err != nil {
+		s.fatalf("%s: enabling the WebAuthn domain: %v", name, err)
+	}
+	res, err := chromedp.Call(ctx, webauthn.AddVirtualAuthenticator,
+		webauthn.AddVirtualAuthenticatorParams{Options: opts})
+	if err != nil {
+		s.fatalf("%s: adding a virtual authenticator: %v", name, err)
+	}
+	a.id = res.AuthenticatorID
 	return a
 }
 
 // close closes the tab and keeps the recording.
 func (a *authenticator) close() {
+	if a.rec.Logins == nil {
+		a.rec.Logins = []login{}
+	}
 	a.s.out.Recordings = append(a.s.out.Recordings, *a.rec)
 	a.cancel()
 }
@@ -455,25 +513,42 @@ func (a *authenticator) discard() {
 	a.cancel()
 }
 
+// setOverrides sets the response override bits of the authenticator,
+// replacing those in effect.
+func (a *authenticator) setOverrides(o overrides) {
+	ptr := func(b bool) *bool { return &b }
+	_, err := chromedp.Call(a.ctx, webauthn.SetResponseOverrideBits, webauthn.SetResponseOverrideBitsParams{
+		AuthenticatorID:  a.id,
+		IsBadUV:          ptr(o.badUV),
+		IsBadUP:          ptr(o.badUP),
+		IsBogusSignature: ptr(o.bogusSignature),
+	})
+	if err != nil {
+		a.s.fatalf("%s: setting the response overrides: %v", a.rec.Name, err)
+	}
+	a.overrides = o
+}
+
+// verifiesUser reports whether the authenticator's responses carry the
+// user verification flag.
+func (a *authenticator) verifiesUser() bool {
+	return a.opts.HasUserVerification && a.opts.IsUserVerified && !a.overrides.badUV
+}
+
 // eval evaluates an async JavaScript expression in the tab and returns
 // its result. If the expression throws, the error is the exception.
 func (a *authenticator) eval(js string) (string, error) {
-	var out string
-	err := chromedp.Run(a.ctx, chromedp.Evaluate(js, &out,
-		func(p *runtime.EvaluateParams) *runtime.EvaluateParams {
-			return p.WithAwaitPromise(true)
-		}))
-	return out, err
+	return chromedp.Run(a.ctx, chromedp.Evaluate[string](js, chromedp.EvalAwaitPromise))
 }
 
 // exceptionName returns the name of a JavaScript exception. Protocol and
 // context errors return an empty name.
 func exceptionName(err error) string {
-	var details *runtime.ExceptionDetails
-	if !errors.As(err, &details) || details.Exception == nil {
+	var e *chromedp.ExceptionError
+	if !errors.As(err, &e) || e.Exception == nil {
 		return ""
 	}
-	name, _, _ := strings.Cut(details.Exception.Description, ":")
+	name, _, _ := strings.Cut(e.Exception.Description, ":")
 	return name
 }
 
@@ -491,6 +566,36 @@ func (a *authenticator) create(passkeys []string) (optionsJSON, responseJSON []b
 		return JSON.stringify(credential.toJSON());
 	})()`, optionsJSON))
 	return optionsJSON, []byte(response), err
+}
+
+// expectCreateRefused runs a registration ceremony that the client must
+// refuse with the named exception, and logs the refusal.
+func (a *authenticator) expectCreateRefused(what, wantName string, passkeys []string) {
+	_, _, err := a.create(passkeys)
+	if err == nil {
+		a.s.fatalf("%s succeeded, want %s", what, wantName)
+	}
+	if got := exceptionName(err); got != wantName {
+		a.s.fatalf("%s failed with %v, want %s", what, err, wantName)
+	}
+	log.Printf("%s refused by the client, as expected: %v", what, err)
+}
+
+// expectGetRefused runs a login ceremony that the client must refuse
+// with the named exception, and logs the refusal.
+func (a *authenticator) expectGetRefused(what, wantName string) {
+	_, optionsJSON, err := a.s.rp.NewLogin(passkey.LoginOptions{})
+	if err != nil {
+		a.s.fatalf("%v", err)
+	}
+	_, err = a.get(optionsJSON)
+	if err == nil {
+		a.s.fatalf("%s succeeded, want %s", what, wantName)
+	}
+	if got := exceptionName(err); got != wantName {
+		a.s.fatalf("%s failed with %v, want %s", what, err, wantName)
+	}
+	log.Printf("%s refused by the client, as expected: %v", what, err)
 }
 
 // get runs a login ceremony in the tab for the given options and returns
@@ -511,25 +616,22 @@ func (a *authenticator) register() {
 	if err != nil {
 		a.s.fatalf("%s: registration: %v", a.rec.Name, err)
 	}
+	a.rec.UserVerified = a.verifiesUser()
 	// The record is needed to build excludeCredentials and
 	// allowCredentials, so Register has to succeed here as well as at
-	// replay time, except for the authenticator that clears the UV
-	// flag, which it refuses: the replay builds that record as an
-	// importer would.
-	record, err := a.s.rp.Register(responseJSON)
-	switch {
-	case err == nil:
-		a.record = record
-	case a.clearsUV() && errors.Is(err, passkey.ErrUserVerificationUnavailable):
-		record = "refused: " + err.Error()
-	default:
+	// replay time. The exception is a response without the UV flag,
+	// which Register refuses: the replay builds its record as an
+	// importer would, and checks that its logins are refused too.
+	a.record, err = a.s.rp.Register(responseJSON)
+	if err != nil && !(!a.verifiesUser() && errors.Is(err, passkey.ErrUserVerificationUnavailable)) {
 		a.s.fatalf("%s: Register: %v\n%s", a.rec.Name, err, responseJSON)
 	}
 
 	var resp struct {
 		RawID    string `json:"rawId"`
 		Response struct {
-			AuthenticatorData string `json:"authenticatorData"`
+			AuthenticatorData string   `json:"authenticatorData"`
+			Transports        []string `json:"transports"`
 		} `json:"response"`
 	}
 	if err := json.Unmarshal(responseJSON, &resp); err != nil {
@@ -541,9 +643,16 @@ func (a *authenticator) register() {
 
 	a.rec.AAGUID = hex.EncodeToString(aaguid)
 	a.rec.CredentialID = hex.EncodeToString(a.credentialID)
+	// Chrome may report more transports than the one configured: a
+	// hybrid authenticator also advertises BLE.
+	a.rec.Transports = slices.Compact(slices.Sorted(slices.Values(resp.Response.Transports)))
 	a.rec.Registration.Options = optionsJSON
 	a.rec.Registration.Response = responseJSON
-	log.Printf("%s: registered %s", a.rec.Name, record)
+	if a.record == "" {
+		log.Printf("%s: registration refused, as expected: %v", a.rec.Name, err)
+	} else {
+		log.Printf("%s: registered %s", a.rec.Name, a.record)
+	}
 }
 
 // login runs a login ceremony and records the exchange.
@@ -575,42 +684,47 @@ func (a *authenticator) recordLogin(request, optionsJSON []byte, userScoped bool
 		Options:      optionsJSON,
 		Response:     responseJSON,
 		UserScoped:   userScoped,
-		UserVerified: a.rec.UserVerified,
+		UserVerified: a.verifiesUser(),
 		BackedUp:     a.backedUp,
 	}
-	if a.overrides != nil {
-		switch {
-		case a.overrides.IsBadUP:
-			l.Error = errorUserPresence
-		case a.overrides.IsBogusSignature:
-			l.Error = errorSignature
-		}
+	switch {
+	case a.overrides.badUP:
+		l.Error = errorUserPresence
+	case a.overrides.bogusSignature:
+		l.Error = errorSignature
+	case a.backedUp && !a.backupEligible:
+		l.Error = errorBackupState
 	}
 	a.rec.Logins = append(a.rec.Logins, l)
 	log.Printf("%s: login %d recorded", a.rec.Name, len(a.rec.Logins))
 }
 
-// clearsUV reports whether the authenticator is configured to clear the
-// user verification flag in its responses. Chrome applies the override
-// after its own checks, so the assertions come through even though the
-// options request user verification; the replay checks that the package
-// refuses them.
-func (a *authenticator) clearsUV() bool {
-	return a.overrides != nil && a.overrides.IsBadUV
+// setBackupFlags changes the backup eligibility and state the credential
+// reports.
+func (a *authenticator) setBackupFlags(eligible, backedUp bool) {
+	_, err := chromedp.Call(a.ctx, webauthn.SetCredentialProperties, webauthn.SetCredentialPropertiesParams{
+		AuthenticatorID:   a.id,
+		CredentialID:      a.credentialID,
+		BackupEligibility: &eligible,
+		BackupState:       &backedUp,
+	})
+	if err != nil {
+		a.s.fatalf("%s: setting the backup flags: %v", a.rec.Name, err)
+	}
+	a.backupEligible = eligible
+	a.backedUp = backedUp
 }
 
-// setBackupState changes the backup state the credential reports.
-func (a *authenticator) setBackupState(backedUp bool) {
-	if err := chromedp.Run(a.ctx, chromedp.ActionFunc(func(ctx context.Context) error {
-		// DevTools protocol binary parameters are standard, padded
-		// base64, not the base64url of the WebAuthn JSON serialization.
-		return webauthn.SetCredentialProperties(a.id, base64.StdEncoding.EncodeToString(a.credentialID)).
-			WithBackupEligibility(a.opts.DefaultBackupEligibility).
-			WithBackupState(backedUp).Do(ctx)
-	})); err != nil {
-		a.s.fatalf("%s: setting the backup state: %v", a.rec.Name, err)
+// setSignCount sets the credential's signature counter.
+func (a *authenticator) setSignCount(n float64) {
+	_, err := chromedp.Call(a.ctx, webauthn.SetCredentialProperties, webauthn.SetCredentialPropertiesParams{
+		AuthenticatorID: a.id,
+		CredentialID:    a.credentialID,
+		SignCount:       &n,
+	})
+	if err != nil {
+		a.s.fatalf("%s: setting the signature counter: %v", a.rec.Name, err)
 	}
-	a.backedUp = backedUp
 }
 
 // decode decodes a base64url field of the WebAuthn JSON serialization.
