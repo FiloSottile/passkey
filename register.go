@@ -239,7 +239,7 @@ func (rp *RelyingParty) Register(responseJSON []byte) (passkey string, err error
 	}
 	// A record with neither UV nor BE would fail to log in.
 	// See [userVerificationAvailable] and the "User verification" section.
-	if !rp.optionalUserVerification && !userVerificationAvailable(r) {
+	if !userVerificationAvailable(r) {
 		return "", fmt.Errorf("%w: response has neither the UV nor the BE flag "+
 			"(likely to be a security key without PIN)", ErrUserVerificationUnavailable)
 	}

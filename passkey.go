@@ -13,8 +13,8 @@
 //
 // Records are immutable: they are produced by [RelyingParty.Register] and never
 // change afterwards. Mutable authenticator state (like backup state) is not
-// tracked; per-login values are reported by [RelyingParty.Login] as
-// [LoginResult.BackedUp] and [LoginResult.UserVerified].
+// tracked; the backup state is reported per login by [RelyingParty.Login] as
+// [LoginResult.BackedUp].
 //
 // # Storage model
 //
@@ -110,14 +110,13 @@
 //
 // Register verifies that the client data is well-formed JSON with type
 // "webauthn.create", the expected origin, and crossOrigin absent or false;
-// that the authenticator data carries the hash of the RP ID; and, unless
-// [Options.OptionalUserVerification] is set, that user verification is set
-// up on the authenticator (see the User verification section below). The
-// challenge is not verified; see the Challenges section above.
+// that the authenticator data carries the hash of the RP ID; and that user
+// verification is set up on the authenticator (see the User verification
+// section below). The challenge is not verified; see the Challenges section
+// above.
 //
-// Login options request user verification "required", or "preferred" if
-// [Options.OptionalUserVerification] is set. [RelyingParty.NewLogin] sends
-// an empty allowCredentials list, unless [LoginOptions.AllowCredentials]
+// Login options request user verification "required". [RelyingParty.NewLogin]
+// sends an empty allowCredentials list, unless [LoginOptions.AllowCredentials]
 // populates it with the user's credentials.
 //
 // Credential descriptors, in excludeCredentials at registration and in
@@ -133,36 +132,29 @@
 // "webauthn.get", the request's challenge, the expected origin, and
 // crossOrigin absent or false; that the authenticator data carries the
 // hash of the RP ID (as does the matched record) and has the user
-// presence flag set; that the request has not expired; and, unless
-// [Options.OptionalUserVerification] is set, that user verification was
-// performed and can be relied upon (see the User verification section
-// below).
+// presence flag set; that the request has not expired; and that user
+// verification was performed and can be relied upon (see the User
+// verification section below).
 //
 // The signature counter is not checked (it is zero for the major
 // passkey providers).
 //
 // # User verification
 //
-// The UV flag of a login assertion is relied upon (and
-// [LoginResult.UserVerified] is set) only if the matched record has the UV or
-// the BE flag, i.e. if user verification was performed at registration or the
-// credential is a synced passkey. Otherwise, it suggests the credential was
-// stored on an external authenticator without UV set up, and an attacker that
-// were to steal it could have set up their own PIN to enable UV.
-// [UserVerificationAvailable] reports this property of a record.
+// Password-less login requires user verification (e.g. PIN or biometrics).
 //
-// By default, login options request user verification "required", and Login
-// fails unless [LoginResult.UserVerified] would be true: with
-// [ErrUserVerificationUnavailable] if the record has neither the UV nor the BE
-// flag (likely a security key without a PIN), and with a generic error
-// otherwise. Registration options request "preferred", to allow conditional
-// (automatic) passkey creation, but Register fails with
+// The UV flag of an assertion is relied upon only if the matched record has the
+// UV or the BE flag, i.e. if user verification was performed at registration or
+// the credential is a synced passkey. Otherwise, it suggests the credential was
+// stored on an external authenticator without UV set up, and an attacker could
+// have stolen it and set up their own PIN to enable UV. Login fails with
+// [ErrUserVerificationUnavailable] for such a record.
+//
+// Registration options request user verification "preferred", to allow
+// conditional (automatic) passkey creation, but Register fails with
 // [ErrUserVerificationUnavailable] if the response has neither the UV nor the
-// BE flag, as the credential could never log in.
-//
-// If [Options.OptionalUserVerification] is set, login options request
-// "preferred", Register and Login accept responses regardless of the flags,
-// and [LoginResult.UserVerified] retains the same semantics.
+// BE flag (likely a security key without a PIN), as the credential could never
+// be used to log in. A record with neither flag can therefore only be imported.
 //
 // [passkey records]: https://c2sp.org/passkey-record
 package passkey
@@ -179,22 +171,6 @@ import (
 //
 // The zero value is a valid, common configuration.
 type Options struct {
-	// OptionalUserVerification disables the user verification (e.g. PIN or
-	// biometrics) requirement. This is mostly appropriate if a passkey is a
-	// second factor used alongside e.g. a password.
-	//
-	// By default, login ceremonies require user verification and Login fails
-	// unless it was performed and can be relied upon.
-	// If OptionalUserVerification is true, login ceremonies request user
-	// verification but don't require it. Applications can consult
-	// [LoginResult.UserVerified], which retains the same semantics.
-	//
-	// Registration ceremonies never require user verification, but by default
-	// Register rejects credentials that are not capable of it.
-	// If OptionalUserVerification is true, Register will accept some rare
-	// credentials that will only work for logins with OptionalUserVerification.
-	OptionalUserVerification bool
-
 	// Timeout is how long a request returned by NewLogin remains valid.
 	//
 	// If zero, it defaults to five minutes. Conditional UI (autofill)
@@ -208,10 +184,9 @@ type Options struct {
 //
 // Its methods are safe for concurrent use by multiple goroutines.
 type RelyingParty struct {
-	rpID                     string
-	origin                   string
-	optionalUserVerification bool
-	timeout                  time.Duration
+	rpID    string
+	origin  string
+	timeout time.Duration
 }
 
 // NewRelyingParty returns a RelyingParty for the given RP ID and origin,
@@ -300,9 +275,8 @@ func NewRelyingParty(rpID, origin string, opts Options) (*RelyingParty, error) {
 	}
 
 	return &RelyingParty{
-		rpID:                     rpID,
-		origin:                   origin,
-		optionalUserVerification: opts.OptionalUserVerification,
-		timeout:                  timeout,
+		rpID:    rpID,
+		origin:  origin,
+		timeout: timeout,
 	}, nil
 }

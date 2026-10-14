@@ -128,7 +128,7 @@ func testE2E(t *testing.T, alg int32) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := (&LoginResult{Matched: 1, UserVerified: true}); *result != *want {
+	if want := (&LoginResult{Matched: 1}); *result != *want {
 		t.Errorf("Login() = %+v, want %+v", result, want)
 	}
 
@@ -172,7 +172,7 @@ func testE2E(t *testing.T, alg int32) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := (&LoginResult{Matched: 0, UserVerified: true, BackedUp: true}); *result != *want {
+	if want := (&LoginResult{Matched: 0, BackedUp: true}); *result != *want {
 		t.Errorf("Login() = %+v, want %+v", result, want)
 	}
 }

@@ -36,15 +36,11 @@ import (
 func (rp *RelyingParty) NewLogin(opts LoginOptions) (request, optionsJSON []byte, err error) {
 	allowed := credentialDescriptors(opts.AllowCredentials)
 	r := newLoginRequest(len(opts.AllowCredentials) > 0)
-	uv := "required"
-	if rp.optionalUserVerification {
-		uv = "preferred"
-	}
 	optionsJSON, err = json.Marshal(requestOptions{
 		Challenge:        base64.RawURLEncoding.EncodeToString(r.challenge[:]),
 		RPID:             rp.rpID,
 		AllowCredentials: allowed,
-		UserVerification: uv,
+		UserVerification: "required",
 		Timeout:          rp.timeout.Milliseconds(),
 	})
 	if err != nil {
@@ -101,17 +97,16 @@ var ErrUnknownCredential = errors.New("passkey: credential not registered for th
 // ErrUserVerificationUnavailable is returned by [RelyingParty.Register] and
 // [RelyingParty.Login] when the response is valid, but the passkey can't
 // provide user verification (e.g. PIN or biometrics) that can be relied upon.
-// It is never returned if [Options.OptionalUserVerification] is set.
 //
 // If returned by Register, the authenticator is likely a security key without a
 // PIN. It can be surfaced to the user as "this passkey can't verify it's you",
 // suggesting they configure a PIN on their security key or use a different
 // passkey authenticator.
 //
-// If returned by Login, the matched record was generated with
-// [Options.OptionalUserVerification] or imported. It requires replacing the
-// passkey with a new registration, potentially after the user has configured a
-// PIN on their security key.
+// If returned by Login, the matched record can't provide reliable user
+// verification. (This can only happen for imported records.) It requires
+// replacing the passkey with a new registration, potentially after the user has
+// configured a PIN on their security key.
 //
 // It is always wrapped, so callers must use [errors.Is].
 var ErrUserVerificationUnavailable = errors.New("passkey: user verification unavailable")
@@ -124,10 +119,6 @@ type LoginResult struct {
 	// Matched is the index in passkeys of the record the response
 	// was verified against.
 	Matched int
-
-	// UserVerified reports whether user verification (e.g. PIN or
-	// biometrics) was performed and can be relied upon.
-	UserVerified bool
 
 	// BackedUp reports whether the credential asserts it is currently
 	// backed up (e.g. synced to a cloud account). It can inform prompting
@@ -153,8 +144,7 @@ type LoginResult struct {
 //
 //   - If the response is valid but the matched record suggests user
 //     verification can't be relied upon, Login returns
-//     [ErrUserVerificationUnavailable] unless
-//     [Options.OptionalUserVerification] is set.
+//     [ErrUserVerificationUnavailable].
 //
 //   - If the response is valid but the request is older than
 //     [Options.Timeout], Login returns [ErrRequestExpired]: the
@@ -184,7 +174,6 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
 	message = append(message, response.authData...)
 	message = append(message, response.clientDataHash[:]...)
 
-	var result *LoginResult
 	var skipped, signatureErrors []error
 	for i, p := range passkeys {
 		r, err := parseRecord(p)
@@ -205,22 +194,18 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
 			if time.Since(req.created) > rp.timeout {
 				return nil, fmt.Errorf("%w: request created at %v", ErrRequestExpired, req.created)
 			}
-			result = &LoginResult{
-				Matched:      i,
-				UserVerified: userVerificationAvailable(r) && response.flags.userVerified(),
-				BackedUp:     response.flags.backupState(),
+			if !userVerificationAvailable(r) {
+				return nil, fmt.Errorf("%w: the matched record has neither the UV nor the BE flag, "+
+					"so user verification can't be relied upon", ErrUserVerificationUnavailable)
 			}
-			if !rp.optionalUserVerification && !result.UserVerified {
-				if !userVerificationAvailable(r) {
-					return nil, fmt.Errorf("%w: the matched record has neither the UV nor the BE flag, "+
-						"so user verification can't be relied upon", ErrUserVerificationUnavailable)
-				}
+			if !response.flags.userVerified() {
 				return nil, errors.New("passkey: assertion has no user verification flag: " +
-					"the client did not honor the required user verification, or the request " +
-					"options were produced with a different OptionalUserVerification setting")
+					"the client did not honor the required user verification")
 			}
-
-			return result, nil
+			return &LoginResult{
+				Matched:  i,
+				BackedUp: response.flags.backupState(),
+			}, nil
 		}
 		// Continue iterating, in case two records have the same
 		// credential ID but different keys, and the one that actually

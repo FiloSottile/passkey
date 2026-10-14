@@ -14,15 +14,12 @@
 // # Sessions and recordings
 //
 // A visitor describes their authenticator, then walks through a script of
-// ceremonies: a registration and a few logins, under both of the
-// package's user verification policies (see [passkey.Options]), so that
-// real "preferred" vs "required" divergences show. Every ceremony is
-// verified by the package under both policies, and the whole exchange —
-// the options the package emitted, the response exactly as
-// PublicKeyCredential.toJSON() produced it, or the client's refusal —
-// is appended to the session's recording, which is written to the data
-// directory after every step, so nothing is lost if the visitor stops
-// early. A separate, linked session captures a conditional (automatic)
+// ceremonies: a registration and a few logins. Every ceremony is verified
+// by the package, and the whole exchange — the options the package
+// emitted, the response exactly as PublicKeyCredential.toJSON() produced
+// it, or the client's refusal — is appended to the session's recording,
+// which is written to the data directory after every step, so nothing is
+// lost if the visitor stops early. A separate, linked session captures a conditional (automatic)
 // registration, which needs a password sign-in first.
 //
 // Each session is one file, <time>-<random>.json, in the format of the
@@ -111,9 +108,8 @@ type ceremony struct {
 	// an automatic registration after a password sign-in, or an
 	// autofill login.
 	Conditional bool `json:"conditional,omitempty"`
-	// UserVerification is what the options requested: always "preferred"
-	// for registrations; "required" or "preferred" for logins, by
-	// which policy produced them.
+	// UserVerification is what the options requested: "preferred" for
+	// registrations and "required" for logins.
 	UserVerification string `json:"userVerification"`
 	// UserScoped reports a login begun with LoginOptions.AllowCredentials.
 	UserScoped bool `json:"userScoped,omitempty"`
@@ -132,7 +128,7 @@ type ceremony struct {
 	Properties *properties `json:"properties,omitempty"`
 	// Record is the passkey record a registration produced.
 	Record string `json:"record,omitempty"`
-	// Outcomes are the package's verdicts, under both policies.
+	// Outcomes are the package's verdicts.
 	Outcomes *outcomes `json:"outcomes,omitempty"`
 }
 
@@ -171,11 +167,10 @@ type properties struct {
 	ClientData json.RawMessage `json:"clientData"`
 }
 
-// outcomes are the package's verdicts on a ceremony, under its default
-// policy and with OptionalUserVerification set.
+// outcomes are the package's verdicts on a ceremony, keyed by policy;
+// the package has one.
 type outcomes struct {
-	Default                  outcome `json:"default"`
-	OptionalUserVerification outcome `json:"optionalUserVerification"`
+	Default outcome `json:"default"`
 }
 
 type outcome struct {
@@ -188,9 +183,8 @@ type outcome struct {
 }
 
 type loginResult struct {
-	Matched      int  `json:"matched"`
-	UserVerified bool `json:"userVerified"`
-	BackedUp     bool `json:"backedUp"`
+	Matched  int  `json:"matched"`
+	BackedUp bool `json:"backedUp"`
 }
 
 // The recording license.
@@ -230,34 +224,24 @@ func main() {
 	log.Fatal(http.ListenAndServe(*listen, s.handler()))
 }
 
-// server is the site: two relying parties, one per user verification
-// policy, and the live sessions.
+// server is the site: the relying party and the live sessions.
 type server struct {
 	rpID, origin string
-	// strict is the package's default policy; lax has
-	// OptionalUserVerification set. Options that are the same under both
-	// come from lax, so that a device that skips user verification is
-	// recorded rather than refused; every response is verified under both.
-	strict, lax *passkey.RelyingParty
-	data        string
-	token       string
+	rp           *passkey.RelyingParty
+	data         string
+	token        string
 
 	mu       sync.Mutex
 	sessions map[string]*session
 }
 
 func newServer(rpID, origin, data, token string) (*server, error) {
-	strict, err := passkey.NewRelyingParty(rpID, origin, passkey.Options{})
-	if err != nil {
-		return nil, err
-	}
-	lax, err := passkey.NewRelyingParty(rpID, origin, passkey.Options{OptionalUserVerification: true})
+	rp, err := passkey.NewRelyingParty(rpID, origin, passkey.Options{})
 	if err != nil {
 		return nil, err
 	}
 	return &server{
-		rpID: rpID, origin: origin,
-		strict: strict, lax: lax,
+		rpID: rpID, origin: origin, rp: rp,
 		data: data, token: token,
 		sessions: make(map[string]*session),
 	}, nil
@@ -289,8 +273,6 @@ type session struct {
 type pendingLogin struct {
 	request     []byte
 	options     json.RawMessage
-	rp          *passkey.RelyingParty
-	uv          string
 	scoped      bool
 	conditional bool
 }
@@ -470,8 +452,7 @@ func (s *server) annotate(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, sess.view())
 }
 
-// registrationOptions begins a registration. The options are the same
-// under both policies, so they come from lax; excludeCredentials carries
+// registrationOptions begins a registration; excludeCredentials carries
 // the session's records, as an application's would.
 func (s *server) registrationOptions(w http.ResponseWriter, r *http.Request) {
 	sess := s.session(w, r)
@@ -491,7 +472,7 @@ func (s *server) registrationOptions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user := passkey.User{ID: sess.rec.UserID, Name: sess.rec.UserName}
-	options, err := s.lax.NewRegistration(user, passkey.RegistrationOptions{ExcludeCredentials: sess.records})
+	options, err := s.rp.NewRegistration(user, passkey.RegistrationOptions{ExcludeCredentials: sess.records})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -501,8 +482,7 @@ func (s *server) registrationOptions(w http.ResponseWriter, r *http.Request) {
 }
 
 // registration completes a registration: the response, or the client's
-// refusal, is verified under both policies and appended to the
-// recording.
+// refusal, is verified and appended to the recording.
 func (s *server) registration(w http.ResponseWriter, r *http.Request) {
 	sess := s.session(w, r)
 	if sess == nil {
@@ -536,9 +516,8 @@ func (s *server) registration(w http.ResponseWriter, r *http.Request) {
 	} else {
 		c.Response = req.Response
 		c.Properties = registrationProperties(req.Response)
-		c.Outcomes = &outcomes{}
-		record, err := s.lax.Register(req.Response)
-		c.Outcomes.OptionalUserVerification = registrationOutcome(err)
+		record, err := s.rp.Register(req.Response)
+		c.Outcomes = &outcomes{Default: registrationOutcome(err)}
 		if err == nil {
 			c.Record = record
 			sess.records = append(sess.records, record)
@@ -546,8 +525,6 @@ func (s *server) registration(w http.ResponseWriter, r *http.Request) {
 				sess.conditionalSignIn = false
 			}
 		}
-		_, err = s.strict.Register(req.Response)
-		c.Outcomes.Default = registrationOutcome(err)
 	}
 	sess.rec.Ceremonies = append(sess.rec.Ceremonies, c)
 	if err := sess.save(); err != nil {
@@ -558,29 +535,18 @@ func (s *server) registration(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{"index": len(sess.rec.Ceremonies) - 1, "ceremony": c})
 }
 
-// loginOptions begins a login under the requested policy, unscoped or
-// with the session's records as allowCredentials.
+// loginOptions begins a login, unscoped or with the session's records as
+// allowCredentials.
 func (s *server) loginOptions(w http.ResponseWriter, r *http.Request) {
 	sess := s.session(w, r)
 	if sess == nil {
 		return
 	}
 	var req struct {
-		UserVerification string `json:"userVerification"`
-		UserScoped       bool   `json:"userScoped"`
-		Conditional      bool   `json:"conditional"`
+		UserScoped  bool `json:"userScoped"`
+		Conditional bool `json:"conditional"`
 	}
 	if !readJSON(w, r, &req) {
-		return
-	}
-	var rp *passkey.RelyingParty
-	switch req.UserVerification {
-	case "required":
-		rp = s.strict
-	case "preferred":
-		rp = s.lax
-	default:
-		http.Error(w, `userVerification must be "required" or "preferred"`, http.StatusBadRequest)
 		return
 	}
 	sess.mu.Lock()
@@ -592,9 +558,9 @@ func (s *server) loginOptions(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "register a passkey first", http.StatusBadRequest)
 			return
 		}
-		request, options, err = rp.NewLogin(passkey.LoginOptions{AllowCredentials: sess.records})
+		request, options, err = s.rp.NewLogin(passkey.LoginOptions{AllowCredentials: sess.records})
 	} else {
-		request, options, err = rp.NewLogin(passkey.LoginOptions{})
+		request, options, err = s.rp.NewLogin(passkey.LoginOptions{})
 	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -602,15 +568,15 @@ func (s *server) loginOptions(w http.ResponseWriter, r *http.Request) {
 	}
 	id := passkey.RequestID(request)
 	sess.pending[id] = &pendingLogin{
-		request: request, options: options, rp: rp,
-		uv: req.UserVerification, scoped: req.UserScoped, conditional: req.Conditional,
+		request: request, options: options,
+		scoped: req.UserScoped, conditional: req.Conditional,
 	}
 	writeJSON(w, map[string]any{"requestId": id, "options": json.RawMessage(options)})
 }
 
 // login completes a login: the response, or the client's refusal, is
-// verified under both policies against the session's records and
-// appended to the recording. Requests are single-use.
+// verified against the session's records and appended to the recording.
+// Requests are single-use.
 func (s *server) login(w http.ResponseWriter, r *http.Request) {
 	sess := s.session(w, r)
 	if sess == nil {
@@ -637,7 +603,7 @@ func (s *server) login(w http.ResponseWriter, r *http.Request) {
 		Type:             "login",
 		Time:             time.Now().UTC(),
 		Conditional:      p.conditional,
-		UserVerification: p.uv,
+		UserVerification: "required",
 		UserScoped:       p.scoped,
 		Options:          p.options,
 	}
@@ -650,17 +616,11 @@ func (s *server) login(w http.ResponseWriter, r *http.Request) {
 		response, err := passkey.ParseResponse(req.Response)
 		if err != nil {
 			c.Outcomes.Default = outcome{Error: err.Error()}
-			c.Outcomes.OptionalUserVerification = c.Outcomes.Default
 		} else if response.RequestID() != req.RequestID {
 			c.Outcomes.Default = outcome{Error: "response is for a different request"}
-			c.Outcomes.OptionalUserVerification = c.Outcomes.Default
 		} else {
-			// The options were produced by one policy; the other's
-			// verdict says what it would have made of the assertion.
-			result, err := s.strict.Login(response, p.request, sess.records)
+			result, err := s.rp.Login(response, p.request, sess.records)
 			c.Outcomes.Default = loginOutcome(result, err)
-			result, err = s.lax.Login(response, p.request, sess.records)
-			c.Outcomes.OptionalUserVerification = loginOutcome(result, err)
 		}
 	}
 	sess.rec.Ceremonies = append(sess.rec.Ceremonies, c)
@@ -694,8 +654,7 @@ func (c *ceremony) summary() string {
 		}
 		return "error"
 	}
-	return kind + ": default " + verdict(c.Outcomes.Default) +
-		", optional UV " + verdict(c.Outcomes.OptionalUserVerification)
+	return kind + ": " + verdict(c.Outcomes.Default)
 }
 
 // password is the sign-in form of the conditional registration flow: a
@@ -776,9 +735,8 @@ func loginOutcome(result *passkey.LoginResult, err error) outcome {
 		return outcome{Error: err.Error(), Sentinel: sentinel(err)}
 	}
 	return outcome{OK: true, Result: &loginResult{
-		Matched:      result.Matched,
-		UserVerified: result.UserVerified,
-		BackedUp:     result.BackedUp,
+		Matched:  result.Matched,
+		BackedUp: result.BackedUp,
 	}}
 }
 

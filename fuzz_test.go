@@ -98,21 +98,16 @@ func FuzzParseRecord(f *testing.F) {
 		r, err := parseRecord(s)
 
 		_, aaguidErr := AAGUID(s)
-		_, uvErr := UserVerificationAvailable(s)
 		descriptors := credentialDescriptors([]string{s})
 		if err != nil {
 			if aaguidErr == nil {
 				t.Errorf("parseRecord() = %v, but AAGUID() = %v", err, aaguidErr)
-			}
-			if uvErr == nil {
-				t.Errorf("parseRecord() = %v, but UserVerificationAvailable() = %v", err, uvErr)
 			}
 			if len(descriptors) != 0 {
 				t.Errorf("parseRecord() = %v, but credentialDescriptors() returned %d descriptors",
 					err, len(descriptors))
 			}
 			checkWrapped(t, aaguidErr)
-			checkWrapped(t, uvErr)
 			return
 		}
 		checkRecord(t, s, r)
@@ -248,10 +243,6 @@ func checkRecord(t *testing.T, s string, r *record) {
 
 	if aaguid, err := AAGUID(s); err != nil || aaguid != r.aaguid {
 		t.Errorf("AAGUID() = %x, %v, want %x", aaguid, err, r.aaguid)
-	}
-	uvAvailable := r.flags.userVerified() || r.flags.backupEligible()
-	if available, err := UserVerificationAvailable(s); err != nil || available != uvAvailable {
-		t.Errorf("UserVerificationAvailable() = %v, %v, want %v", available, err, uvAvailable)
 	}
 	descriptors := credentialDescriptors([]string{s})
 	if len(descriptors) != 1 {
@@ -465,7 +456,6 @@ func FuzzLogin(f *testing.F) {
 	// would stop at the expiry check.
 	opts := Options{Timeout: 30 * 24 * time.Hour}
 	c := newFuzzCeremony(f, algES256, opts)
-	optionalUV := newTestRP(f, Options{OptionalUserVerification: true, Timeout: opts.Timeout})
 
 	// A record with the ceremony's credential ID but another key, which
 	// the record scan has to look past.
@@ -494,41 +484,19 @@ func FuzzLogin(f *testing.F) {
 			return
 		}
 		result, err := c.rp.Login(response, request, passkeys)
-		optionalResult, optionalErr := optionalUV.Login(response, request, passkeys)
 		if err != nil {
 			if result != nil {
 				t.Errorf("Login() = %+v with error %v, want nil", result, err)
 			}
 			checkWrapped(t, err)
-			// User verification is the only difference between the two
-			// relying parties: with it optional, Login reports it
-			// instead of requiring it, so a login only the optional one
-			// accepts was rejected for it, and can't have been reliably
-			// verified.
-			if optionalErr != nil {
-				return
-			}
-			if !strings.Contains(err.Error(), "user verification") || optionalResult.UserVerified {
-				t.Errorf("Login() = %v, but with OptionalUserVerification = %+v", err, optionalResult)
-			}
-			result = optionalResult
-		} else {
-			if !result.UserVerified {
-				t.Errorf("Login() = %+v, want reliable user verification", result)
-			}
-			if optionalErr != nil || *optionalResult != *result {
-				t.Errorf("Login() with OptionalUserVerification = %+v, %v, want %+v",
-					optionalResult, optionalErr, result)
-			}
+			return
 		}
 
 		// The signed regions are the ceremony's, because the mutator
-		// cannot produce a signature over anything else.
-		if !bytes.Equal(response.authData, c.authData) && !bytes.Equal(response.authData, unverifiedAuthData) {
+		// cannot produce a signature over anything else; the unverified
+		// authenticator data is signed too, but the policy rejects it.
+		if !bytes.Equal(response.authData, c.authData) {
 			t.Error("Login() accepted mutated authenticator data")
-		}
-		if result.UserVerified != bytes.Equal(response.authData, c.authData) {
-			t.Errorf("Login() reported UserVerified = %v for authenticator data %x", result.UserVerified, response.authData)
 		}
 		if response.clientDataHash != sha256.Sum256(c.clientData) {
 			t.Error("Login() accepted mutated client data")

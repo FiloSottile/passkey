@@ -299,14 +299,7 @@ func newSession() *session {
 	port := listener.Addr().(*net.TCPAddr).Port
 	origin := fmt.Sprintf("http://localhost:%d", port)
 
-	// User verification is optional, so that the ceremonies request it
-	// as "preferred" and the authenticators that clear the UV flag can
-	// be recorded: Register accepts their registrations, and Chrome
-	// returns their assertions, which it would refuse under "required".
-	// The replay verifies the recordings under both policies.
-	rp, err := passkey.NewRelyingParty("localhost", origin, passkey.Options{
-		OptionalUserVerification: true,
-	})
+	rp, err := passkey.NewRelyingParty("localhost", origin, passkey.Options{})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -520,12 +513,18 @@ func (a *authenticator) register() {
 	}
 	// The record is needed to build excludeCredentials and
 	// allowCredentials, so Register has to succeed here as well as at
-	// replay time.
+	// replay time, except for the authenticator that clears the UV
+	// flag, which it refuses: the replay builds that record as an
+	// importer would.
 	record, err := a.s.rp.Register(responseJSON)
-	if err != nil {
+	switch {
+	case err == nil:
+		a.record = record
+	case a.clearsUV() && errors.Is(err, passkey.ErrUserVerificationUnavailable):
+		record = "refused: " + err.Error()
+	default:
 		a.s.fatalf("%s: Register: %v\n%s", a.rec.Name, err, responseJSON)
 	}
-	a.record = record
 
 	var resp struct {
 		RawID    string `json:"rawId"`
@@ -589,6 +588,15 @@ func (a *authenticator) recordLogin(request, optionsJSON []byte, userScoped bool
 	}
 	a.rec.Logins = append(a.rec.Logins, l)
 	log.Printf("%s: login %d recorded", a.rec.Name, len(a.rec.Logins))
+}
+
+// clearsUV reports whether the authenticator is configured to clear the
+// user verification flag in its responses. Chrome applies the override
+// after its own checks, so the assertions come through even though the
+// options request user verification; the replay checks that the package
+// refuses them.
+func (a *authenticator) clearsUV() bool {
+	return a.overrides != nil && a.overrides.IsBadUV
 }
 
 // setBackupState changes the backup state the credential reports.

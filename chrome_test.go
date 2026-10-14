@@ -2,6 +2,7 @@ package passkey
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -60,6 +61,22 @@ const (
 	chromeErrorSignature    = "signature"     // Login fails, without a sentinel
 )
 
+// importedRecord builds the record of a registration response as an
+// importer would, bypassing Register and its policy: the authenticator
+// data and the transports, encoded directly.
+func importedRecord(t testing.TB, responseJSON []byte) string {
+	t.Helper()
+	var resp registrationResponse
+	if err := json.Unmarshal(responseJSON, &resp); err != nil {
+		t.Fatal(err)
+	}
+	ad, err := base64.RawURLEncoding.DecodeString(resp.Response.AuthenticatorData)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return encodeRecord(ad, resp.Response.Transports)
+}
+
 // loadChromeRecordings reads testdata/chrome.json.
 func loadChromeRecordings(t testing.TB) chromeRecordings {
 	t.Helper()
@@ -77,40 +94,28 @@ func loadChromeRecordings(t testing.TB) chromeRecordings {
 // TestChromeRecordings replays the recorded Chrome ceremonies: every
 // registration must produce a record carrying the recorded values, and
 // every login must verify against the user's records, matching its own,
-// unless it was recorded broken. The recordings were made with
-// OptionalUserVerification set, so that responses without user
-// verification could be captured; they are replayed under both policies,
-// with the default one accepting exactly the ceremonies whose flags allow
-// it. Every login is also verified with a stale request, and with its
-// own record deleted, so that the sentinels are reached by a real
-// client's response.
+// unless it was recorded broken. The authenticator that clears the UV
+// flag is refused by Register, so its record is built as an importer
+// would, and its logins must be refused in turn. Every login is also
+// verified with a stale request, and with its own record deleted, so
+// that the sentinels are reached by a real client's response.
 func TestChromeRecordings(t *testing.T) {
 	f := loadChromeRecordings(t)
 	rp := newTestRPFor(t, f.RPID, f.Origin, Options{})
-	optionalUV := newTestRPFor(t, f.RPID, f.Origin, Options{OptionalUserVerification: true})
 
 	var records []string
 	for _, rec := range f.Recordings {
-		record, err := optionalUV.Register(rec.Registration.Response)
-		if err != nil {
+		record, err := rp.Register(rec.Registration.Response)
+		if !rec.UserVerified && !rec.BackupEligible {
+			checkError(t, err, ErrUserVerificationUnavailable, "")
+			record = importedRecord(t, rec.Registration.Response)
+		} else if err != nil {
 			t.Fatalf("%s: Register() = %v, want success", rec.Name, err)
-		}
-		records = append(records, record)
-
-		// The attestation object alone yields the same record.
-		if got, err := optionalUV.Register(attestationObjectOnly(t, rec.Registration.Response)); err != nil || got != record {
+		} else if got, err := rp.Register(attestationObjectOnly(t, rec.Registration.Response)); err != nil || got != record {
+			// The attestation object alone yields the same record.
 			t.Errorf("%s: Register() from attestationObject = %q, %v, want %q", rec.Name, got, err, record)
 		}
-
-		// By default, only registrations with the UV or BE flag are accepted.
-		strict, err := rp.Register(rec.Registration.Response)
-		if rec.UserVerified || rec.BackupEligible {
-			if err != nil || strict != record {
-				t.Errorf("%s: Register() by default = %q, %v, want %q", rec.Name, strict, err, record)
-			}
-		} else {
-			checkError(t, err, ErrUserVerificationUnavailable, "")
-		}
+		records = append(records, record)
 	}
 
 	for i, rec := range f.Recordings {
@@ -168,7 +173,7 @@ func TestChromeRecordings(t *testing.T) {
 
 					switch login.Error {
 					case chromeErrorSignature:
-						_, err := optionalUV.Login(resp, request, records)
+						_, err := rp.Login(resp, request, records)
 						checkError(t, err, nil, "signature verification failed")
 						return
 					case "":
@@ -176,41 +181,32 @@ func TestChromeRecordings(t *testing.T) {
 						t.Fatalf("unknown error reason %q", login.Error)
 					}
 
-					result, err := optionalUV.Login(resp, request, records)
-					if err != nil {
-						t.Fatalf("Login() = %v, want success", err)
-					}
-					// The assertion's UV flag is relied upon only if the
-					// record was registered with UV or BE.
-					want := &LoginResult{
-						Matched:      i,
-						UserVerified: login.UserVerified && (rec.UserVerified || rec.BackupEligible),
-						BackedUp:     login.BackedUp,
-					}
-					if *result != *want {
-						t.Errorf("Login() = %+v, want %+v", result, want)
-					}
-
-					// By default, Login requires reliable user verification:
-					// a record that can't back it is the user's to fix, an
-					// assertion missing the flag despite it is not.
-					strict, err := rp.Login(resp, request, records)
+					// Login requires reliable user verification: a record
+					// that can't back it is the user's to fix, an assertion
+					// missing the flag despite it is not.
+					result, err := rp.Login(resp, request, records)
 					switch {
-					case want.UserVerified:
-						if err != nil || *strict != *want {
-							t.Errorf("Login() by default = %+v, %v, want %+v", strict, err, want)
-						}
-					case rec.UserVerified || rec.BackupEligible:
+					case !rec.UserVerified && !rec.BackupEligible:
+						checkError(t, err, ErrUserVerificationUnavailable, "")
+					case !login.UserVerified:
 						checkError(t, err, nil, "client did not honor")
 					default:
-						checkError(t, err, ErrUserVerificationUnavailable, "")
+						if err != nil {
+							t.Fatalf("Login() = %v, want success", err)
+						}
+						want := &LoginResult{Matched: i, BackedUp: login.BackedUp}
+						if *result != *want {
+							t.Errorf("Login() = %+v, want %+v", result, want)
+						}
 					}
 
-					_, err = optionalUV.Login(resp, stale, records)
+					// The expiry and the record scan come before the
+					// policy, so these sentinels are reached regardless.
+					_, err = rp.Login(resp, stale, records)
 					checkError(t, err, ErrRequestExpired, "")
 
 					// The passkey was deleted from the account.
-					_, err = optionalUV.Login(resp, request, slices.Concat(records[:i], records[i+1:]))
+					_, err = rp.Login(resp, request, slices.Concat(records[:i], records[i+1:]))
 					checkError(t, err, ErrUnknownCredential, "")
 				})
 			}

@@ -111,21 +111,15 @@ footer { color:var(--muted); font-size:.9rem; }
 <button>Create passkey</button>
 <div class="result" hidden></div>
 </li>
-<li class="step" data-step="login-preferred">
+<li class="step" data-step="login">
 <b>Sign in</b>
-<p class="step-desc">A login with user verification <i>preferred</i>. Pick the passkey you just created.</p>
+<p class="step-desc">A login with user verification <i>required</i>. Pick the passkey you just created.</p>
 <button>Sign in</button>
 <div class="result" hidden></div>
 </li>
 <li class="step" data-step="login-scoped">
 <b>Sign in again, with allowCredentials</b>
 <p class="step-desc">The same, but the site names the credential it expects, as it would for a re-authentication prompt in a signed-in session.</p>
-<button>Sign in</button>
-<div class="result" hidden></div>
-</li>
-<li class="step" data-step="login-required">
-<b>Sign in requiring user verification</b>
-<p class="step-desc">A login with user verification <i>required</i>. Your browser may ask you to set up a PIN, or refuse: either is a useful result. Do this one last, as it can change your authenticator.</p>
 <button>Sign in</button>
 <div class="result" hidden></div>
 </li>
@@ -215,17 +209,13 @@ const steps = {
     match: c => c.type === 'registration',
     run: () => register(conditionalFlow()),
   },
-  'login-preferred': {
-    match: c => c.type === 'login' && c.userVerification === 'preferred' && !c.userScoped && !c.conditional,
-    run: () => login({userVerification: 'preferred'}),
+  'login': {
+    match: c => c.type === 'login' && !c.userScoped && !c.conditional,
+    run: () => login(false),
   },
   'login-scoped': {
     match: c => c.type === 'login' && c.userScoped,
-    run: () => login({userVerification: 'preferred', userScoped: true}),
-  },
-  'login-required': {
-    match: c => c.type === 'login' && c.userVerification === 'required' && !c.userScoped,
-    run: () => login({userVerification: 'required'}),
+    run: () => login(true),
   },
   'login-conditional': {
     match: c => c.type === 'login' && c.conditional,
@@ -253,9 +243,9 @@ async function register(conditional) {
   return api(`/api/session/${sid}/registration`, body);
 }
 
-async function login({userVerification, userScoped = false}) {
+async function login(userScoped) {
   disarmAutofill();
-  const {requestId, options} = await api(`/api/session/${sid}/login/options`, {userVerification, userScoped});
+  const {requestId, options} = await api(`/api/session/${sid}/login/options`, {userScoped});
   let body = {requestId};
   try {
     body.response = serialize(await navigator.credentials.get({publicKey: PublicKeyCredential.parseRequestOptionsFromJSON(options)}));
@@ -284,7 +274,7 @@ async function armAutofill(retry = false) {
   const controller = new AbortController();
   autofill = controller;
   autofillDone = false;
-  const {requestId, options} = await api(`/api/session/${sid}/login/options`, {userVerification: 'preferred', conditional: true});
+  const {requestId, options} = await api(`/api/session/${sid}/login/options`, {conditional: true});
   if (autofill !== controller) return; // disarmed meanwhile
   const pending = navigator.credentials.get({
     publicKey: PublicKeyCredential.parseRequestOptionsFromJSON(options),
@@ -318,7 +308,7 @@ const algorithms = {'-7': 'ES256', '-257': 'RS256', '-48': 'ML-DSA-44', '-49': '
 
 function outcomeText(o, login) {
   if (o.ok) {
-    if (login && o.result) return `accepted — UserVerified ${o.result.userVerified}, BackedUp ${o.result.backedUp}`;
+    if (login && o.result) return `accepted — BackedUp ${o.result.backedUp}`;
     return 'accepted';
   }
   return `rejected${o.sentinel ? ` (${o.sentinel})` : ''}: ${o.error}`;
@@ -358,8 +348,7 @@ function render(stepName, index, c) {
     if (p.authenticatorAttachment) dl('attachment', esc(p.authenticatorAttachment));
     const o = c.outcomes || {};
     const login = c.type === 'login';
-    dl('default policy', `<span class="${o.default && o.default.ok ? 'ok' : 'bad'}">${esc(outcomeText(o.default || {}, login))}</span>`);
-    dl('optional UV policy', `<span class="${o.optionalUserVerification && o.optionalUserVerification.ok ? 'ok' : 'bad'}">${esc(outcomeText(o.optionalUserVerification || {}, login))}</span>`);
+    dl('verdict', `<span class="${o.default && o.default.ok ? 'ok' : 'bad'}">${esc(outcomeText(o.default || {}, login))}</span>`);
   }
   box.innerHTML = `${head}<dl>${rows.join('')}</dl>
     <div class="prompt"><input type="text" placeholder="Optional: what did it ask of you? (Touch ID, PIN, a tap, nothing…)" value="${esc(c.prompt || '')}"><button type="button">Save</button></div>`;

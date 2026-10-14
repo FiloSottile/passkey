@@ -325,19 +325,6 @@ func AAGUID(passkey string) ([16]byte, error) {
 	return r.aaguid, nil
 }
 
-// UserVerificationAvailable reports whether the passkey can provide user
-// verification (e.g. PIN or biometrics) that can be relied upon.
-//
-// If false, [RelyingParty.Login] with this record returns
-// [ErrUserVerificationUnavailable] unless [Options.OptionalUserVerification] is set.
-func UserVerificationAvailable(passkey string) (bool, error) {
-	r, err := parseRecord(passkey)
-	if err != nil {
-		return false, err
-	}
-	return userVerificationAvailable(r), nil
-}
-
 func userVerificationAvailable(r *record) bool {
 	// WebAuthn L3, Section 4 (see uvInitialized) insists that the UV
 	// flag can be relied upon only if the credential was previously
@@ -364,10 +351,10 @@ func userVerificationAvailable(r *record) bool {
 	// Backup Eligible credentials, which can't be produced by external
 	// authenticators.
 	//
-	// userVerificationAvailable will rarely be false: Chrome (but not
-	// Safari and Firefox) forces setting up a PIN before storing a
-	// resident credential, and [RelyingParty.Register] refuses to
-	// return such a record without [Options.OptionalUserVerification].
+	// userVerificationAvailable is false only for imported records:
+	// [RelyingParty.Register] refuses to produce one, and rarely has
+	// to, as Chrome (but not Safari and Firefox) forces setting up a
+	// PIN before storing a resident credential.
 	//
 	// See https://go.dev/issue/80663.
 	return r.flags.userVerified() || r.flags.backupEligible()

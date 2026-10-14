@@ -114,22 +114,21 @@ func loadWebAuthnVectors(t testing.TB) webauthnVectorFile {
 // produce records carrying the vector's values, and the assertions,
 // signed by the same credentials, must verify against those records.
 // The vectors were not produced under this package's user verification
-// policy, so they are replayed with OptionalUserVerification set, and
-// the default policy is checked against the flags they carry: Register
-// accepts a registration iff it has the UV or the BE flag, and Login
-// accepts an assertion iff its UV flag is set and backed by the record.
+// policy, which is checked against the flags they carry: Register
+// accepts a registration iff it has the UV or the BE flag (the others
+// are replayed as imported records), and Login accepts an assertion iff
+// its UV flag is set and backed by the record.
 func TestWebAuthnVectors(t *testing.T) {
 	f := loadWebAuthnVectors(t)
 	rp := newTestRPFor(t, f.RPID, f.Origin, Options{})
-	optionalUV := newTestRPFor(t, f.RPID, f.Origin, Options{OptionalUserVerification: true})
 	for _, v := range f.Vectors {
 		t.Run(v.Name, func(t *testing.T) {
-			testWebAuthnVector(t, rp, optionalUV, v)
+			testWebAuthnVector(t, rp, v)
 		})
 	}
 }
 
-func testWebAuthnVector(t *testing.T, rp, optionalUV *RelyingParty, v webauthnVector) {
+func testWebAuthnVector(t *testing.T, rp *RelyingParty, v webauthnVector) {
 	b64 := base64.RawURLEncoding.EncodeToString
 	wantRegisterErr, wantParseErr := webauthnVectorOutcome(v)
 	// Whether the record can back the UV flag of the vector's assertion.
@@ -146,7 +145,7 @@ func testWebAuthnVector(t *testing.T, rp, optionalUV *RelyingParty, v webauthnVe
 		// No credProps output, which is accepted: not every client reports it.
 		"clientExtensionResults": map[string]any{},
 	})
-	record, err := optionalUV.Register(registrationJSON)
+	record, err := rp.Register(registrationJSON)
 	switch {
 	case wantRegisterErr != "":
 		if err == nil {
@@ -158,6 +157,11 @@ func testWebAuthnVector(t *testing.T, rp, optionalUV *RelyingParty, v webauthnVe
 		if wantRegisterErr == unsupportedAlgorithmError && !errors.Is(err, ErrUnsupportedAlgorithm) {
 			t.Errorf("Register() = %v, want errors.Is(err, ErrUnsupportedAlgorithm)", err)
 		}
+	case !reliableUV:
+		checkError(t, err, ErrUserVerificationUnavailable, "")
+		// Built as an importer would, so that the assertion reaches the
+		// policy check.
+		record = encodeRecord(vectorAuthData(t, v), nil)
 	case err != nil:
 		t.Fatalf("Register() = %v, want success", err)
 	default:
@@ -180,14 +184,6 @@ func testWebAuthnVector(t *testing.T, rp, optionalUV *RelyingParty, v webauthnVe
 		}
 		if r.flags.backupEligible() != v.Registration.BackupEligible {
 			t.Errorf("record BE flag = %v, want %v", r.flags.backupEligible(), v.Registration.BackupEligible)
-		}
-		strict, err := rp.Register(registrationJSON)
-		if reliableUV {
-			if err != nil || strict != record {
-				t.Errorf("Register() by default = %q, %v, want %q", strict, err, record)
-			}
-		} else {
-			checkError(t, err, ErrUserVerificationUnavailable, "")
 		}
 	}
 
@@ -240,24 +236,19 @@ func testWebAuthnVector(t *testing.T, rp, optionalUV *RelyingParty, v webauthnVe
 	if resp.RequestID() != RequestID(request) {
 		t.Errorf("Response.RequestID() = %q, want %q", resp.RequestID(), RequestID(request))
 	}
-	result, err := optionalUV.Login(resp, request, []string{record})
-	if err != nil {
-		t.Fatalf("Login() = %v, want success", err)
-	}
-	want := &LoginResult{Matched: 0, UserVerified: v.Authentication.UserVerified && reliableUV,
-		BackedUp: v.Authentication.BackedUp}
-	if *result != *want {
-		t.Errorf("Login() = %+v, want %+v", result, want)
-	}
-	strict, err := rp.Login(resp, request, []string{record})
+	result, err := rp.Login(resp, request, []string{record})
 	switch {
-	case want.UserVerified:
-		if err != nil || *strict != *want {
-			t.Errorf("Login() by default = %+v, %v, want %+v", strict, err, want)
-		}
-	case reliableUV:
+	case !reliableUV:
+		checkError(t, err, ErrUserVerificationUnavailable, "")
+	case !v.Authentication.UserVerified:
 		checkError(t, err, nil, "client did not honor")
 	default:
-		checkError(t, err, ErrUserVerificationUnavailable, "")
+		if err != nil {
+			t.Fatalf("Login() = %v, want success", err)
+		}
+		want := &LoginResult{Matched: 0, BackedUp: v.Authentication.BackedUp}
+		if *result != *want {
+			t.Errorf("Login() = %+v, want %+v", result, want)
+		}
 	}
 }

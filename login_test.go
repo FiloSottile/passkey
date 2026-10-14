@@ -152,9 +152,6 @@ func checkError(t *testing.T, err error, wantIs error, wantHas string) {
 func TestLogin(t *testing.T) {
 	otherChallenge := base64.RawURLEncoding.EncodeToString(bytes.Repeat([]byte{0xCC}, 32))
 	unknownID := bytes.Repeat([]byte{0xEE}, 32)
-	optionalUV := func(t *testing.T) *RelyingParty {
-		return newTestRP(t, Options{OptionalUserVerification: true})
-	}
 	expired := func(env *loginEnv) []byte {
 		return withRequestCreated(env.request, time.Now().Add(-6*time.Minute))
 	}
@@ -364,13 +361,6 @@ func TestLogin(t *testing.T) {
 			},
 			errHas: "client did not honor",
 		},
-		{
-			name: "user verification optional",
-			setup: func(t *testing.T, env *loginEnv) (*RelyingParty, []byte, []byte) {
-				return optionalUV(t), mustJSON(t, env.response(t, flagUP)), env.request
-			},
-			ok: true,
-		},
 
 		// A sentinel must be unreachable when an earlier check fails.
 		{
@@ -465,37 +455,24 @@ func TestLoginNilResponse(t *testing.T) {
 	checkError(t, err, nil, "response is nil")
 }
 
-// TestLoginUserVerification checks the user verification policy. By
-// default, Login requires user verification that can be relied upon:
-// the assertion's UV flag, backed by a record registered with the UV
-// flag (so that user verification was set up by whoever registered the
-// passkey, not by whoever later got hold of the authenticator) or with
-// the BE flag (a synced passkey). With OptionalUserVerification, Login
-// accepts any assertion and reports the same computation as
-// LoginResult.UserVerified. LoginResult.BackedUp is the assertion's BS
-// flag in either mode.
-//
-// UserVerificationAvailable exposes the record side of the policy, so
-// it must agree with Login: by default ErrUserVerificationUnavailable
-// singles out exactly the records it reports false for, and a login
-// is UserVerified exactly when it reports true and the assertion has
-// the UV flag.
+// TestLoginUserVerification checks the user verification policy: Login
+// requires the assertion's UV flag, backed by a record registered with
+// the UV flag (so that user verification was set up by whoever
+// registered the passkey, not by whoever later got hold of the
+// authenticator) or with the BE flag (a synced passkey).
+// ErrUserVerificationUnavailable singles out the records that can't
+// back it, which is what the user can act on. LoginResult.BackedUp is
+// the assertion's BS flag.
 func TestLoginUserVerification(t *testing.T) {
 	rp := newTestRP(t, Options{})
-	optionalUV := newTestRP(t, Options{OptionalUserVerification: true})
 	user := User{ID: "wxJph3ZClFxTP2xF9r2W0A", Name: "user@example.com"}
 	auth := newAuthenticator(t, algES256)
 
 	// The records differ only in their flags. Those with neither UV nor
-	// BE can't come out of Register by default, but can be imported or
-	// registered with OptionalUserVerification set.
+	// BE can't come out of Register, but can be imported, so all of them
+	// are encoded directly.
 	record := func(flags byte) string {
-		t.Helper()
-		record, err := optionalUV.Register(mustJSON(t, auth.registrationResponse(t, testRPID, testOrigin, "AA", flags)))
-		if err != nil {
-			t.Fatal(err)
-		}
-		return record
+		return encodeRecord(auth.authData(testRPID, true, flags), nil)
 	}
 	recNone := record(flagUP)
 	recUV := record(flagUP | flagUV)
@@ -503,92 +480,60 @@ func TestLoginUserVerification(t *testing.T) {
 	recUVBE := record(flagUP | flagUV | flagBE | flagBS)
 
 	tests := []struct {
-		name         string
-		rp           *RelyingParty
-		record       string
-		assertion    byte
-		errIs        error
-		errHas       string
-		userVerified bool
-		backedUp     bool
+		name      string
+		record    string
+		assertion byte
+		errIs     error
+		errHas    string
+		backedUp  bool
 	}{
 		{
-			name: "UV record, UV assertion",
-			rp:   rp, record: recUV, assertion: flagUP | flagUV,
-			userVerified: true,
+			name:   "UV record, UV assertion",
+			record: recUV, assertion: flagUP | flagUV,
 		},
 		{
 			// The client did not honor userVerification: "required":
 			// nothing the user can fix, so no sentinel.
-			name: "UV record, no UV",
-			rp:   rp, record: recUV, assertion: flagUP,
+			name:   "UV record, no UV",
+			record: recUV, assertion: flagUP,
 			errHas: "no user verification flag",
 		},
 		{
 			// A PIN configured after registration, possibly by a thief.
-			name: "unverified record, UV assertion",
-			rp:   rp, record: recNone, assertion: flagUP | flagUV,
+			name:   "unverified record, UV assertion",
+			record: recNone, assertion: flagUP | flagUV,
 			errIs: ErrUserVerificationUnavailable, errHas: "can't be relied upon",
 		},
 		{
 			// The record is what makes this unfixable by the client, so
 			// the user is pointed at it, not at the missing flag.
-			name: "unverified record, no UV",
-			rp:   rp, record: recNone, assertion: flagUP,
+			name:   "unverified record, no UV",
+			record: recNone, assertion: flagUP,
 			errIs: ErrUserVerificationUnavailable, errHas: "neither the UV nor the BE flag",
 		},
 		{
-			name: "synced record, UV assertion",
-			rp:   rp, record: recBE, assertion: flagUP | flagUV | flagBE | flagBS,
-			userVerified: true, backedUp: true,
+			name:   "synced record, UV assertion",
+			record: recBE, assertion: flagUP | flagUV | flagBE | flagBS,
+			backedUp: true,
 		},
 		{
-			name: "synced record, no UV",
-			rp:   rp, record: recBE, assertion: flagUP | flagBE | flagBS,
+			name:   "synced record, no UV",
+			record: recBE, assertion: flagUP | flagBE | flagBS,
 			errHas: "client did not honor",
 		},
 		{
-			name: "UV synced record, UV assertion",
-			rp:   rp, record: recUVBE, assertion: flagUP | flagUV | flagBE | flagBS,
-			userVerified: true, backedUp: true,
-		},
-		{
-			name: "backup eligible but not backed up",
-			rp:   rp, record: recBE, assertion: flagUP | flagUV | flagBE,
-			userVerified: true,
-		},
-
-		{
-			name: "optional, UV record, UV assertion",
-			rp:   optionalUV, record: recUV, assertion: flagUP | flagUV,
-			userVerified: true,
-		},
-		{
-			name: "optional, UV record, no UV",
-			rp:   optionalUV, record: recUV, assertion: flagUP,
-		},
-		{
-			name: "optional, unverified record, UV assertion",
-			rp:   optionalUV, record: recNone, assertion: flagUP | flagUV,
-		},
-		{
-			name: "optional, unverified record, no UV",
-			rp:   optionalUV, record: recNone, assertion: flagUP,
-		},
-		{
-			name: "optional, synced record, UV assertion",
-			rp:   optionalUV, record: recBE, assertion: flagUP | flagUV | flagBE | flagBS,
-			userVerified: true, backedUp: true,
-		},
-		{
-			name: "optional, synced record, no UV",
-			rp:   optionalUV, record: recBE, assertion: flagUP | flagBE | flagBS,
+			name:   "UV synced record, UV assertion",
+			record: recUVBE, assertion: flagUP | flagUV | flagBE | flagBS,
 			backedUp: true,
+		},
+		{
+			name:   "backup eligible but not backed up",
+			record: recBE, assertion: flagUP | flagUV | flagBE,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			request, requestJSON, err := tt.rp.NewLogin(LoginOptions{})
+			request, requestJSON, err := rp.NewLogin(LoginOptions{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -597,14 +542,7 @@ func TestLoginUserVerification(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			result, err := tt.rp.Login(resp, request, []string{tt.record})
-			available, uvErr := UserVerificationAvailable(tt.record)
-			if uvErr != nil {
-				t.Fatal(uvErr)
-			}
-			if tt.rp == rp && errors.Is(err, ErrUserVerificationUnavailable) != !available {
-				t.Errorf("UserVerificationAvailable() = %v, but Login() = %v", available, err)
-			}
+			result, err := rp.Login(resp, request, []string{tt.record})
 			if tt.errIs != nil || tt.errHas != "" {
 				checkError(t, err, tt.errIs, tt.errHas)
 				return
@@ -612,13 +550,9 @@ func TestLoginUserVerification(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Login() = %v, want success", err)
 			}
-			want := &LoginResult{UserVerified: tt.userVerified, BackedUp: tt.backedUp}
+			want := &LoginResult{BackedUp: tt.backedUp}
 			if *result != *want {
 				t.Errorf("Login() = %+v, want %+v", result, want)
-			}
-			if verified := available && tt.assertion&flagUV != 0; result.UserVerified != verified {
-				t.Errorf("UserVerified = %v, but UserVerificationAvailable() = %v with assertion flags %08b",
-					result.UserVerified, available, tt.assertion)
 			}
 		})
 	}
@@ -1124,36 +1058,25 @@ func TestLoginLockouts(t *testing.T) {
 }
 
 // TestNewLoginUserVerification checks that login ceremonies request user
-// verification as "required" by default, so that clients prompt for it
-// rather than return an assertion Login would reject, and as
-// "preferred" with OptionalUserVerification.
+// verification as "required", so that clients prompt for it rather than
+// return an assertion Login would reject.
 func TestNewLoginUserVerification(t *testing.T) {
 	env := newLoginEnv(t)
-	for _, tt := range []struct {
-		optional bool
-		want     string
-	}{
-		{false, "required"},
-		{true, "preferred"},
-	} {
-		rp := newTestRP(t, Options{OptionalUserVerification: tt.optional})
-		_, unscopedJSON, err := rp.NewLogin(LoginOptions{})
-		if err != nil {
+	_, unscopedJSON, err := env.rp.NewLogin(LoginOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, scopedJSON, err := env.rp.NewLogin(LoginOptions{AllowCredentials: env.records})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, optionsJSON := range [][]byte{unscopedJSON, scopedJSON} {
+		var o requestOptions
+		if err := json.Unmarshal(optionsJSON, &o); err != nil {
 			t.Fatal(err)
 		}
-		_, scopedJSON, err := rp.NewLogin(LoginOptions{AllowCredentials: env.records})
-		if err != nil {
-			t.Fatal(err)
-		}
-		for _, optionsJSON := range [][]byte{unscopedJSON, scopedJSON} {
-			var o requestOptions
-			if err := json.Unmarshal(optionsJSON, &o); err != nil {
-				t.Fatal(err)
-			}
-			if o.UserVerification != tt.want {
-				t.Errorf("OptionalUserVerification = %v: userVerification = %q, want %q",
-					tt.optional, o.UserVerification, tt.want)
-			}
+		if o.UserVerification != "required" {
+			t.Errorf("userVerification = %q, want %q", o.UserVerification, "required")
 		}
 	}
 }
