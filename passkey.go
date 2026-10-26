@@ -90,8 +90,9 @@
 // # WebAuthn interface details
 //
 // Registration options request a discoverable credential
-// (residentKey: "required") with user verification "preferred",
-// attestation "none", and the credProps extension.
+// (residentKey: "required") with user verification "required" (or
+// "preferred" with [RegistrationOptions.Conditional]), attestation "none",
+// and the credProps extension.
 //
 // The requested algorithms are, in order of preference, ML-DSA-44, ES256, and RS256.
 //
@@ -111,9 +112,9 @@
 // Register verifies that the client data is well-formed JSON with type
 // "webauthn.create", the expected origin, and crossOrigin absent or false;
 // that the authenticator data carries the hash of the RP ID; and that user
-// verification is set up on the authenticator (see the User verification
-// section below). The challenge is not verified; see the Challenges section
-// above.
+// verification was performed, unless the credential was created conditionally
+// (see the User verification section below). The challenge is not verified;
+// see the Challenges section above.
 //
 // Login options request user verification "required". [RelyingParty.NewLogin]
 // sends an empty allowCredentials list, unless [LoginOptions.AllowCredentials]
@@ -144,17 +145,19 @@
 // Password-less login requires user verification (e.g. PIN or biometrics).
 //
 // The UV flag of an assertion is relied upon only if the matched record has the
-// UV or the BE flag, i.e. if user verification was performed at registration or
-// the credential is a synced passkey. Otherwise, it suggests the credential was
-// stored on an external authenticator without UV set up, and an attacker could
-// have stolen it and set up their own PIN to enable UV. Login fails with
-// [ErrUserVerificationUnavailable] for such a record.
+// UV flag or lacks the UP flag, i.e. if user verification was performed at
+// registration or the credential was created conditionally. Otherwise, it
+// suggests the credential was stored on an external authenticator without UV
+// set up, and an attacker could have stolen it and set up their own PIN to
+// enable UV. Login fails for such a record.
 //
-// Registration options request user verification "preferred", to allow
-// conditional (automatic) passkey creation, but Register fails with
-// [ErrUserVerificationUnavailable] if the response has neither the UV nor the
-// BE flag (likely a security key without a PIN), as the credential could never
-// be used to log in. A record with neither flag can therefore only be imported.
+// Register also fails if the response has the UP flag but not the UV
+// flag, as the credential could never be used to log in. A record with the UP
+// flag but not the UV flag can therefore only be imported.
+//
+// Registration options request user verification "required", except for
+// conditional (automatic) passkey creation. Conditional creation is not offered
+// for security keys, and non-conditional creation always has the UP flag set.
 //
 // [passkey records]: https://c2sp.org/passkey-record
 package passkey

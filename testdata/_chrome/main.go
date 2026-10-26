@@ -65,12 +65,13 @@ type recording struct {
 	Description string `json:"description"`
 	// AAGUID, CredentialID, and Transports are read out of the
 	// registration response (the transports as the record stores them,
-	// sorted and deduplicated), and UserVerified, BackupEligible, and
-	// BackedUp are how the authenticator was configured at
-	// registration, all as expected of the record.
+	// sorted and deduplicated), and UserPresent, UserVerified,
+	// BackupEligible, and BackedUp are how the authenticator was
+	// configured at registration, all as expected of the record.
 	AAGUID         string   `json:"aaguid"`       // hex
 	CredentialID   string   `json:"credentialId"` // hex
 	Transports     []string `json:"transports"`
+	UserPresent    bool     `json:"userPresent"`
 	UserVerified   bool     `json:"userVerified"`
 	BackupEligible bool     `json:"backupEligible"`
 	BackedUp       bool     `json:"backedUp"`
@@ -188,19 +189,39 @@ func main() {
 	a.close()
 
 	// A platform authenticator that can't verify the user: Chrome
-	// creates the discoverable credential anyway, as registration
-	// requests user verification "preferred" (it refuses to on a
-	// security key, see below), but honors "required" at login by
-	// refusing to assert it.
+	// honors user verification "required" by refusing to create a
+	// credential, but creates one with the "preferred" of conditional
+	// options, even if the ceremony is modal. Register refuses it, and
+	// Chrome refuses to assert it with user verification "required".
 	opts = platformAuthenticator()
 	opts.HasUserVerification = false
 	opts.IsUserVerified = false
 	a = s.addAuthenticator("no-user-verification",
-		"A CTAP2.1 platform authenticator without user verification: "+
+		"A CTAP2.1 platform authenticator without user verification, "+
+			"registered with conditional options in a modal ceremony: "+
 			"Chrome creates the credential, but refuses to assert it "+
 			"with user verification required, so there are no logins.", opts)
-	a.register()
+	a.expectCreateRefused("a registration on an authenticator without user verification",
+		"NotAllowedError", nil)
+	a.registerWithOptions(passkey.RegistrationOptions{Conditional: true})
 	a.expectGetRefused("a login on an authenticator without user verification", "NotAllowedError")
+	a.close()
+
+	// A conditional creation, which Chrome performs only after a password
+	// sign-in it mediated, so its responses are simulated by clearing the
+	// user presence and verification flags at registration.
+	opts = platformAuthenticator()
+	opts.DefaultBackupEligibility = true
+	opts.DefaultBackupState = true
+	a = s.addAuthenticator("conditional",
+		"A CTAP2.1 platform authenticator whose credentials are backup "+
+			"eligible and backed up, that clears the user presence and "+
+			"user verification flags at registration, as in a conditional "+
+			"creation, then verifies the user in its assertions.", opts)
+	a.setOverrides(overrides{badUP: true, badUV: true})
+	a.registerWithOptions(passkey.RegistrationOptions{Conditional: true})
+	a.setOverrides(overrides{})
+	a.login()
 	a.close()
 
 	// Responses altered by the response override bits of the DevTools
@@ -552,11 +573,11 @@ func exceptionName(err error) string {
 	return name
 }
 
-// create runs a registration ceremony in the tab, excluding the given
-// passkeys, and returns the creation options along with the serialized
+// create runs a modal registration ceremony in the tab, with the given
+// options, and returns the creation options along with the serialized
 // response, exactly as PublicKeyCredential.toJSON() produced it.
-func (a *authenticator) create(passkeys []string) (optionsJSON, responseJSON []byte, err error) {
-	optionsJSON, err = a.s.rp.NewRegistration(a.s.user, passkey.RegistrationOptions{ExcludeCredentials: passkeys})
+func (a *authenticator) create(opts passkey.RegistrationOptions) (optionsJSON, responseJSON []byte, err error) {
+	optionsJSON, err = a.s.rp.NewRegistration(a.s.user, opts)
 	if err != nil {
 		a.s.fatalf("%v", err)
 	}
@@ -571,7 +592,7 @@ func (a *authenticator) create(passkeys []string) (optionsJSON, responseJSON []b
 // expectCreateRefused runs a registration ceremony that the client must
 // refuse with the named exception, and logs the refusal.
 func (a *authenticator) expectCreateRefused(what, wantName string, passkeys []string) {
-	_, _, err := a.create(passkeys)
+	_, _, err := a.create(passkey.RegistrationOptions{ExcludeCredentials: passkeys})
 	if err == nil {
 		a.s.fatalf("%s succeeded, want %s", what, wantName)
 	}
@@ -612,18 +633,26 @@ func (a *authenticator) get(optionsJSON []byte) ([]byte, error) {
 
 // register registers a credential and records the exchange.
 func (a *authenticator) register() {
-	optionsJSON, responseJSON, err := a.create(nil)
+	a.registerWithOptions(passkey.RegistrationOptions{})
+}
+
+// registerWithOptions registers a credential with the given options and
+// records the exchange.
+func (a *authenticator) registerWithOptions(opts passkey.RegistrationOptions) {
+	optionsJSON, responseJSON, err := a.create(opts)
 	if err != nil {
 		a.s.fatalf("%s: registration: %v", a.rec.Name, err)
 	}
+	a.rec.UserPresent = !a.overrides.badUP
 	a.rec.UserVerified = a.verifiesUser()
 	// The record is needed to build excludeCredentials and
 	// allowCredentials, so Register has to succeed here as well as at
-	// replay time. The exception is a response without the UV flag,
-	// which Register refuses: the replay builds its record as an
-	// importer would, and checks that its logins are refused too.
+	// replay time. The exception is a response with the UP flag but not
+	// the UV flag, which Register refuses: the replay builds its record
+	// as an importer would, and checks that its logins are refused too.
 	a.record, err = a.s.rp.Register(responseJSON)
-	if err != nil && !(!a.verifiesUser() && errors.Is(err, passkey.ErrUserVerificationUnavailable)) {
+	unverified := a.rec.UserPresent && !a.rec.UserVerified
+	if err != nil && !(unverified && strings.Contains(err.Error(), "UP flag but not the UV flag")) {
 		a.s.fatalf("%s: Register: %v\n%s", a.rec.Name, err, responseJSON)
 	}
 

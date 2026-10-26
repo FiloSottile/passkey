@@ -109,7 +109,7 @@ func impostorResponse(t *testing.T, env *loginEnv) []byte {
 	return mustJSON(t, impostor.loginResponse(t, testRPID, testOrigin, env.challenge, env.user.ID, flagUP|flagUV))
 }
 
-var sentinelErrors = []error{ErrRequestExpired, ErrUnknownCredential, ErrUserVerificationUnavailable, ErrUnsupportedAlgorithm}
+var sentinelErrors = []error{ErrRequestExpired, ErrUnknownCredential, ErrUnsupportedAlgorithm}
 
 // checkWrapped asserts that err is not a bare sentinel: they are
 // documented as always wrapped.
@@ -459,25 +459,25 @@ func TestLoginNilResponse(t *testing.T) {
 // requires the assertion's UV flag, backed by a record registered with
 // the UV flag (so that user verification was set up by whoever
 // registered the passkey, not by whoever later got hold of the
-// authenticator) or with the BE flag (a synced passkey).
-// ErrUserVerificationUnavailable singles out the records that can't
-// back it, which is what the user can act on. LoginResult.BackedUp is
-// the assertion's BS flag.
+// authenticator) or without the UP flag (a conditional creation). The BE
+// flag makes no difference, and the record is checked before the
+// assertion. LoginResult.BackedUp is the assertion's BS flag.
 func TestLoginUserVerification(t *testing.T) {
 	rp := newTestRP(t, Options{})
 	user := User{ID: "wxJph3ZClFxTP2xF9r2W0A", Name: "user@example.com"}
 	auth := newAuthenticator(t, algES256)
 
-	// The records differ only in their flags. Those with neither UV nor
-	// BE can't come out of Register, but can be imported, so all of them
-	// are encoded directly.
+	// The records differ only in their flags. Those with UP but not UV
+	// can't come out of Register, but can be imported, so all of them are
+	// encoded directly.
 	record := func(flags byte) string {
 		return encodeRecord(auth.authData(testRPID, true, flags), nil)
 	}
 	recNone := record(flagUP)
+	recBE := record(flagUP | flagBE | flagBS)
 	recUV := record(flagUP | flagUV)
-	recBE := record(flagUP | flagBE)
 	recUVBE := record(flagUP | flagUV | flagBE | flagBS)
+	recConditional := record(flagBE | flagBS)
 
 	tests := []struct {
 		name      string
@@ -492,8 +492,7 @@ func TestLoginUserVerification(t *testing.T) {
 			record: recUV, assertion: flagUP | flagUV,
 		},
 		{
-			// The client did not honor userVerification: "required":
-			// nothing the user can fix, so no sentinel.
+			// The client did not honor userVerification: "required".
 			name:   "UV record, no UV",
 			record: recUV, assertion: flagUP,
 			errHas: "no user verification flag",
@@ -502,23 +501,26 @@ func TestLoginUserVerification(t *testing.T) {
 			// A PIN configured after registration, possibly by a thief.
 			name:   "unverified record, UV assertion",
 			record: recNone, assertion: flagUP | flagUV,
-			errIs: ErrUserVerificationUnavailable, errHas: "can't be relied upon",
+			errHas: "can't be relied upon",
 		},
 		{
-			// The record is what makes this unfixable by the client, so
-			// the user is pointed at it, not at the missing flag.
 			name:   "unverified record, no UV",
 			record: recNone, assertion: flagUP,
-			errIs: ErrUserVerificationUnavailable, errHas: "neither the UV nor the BE flag",
+			errHas: "UP flag but not the UV flag",
 		},
 		{
-			name:   "synced record, UV assertion",
+			name:   "unverified synced record, UV assertion",
 			record: recBE, assertion: flagUP | flagUV | flagBE | flagBS,
+			errHas: "can't be relied upon",
+		},
+		{
+			name:   "conditional record, UV assertion",
+			record: recConditional, assertion: flagUP | flagUV | flagBE | flagBS,
 			backedUp: true,
 		},
 		{
-			name:   "synced record, no UV",
-			record: recBE, assertion: flagUP | flagBE | flagBS,
+			name:   "conditional record, no UV",
+			record: recConditional, assertion: flagUP | flagBE | flagBS,
 			errHas: "client did not honor",
 		},
 		{
@@ -528,7 +530,7 @@ func TestLoginUserVerification(t *testing.T) {
 		},
 		{
 			name:   "backup eligible but not backed up",
-			record: recBE, assertion: flagUP | flagUV | flagBE,
+			record: recUVBE, assertion: flagUP | flagUV | flagBE,
 		},
 	}
 	for _, tt := range tests {

@@ -40,14 +40,15 @@ func testE2E(t *testing.T, alg int32) {
 	}
 	user := User{ID: "wxJph3ZClFxTP2xF9r2W0A", Name: "user@example.com"}
 
-	// Register a first passkey, from a backed-up credential.
+	// Register a first passkey, created conditionally (without user
+	// presence or verification) from a backed-up credential.
 	auth1 := newAuthenticator(t, alg)
-	optionsJSON, err := rp.NewRegistration(user, RegistrationOptions{})
+	optionsJSON, err := rp.NewRegistration(user, RegistrationOptions{Conditional: true})
 	if err != nil {
 		t.Fatal(err)
 	}
 	rec1, err := rp.Register(mustJSON(t, auth1.registrationResponse(t, testRPID, testOrigin,
-		challengeOf(t, optionsJSON), flagUP|flagUV|flagBE|flagBS)))
+		challengeOf(t, optionsJSON), flagBE|flagBS)))
 	if err != nil {
 		t.Fatal(err)
 	}

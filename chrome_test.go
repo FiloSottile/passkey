@@ -31,6 +31,7 @@ type chromeRecording struct {
 	AAGUID         hexBytes `json:"aaguid"`
 	CredentialID   hexBytes `json:"credentialId"`
 	Transports     []string `json:"transports"`
+	UserPresent    bool     `json:"userPresent"`
 	UserVerified   bool     `json:"userVerified"`
 	BackupEligible bool     `json:"backupEligible"`
 	BackedUp       bool     `json:"backedUp"`
@@ -95,11 +96,11 @@ func loadChromeRecordings(t testing.TB) chromeRecordings {
 // TestChromeRecordings replays the recorded Chrome ceremonies: every
 // registration must produce a record carrying the recorded values, and
 // every login must verify against the user's records, matching its own,
-// unless it was recorded broken. The authenticator that clears the UV
-// flag is refused by Register, so its record is built as an importer
-// would, and its logins must be refused in turn. Every login is also
-// verified with a stale request, and with its own record deleted, so
-// that the sentinels are reached by a real client's response.
+// unless it was recorded broken. Registrations with the UP flag but not
+// the UV flag are refused by Register, so their records are built as an
+// importer would, and their logins must be refused in turn. Every login
+// is also verified with a stale request, and with its own record
+// deleted, so that the sentinels are reached by a real client's response.
 func TestChromeRecordings(t *testing.T) {
 	f := loadChromeRecordings(t)
 	rp := newTestRPFor(t, f.RPID, f.Origin, Options{})
@@ -107,8 +108,8 @@ func TestChromeRecordings(t *testing.T) {
 	var records []string
 	for _, rec := range f.Recordings {
 		record, err := rp.Register(rec.Registration.Response)
-		if !rec.UserVerified && !rec.BackupEligible {
-			checkError(t, err, ErrUserVerificationUnavailable, "")
+		if rec.UserPresent && !rec.UserVerified {
+			checkError(t, err, nil, "UP flag but not the UV flag")
 			record = importedRecord(t, rec.Registration.Response)
 		} else if err != nil {
 			t.Fatalf("%s: Register() = %v, want success", rec.Name, err)
@@ -134,6 +135,9 @@ func TestChromeRecordings(t *testing.T) {
 			}
 			if !bytes.Equal(r.credentialID, rec.CredentialID) {
 				t.Errorf("credentialID = %x, want %x", r.credentialID, rec.CredentialID)
+			}
+			if r.flags.userPresent() != rec.UserPresent {
+				t.Errorf("record UP flag = %v, want %v", r.flags.userPresent(), rec.UserPresent)
 			}
 			if r.flags.userVerified() != rec.UserVerified {
 				t.Errorf("record UV flag = %v, want %v", r.flags.userVerified(), rec.UserVerified)
@@ -186,13 +190,12 @@ func TestChromeRecordings(t *testing.T) {
 						t.Fatalf("unknown error reason %q", login.Error)
 					}
 
-					// Login requires reliable user verification: a record
-					// that can't back it is the user's to fix, an assertion
-					// missing the flag despite it is not.
+					// Login requires reliable user verification: the record
+					// is checked before the assertion.
 					result, err := rp.Login(resp, request, records)
 					switch {
-					case !rec.UserVerified && !rec.BackupEligible:
-						checkError(t, err, ErrUserVerificationUnavailable, "")
+					case rec.UserPresent && !rec.UserVerified:
+						checkError(t, err, nil, "UP flag but not the UV flag")
 					case !login.UserVerified:
 						checkError(t, err, nil, "client did not honor")
 					default:

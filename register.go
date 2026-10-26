@@ -77,6 +77,11 @@ type RegistrationOptions struct {
 	// the user won't end up with duplicate passkeys on the same
 	// authenticator.
 	ExcludeCredentials []string
+
+	// Conditional must be set if and only if the options will be passed to
+	// navigator.credentials.create() with mediation: "conditional", to
+	// create a passkey automatically (e.g. after a password sign-in).
+	Conditional bool
 }
 
 // NewRegistration begins the registration of a new passkey for user.
@@ -87,7 +92,8 @@ type RegistrationOptions struct {
 //  2. passed to PublicKeyCredential.parseCreationOptionsFromJSON(), and then
 //  3. passed to navigator.credentials.create() as the publicKey field.
 //
-// It can be used both for modal and for conditional UI flows.
+// The mediation parameter of navigator.credentials.create() must not be set
+// to "conditional" unless [RegistrationOptions.Conditional] is set.
 //
 // Registration is stateless for the server: there is no request value
 // to store, and the response is verified by [RelyingParty.Register].
@@ -118,9 +124,11 @@ func (rp *RelyingParty) NewRegistration(user User, opts RegistrationOptions) (op
 	o.ExcludeCredentials = exclude
 	o.AuthenticatorSelection.ResidentKey = "required"
 	o.AuthenticatorSelection.RequireResidentKey = true
-	// Always "preferred" to allow conditional registration.
 	// See [userVerificationAvailable] and the "User verification" section.
-	o.AuthenticatorSelection.UserVerification = "preferred"
+	o.AuthenticatorSelection.UserVerification = "required"
+	if opts.Conditional {
+		o.AuthenticatorSelection.UserVerification = "preferred"
+	}
 	o.Attestation = "none"
 	o.Extensions.CredProps = true
 	o.Timeout = rp.timeout.Milliseconds()
@@ -237,11 +245,12 @@ func (rp *RelyingParty) Register(responseJSON []byte) (passkey string, err error
 	if cp := resp.ClientExtensionResults.CredProps; cp != nil && cp.RK != nil && !*cp.RK {
 		return "", errors.New("passkey: client reports the credential is not discoverable")
 	}
-	// A record with neither UV nor BE would fail to log in.
+	// A record with UP but not UV would fail to log in.
 	// See [userVerificationAvailable] and the "User verification" section.
 	if !userVerificationAvailable(r) {
-		return "", fmt.Errorf("%w: response has neither the UV nor the BE flag "+
-			"(likely to be a security key without PIN)", ErrUserVerificationUnavailable)
+		return "", errors.New("passkey: response has the UP flag but not the UV flag: " +
+			"the client did not honor the required user verification, or " +
+			`Conditional options were used without mediation: "conditional"`)
 	}
 
 	return encodeRecord(ad, resp.Response.Transports), nil

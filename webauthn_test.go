@@ -115,9 +115,9 @@ func loadWebAuthnVectors(t testing.TB) webauthnVectorFile {
 // signed by the same credentials, must verify against those records.
 // The vectors were not produced under this package's user verification
 // policy, which is checked against the flags they carry: Register
-// accepts a registration iff it has the UV or the BE flag (the others
-// are replayed as imported records), and Login accepts an assertion iff
-// its UV flag is set and backed by the record.
+// accepts a registration iff it has the UV flag or lacks the UP flag (the
+// others are replayed as imported records), and Login accepts an
+// assertion iff its UV flag is set and backed by the record.
 func TestWebAuthnVectors(t *testing.T) {
 	f := loadWebAuthnVectors(t)
 	rp := newTestRPFor(t, f.RPID, f.Origin, Options{})
@@ -132,7 +132,10 @@ func testWebAuthnVector(t *testing.T, rp *RelyingParty, v webauthnVector) {
 	b64 := base64.RawURLEncoding.EncodeToString
 	wantRegisterErr, wantParseErr := webauthnVectorOutcome(v)
 	// Whether the record can back the UV flag of the vector's assertion.
-	reliableUV := v.Registration.UserVerified || v.Registration.BackupEligible
+	// The vectors don't list the UP flag, so it's read from the
+	// authenticator data, after the RP ID hash.
+	userPresent := vectorAuthData(t, v)[32]&flagUP != 0
+	reliableUV := v.Registration.UserVerified || !userPresent
 
 	registrationJSON := mustJSON(t, map[string]any{
 		"id":    b64(v.CredentialID),
@@ -158,7 +161,7 @@ func testWebAuthnVector(t *testing.T, rp *RelyingParty, v webauthnVector) {
 			t.Errorf("Register() = %v, want errors.Is(err, ErrUnsupportedAlgorithm)", err)
 		}
 	case !reliableUV:
-		checkError(t, err, ErrUserVerificationUnavailable, "")
+		checkError(t, err, nil, "UP flag but not the UV flag")
 		// Built as an importer would, so that the assertion reaches the
 		// policy check.
 		record = encodeRecord(vectorAuthData(t, v), nil)
@@ -239,7 +242,7 @@ func testWebAuthnVector(t *testing.T, rp *RelyingParty, v webauthnVector) {
 	result, err := rp.Login(resp, request, []string{record})
 	switch {
 	case !reliableUV:
-		checkError(t, err, ErrUserVerificationUnavailable, "")
+		checkError(t, err, nil, "UP flag but not the UV flag")
 	case !v.Authentication.UserVerified:
 		checkError(t, err, nil, "client did not honor")
 	default:

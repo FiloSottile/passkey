@@ -109,7 +109,7 @@ type ceremony struct {
 	// autofill login.
 	Conditional bool `json:"conditional,omitempty"`
 	// UserVerification is what the options requested: "preferred" for
-	// registrations and "required" for logins.
+	// conditional registrations and "required" otherwise.
 	UserVerification string `json:"userVerification"`
 	// UserScoped reports a login begun with LoginOptions.AllowCredentials.
 	UserScoped bool `json:"userScoped,omitempty"`
@@ -472,7 +472,10 @@ func (s *server) registrationOptions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user := passkey.User{ID: sess.rec.UserID, Name: sess.rec.UserName}
-	options, err := s.rp.NewRegistration(user, passkey.RegistrationOptions{ExcludeCredentials: sess.records})
+	options, err := s.rp.NewRegistration(user, passkey.RegistrationOptions{
+		ExcludeCredentials: sess.records,
+		Conditional:        req.Conditional,
+	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -508,8 +511,11 @@ func (s *server) registration(w http.ResponseWriter, r *http.Request) {
 		Type:             "registration",
 		Time:             time.Now().UTC(),
 		Conditional:      p.conditional,
-		UserVerification: "preferred",
+		UserVerification: "required",
 		Options:          p.options,
+	}
+	if p.conditional {
+		c.UserVerification = "preferred"
 	}
 	if req.ClientError != nil || len(req.Response) == 0 {
 		c.ClientError = clipError(req.ClientError)
@@ -742,8 +748,6 @@ func loginOutcome(result *passkey.LoginResult, err error) outcome {
 
 func sentinel(err error) string {
 	switch {
-	case errors.Is(err, passkey.ErrUserVerificationUnavailable):
-		return "user-verification-unavailable"
 	case errors.Is(err, passkey.ErrUnknownCredential):
 		return "unknown-credential"
 	case errors.Is(err, passkey.ErrRequestExpired):

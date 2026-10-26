@@ -340,24 +340,26 @@ func userVerificationAvailable(r *record) bool {
 	// (certain) logins, and 2. it defeats the point of UV-less
 	// conditional registration. (If a UV+password login is required to
 	// "upgrade" the record to a passwordless credential, then you might
-	// as well just require UV at registration.)
+	// as well just forgo conditional registration.)
 	//
 	// Ideally, a credProps field would be introduced to communicate
 	// what actually matters for security: whether the authenticator has
 	// UV *set up*, not whether UV was obtained during registration.
 	//
-	// In the meantime, since the attack scenario only affects external
-	// authenticators (security keys), we relax the requirement for
-	// Backup Eligible credentials, which can't be produced by external
-	// authenticators.
+	// In the meantime, we can trust UV for credentials generated with
+	// conditional registration (which is not supported by external
+	// authenticators), and we can reliably detect them: conditional
+	// creation is the only one that can omit the UP flag (Section 6.3.2,
+	// requireUserPresence).
 	//
 	// userVerificationAvailable is false only for imported records:
-	// [RelyingParty.Register] refuses to produce one, and rarely has
-	// to, as Chrome (but not Safari and Firefox) forces setting up a
-	// PIN before storing a resident credential.
+	// [RelyingParty.Register] refuses to produce one, and should only
+	// encounter one if an application uses conditional options in a
+	// non-conditional registration by mistake, because our regular
+	// options require UV at registration.
 	//
 	// See https://go.dev/issue/80663.
-	return r.flags.userVerified() || r.flags.backupEligible()
+	return r.flags.userVerified() || !r.flags.userPresent()
 }
 
 // credentialDescriptor is the client-side description of a credential, used

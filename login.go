@@ -94,23 +94,6 @@ var ErrRequestExpired = errors.New("passkey: login request expired")
 // It is always wrapped, so callers must use [errors.Is].
 var ErrUnknownCredential = errors.New("passkey: credential not registered for this user")
 
-// ErrUserVerificationUnavailable is returned by [RelyingParty.Register] and
-// [RelyingParty.Login] when the response is valid, but the passkey can't
-// provide user verification (e.g. PIN or biometrics) that can be relied upon.
-//
-// If returned by Register, the authenticator is likely a security key without a
-// PIN. It can be surfaced to the user as "this passkey can't verify it's you",
-// suggesting they configure a PIN on their security key or use a different
-// passkey authenticator.
-//
-// If returned by Login, the matched record can't provide reliable user
-// verification. (This can only happen for imported records.) It requires
-// replacing the passkey with a new registration, potentially after the user has
-// configured a PIN on their security key.
-//
-// It is always wrapped, so callers must use [errors.Is].
-var ErrUserVerificationUnavailable = errors.New("passkey: user verification unavailable")
-
 // LoginResult is returned by [RelyingParty.Login] on a successful login.
 //
 // Unlike the [Response] methods, which return attacker-controlled
@@ -141,10 +124,6 @@ type LoginResult struct {
 //     credential the server no longer (or never) had a record of, for
 //     example one deleted from account settings but still present in the
 //     user's passkey provider.
-//
-//   - If the response is valid but the matched record suggests user
-//     verification can't be relied upon, Login returns
-//     [ErrUserVerificationUnavailable].
 //
 //   - If the response is valid but the request is older than
 //     [Options.Timeout], Login returns [ErrRequestExpired]: the
@@ -195,8 +174,8 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
 				return nil, fmt.Errorf("%w: request created at %v", ErrRequestExpired, req.created)
 			}
 			if !userVerificationAvailable(r) {
-				return nil, fmt.Errorf("%w: the matched record has neither the UV nor the BE flag, "+
-					"so user verification can't be relied upon", ErrUserVerificationUnavailable)
+				return nil, errors.New("passkey: the matched record has the UP flag but not the UV flag, " +
+					"so user verification can't be relied upon")
 			}
 			if !response.flags.userVerified() {
 				return nil, errors.New("passkey: assertion has no user verification flag: " +

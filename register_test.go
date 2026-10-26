@@ -159,8 +159,7 @@ func TestRegister(t *testing.T) {
 			resp: func(t *testing.T, a *authenticator) []byte {
 				return regJSON(t, a, flagUP)
 			},
-			errIs:  ErrUserVerificationUnavailable,
-			errHas: "neither the UV nor the BE flag",
+			errHas: "UP flag but not the UV flag",
 		},
 		{
 			name: "authenticator data encoding",
@@ -332,7 +331,7 @@ func TestRegister(t *testing.T) {
 		{
 			name: "backup eligible and backed up",
 			resp: func(t *testing.T, a *authenticator) []byte {
-				return regJSON(t, a, flagUP|flagBE|flagBS)
+				return regJSON(t, a, flagUP|flagUV|flagBE|flagBS)
 			},
 			ok: true,
 		},
@@ -544,9 +543,10 @@ func TestRegister(t *testing.T) {
 }
 
 // TestRegisterUserVerification checks the registration-time user
-// verification policy: Register requires the UV or the BE flag, so that
-// the record can back the UV flag of future assertions and the
-// credential is able to log in.
+// verification policy: Register requires the UV flag, unless the UP flag
+// is also missing (a conditional creation), so that the record can back
+// the UV flag of future assertions and the credential is able to log in.
+// The BE flag makes no difference.
 func TestRegisterUserVerification(t *testing.T) {
 	rp := newTestRP(t, Options{})
 	tests := []struct {
@@ -554,22 +554,22 @@ func TestRegisterUserVerification(t *testing.T) {
 		flags byte
 		ok    bool
 	}{
-		{"neither", flagUP, false},
-		{"UV", flagUP | flagUV, true},
-		{"BE", flagUP | flagBE, true},
-		{"BE and BS", flagUP | flagBE | flagBS, true},
-		{"UV and BE", flagUP | flagUV | flagBE | flagBS, true},
-		// Conditional creation, without a prompt: only synced passkeys
-		// are accepted.
-		{"neither without UP", 0, false},
-		{"BE without UP", flagBE | flagBS, true},
+		{"UP", flagUP, false},
+		{"UP and UV", flagUP | flagUV, true},
+		{"UP and BE", flagUP | flagBE, false},
+		{"UP, BE, and BS", flagUP | flagBE | flagBS, false},
+		{"UP, UV, and BE", flagUP | flagUV | flagBE | flagBS, true},
+		// Conditional creation, without a prompt.
+		{"none", 0, true},
+		{"UV", flagUV, true},
+		{"BE and BS", flagBE | flagBS, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			a := newAuthenticator(t, algES256)
 			record, err := rp.Register(regJSON(t, a, tt.flags))
 			if !tt.ok {
-				checkError(t, err, ErrUserVerificationUnavailable, "")
+				checkError(t, err, nil, "UP flag but not the UV flag")
 				return
 			}
 			if err != nil {
@@ -655,8 +655,9 @@ func TestRegisterTransports(t *testing.T) {
 // from excludeCredentials rather than failing the ceremony, the
 // challenge is 32 random bytes fresh for every registration (unverified,
 // but some clients enforce a minimum length), and user verification is
-// requested as "preferred", so that synced passkeys can be created
-// without a prompt (Register enforces the policy on the response).
+// requested as "required", or as "preferred" for conditional creation,
+// which clients refuse if it is required but can't be performed without
+// a prompt (Register enforces the policy on the response).
 func TestNewRegistration(t *testing.T) {
 	rp := newTestRP(t, Options{})
 	valid := User{ID: "user-id", Name: "user@example.com"}
@@ -669,11 +670,26 @@ func TestNewRegistration(t *testing.T) {
 	if err := json.Unmarshal(creationJSON, &o); err != nil {
 		t.Fatal(err)
 	}
-	if got := o.AuthenticatorSelection.UserVerification; got != "preferred" {
-		t.Errorf("userVerification = %q, want %q", got, "preferred")
+	if got := o.AuthenticatorSelection.UserVerification; got != "required" {
+		t.Errorf("userVerification = %q, want %q", got, "required")
 	}
 	if o.AuthenticatorSelection.ResidentKey != "required" || !o.AuthenticatorSelection.RequireResidentKey {
 		t.Errorf("authenticatorSelection = %+v, want a required resident key", o.AuthenticatorSelection)
+	}
+
+	creationJSON, err = rp.NewRegistration(valid, RegistrationOptions{Conditional: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var conditional creationOptions
+	if err := json.Unmarshal(creationJSON, &conditional); err != nil {
+		t.Fatal(err)
+	}
+	if got := conditional.AuthenticatorSelection.UserVerification; got != "preferred" {
+		t.Errorf("conditional userVerification = %q, want %q", got, "preferred")
+	}
+	if conditional.AuthenticatorSelection.ResidentKey != "required" || !conditional.AuthenticatorSelection.RequireResidentKey {
+		t.Errorf("conditional authenticatorSelection = %+v, want a required resident key", conditional.AuthenticatorSelection)
 	}
 
 	creationJSON, err = rp.NewRegistration(valid, RegistrationOptions{ExcludeCredentials: []string{"not a passkey record"}})

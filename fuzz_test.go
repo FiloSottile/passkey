@@ -178,8 +178,8 @@ func FuzzRegister(f *testing.F) {
 		if r.rpIDHash != sha256.Sum256([]byte(testRPID)) {
 			t.Error("Register() produced a record for a different RP ID")
 		}
-		if !r.flags.userVerified() && !r.flags.backupEligible() {
-			t.Error("Register() produced a record with neither the UV nor the BE flag")
+		if r.flags.userPresent() && !r.flags.userVerified() {
+			t.Error("Register() produced a record with the UP flag but not the UV flag")
 		}
 		checkRecord(t, s, r)
 	})
