@@ -61,24 +61,22 @@
 // [RelyingParty.NewLogin] returns an opaque request value that must be
 // presented back to [RelyingParty.Login].
 //
-// The application must:
-//
-//   - store the request, either server-side (in memory or in a KV
-//     store, keyed by [RequestID]) or client-side in a cookie;
-//   - if possible, delete it after use, so that each request is
-//     accepted at most once (client-side storage can't enforce this:
-//     an attacker who captured both request and response can replay
-//     the login until the request expires); and
-//   - protect its integrity if stored client-side (e.g. with an
-//     authenticated cookie), as a forged request could defeat
-//     challenge freshness.
+// The application must store the request (e.g. in memory or in a KV store,
+// keyed by [RequestID]) and, if possible, delete it after use, so that each
+// request is accepted at most once.
 //
 // Requests expire [Options.Timeout] after creation (which [RequestCreation]
 // returns), and the application can use the same window as the lifetime of
-// stored requests (e.g. as the KV TTL or cookie Max-Age).
+// stored requests (e.g. as the KV TTL).
 //
 // Request values don't need to be kept secret but must be protected
 // from tampering.
+//
+// Client-side storage, such as with cookies, weakens the anti-replay
+// protections. This might be acceptable in some threat models, for example
+// if there is complete trust in the TLS connection and the client environment.
+// However, applications must nonetheless authenticate the request value
+// (e.g. with an authenticated cookie) to ensure it has not been tampered with.
 //
 // (Registration has no request value: with attestation "none", no part of a
 // registration response is signed by a party the server trusts, so a
