@@ -171,11 +171,12 @@ import (
 //
 // The zero value is a valid, common configuration.
 type Options struct {
-	// Timeout is how long a request returned by NewLogin remains valid.
+	// Timeout is how long a request returned by NewLogin remains valid. It
+	// is also sent to the client as the ceremony timeout hint.
 	//
-	// If zero, it defaults to five minutes. Conditional UI (autofill)
-	// logins may warrant a longer timeout, as the prompt can sit idle
-	// for a while before the user engages with it.
+	// If zero, it defaults to 24 hours. Clients abort a ceremony when the
+	// hint elapses and conditional UI (autofill) prompts can sit idle for
+	// a long time before the user engages with them.
 	Timeout time.Duration
 }
 
@@ -271,7 +272,7 @@ func NewRelyingParty(rpID, origin string, opts Options) (*RelyingParty, error) {
 		// Clients coerce the timeout hint to a WebIDL unsigned long.
 		return nil, errors.New("passkey: Timeout is too large")
 	case timeout == 0:
-		timeout = 5 * time.Minute
+		timeout = 24 * time.Hour
 	}
 
 	return &RelyingParty{

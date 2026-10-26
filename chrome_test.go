@@ -174,7 +174,7 @@ func TestChromeRecordings(t *testing.T) {
 					// request is verified as if it had just been created,
 					// and separately as stale.
 					request := withRequestCreated(login.Request, time.Now())
-					stale := withRequestCreated(login.Request, time.Now().Add(-24*time.Hour))
+					stale := withRequestCreated(login.Request, time.Now().Add(-25*time.Hour))
 
 					switch login.Error {
 					case chromeErrorSignature:

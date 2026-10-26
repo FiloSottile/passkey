@@ -153,7 +153,7 @@ func TestLogin(t *testing.T) {
 	otherChallenge := base64.RawURLEncoding.EncodeToString(bytes.Repeat([]byte{0xCC}, 32))
 	unknownID := bytes.Repeat([]byte{0xEE}, 32)
 	expired := func(env *loginEnv) []byte {
-		return withRequestCreated(env.request, time.Now().Add(-6*time.Minute))
+		return withRequestCreated(env.request, time.Now().Add(-25*time.Hour))
 	}
 
 	tests := []struct {
@@ -337,7 +337,7 @@ func TestLogin(t *testing.T) {
 		{
 			name: "request not yet expired",
 			setup: func(t *testing.T, env *loginEnv) (*RelyingParty, []byte, []byte) {
-				recent := withRequestCreated(env.request, time.Now().Add(-4*time.Minute))
+				recent := withRequestCreated(env.request, time.Now().Add(-23*time.Hour))
 				return env.rp, mustJSON(t, env.response(t, flagUP|flagUV)), recent
 			},
 			ok: true,
@@ -346,7 +346,7 @@ func TestLogin(t *testing.T) {
 			// The timeout belongs to the RelyingParty verifying the login.
 			name: "expired request within a longer timeout",
 			setup: func(t *testing.T, env *loginEnv) (*RelyingParty, []byte, []byte) {
-				longRP := newTestRP(t, Options{Timeout: 30 * time.Minute})
+				longRP := newTestRP(t, Options{Timeout: 48 * time.Hour})
 				return longRP, mustJSON(t, env.response(t, flagUP|flagUV)), expired(env)
 			},
 			ok: true,

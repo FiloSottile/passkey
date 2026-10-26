@@ -168,7 +168,7 @@ out.textContent = "Signed in as " + await res.text() + "."
 		for range time.Tick(time.Minute) {
 			requests.Range(func(key, value any) bool {
 				created := passkey.RequestCreation(value.([]byte))
-				if time.Since(created) > 5*time.Minute {
+				if time.Since(created) > 24*time.Hour {
 					requests.Delete(key)
 				}
 				return true

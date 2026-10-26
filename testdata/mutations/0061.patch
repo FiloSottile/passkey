@@ -1,4 +1,4 @@
-zero Timeout not defaulted to five minutes
+zero Timeout not defaulted to 24 hours
 
 diff --git a/passkey.go b/passkey.go
 index 270e175..e888063 100644
@@ -9,7 +9,7 @@ index 270e175..e888063 100644
  		// Clients coerce the timeout hint to a WebIDL unsigned long.
  		return nil, errors.New("passkey: Timeout is too large")
 -	case timeout == 0:
--		timeout = 5 * time.Minute
+-		timeout = 24 * time.Hour
  	}
  
  	return &RelyingParty{

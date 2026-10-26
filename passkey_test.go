@@ -246,7 +246,7 @@ func TestNewRelyingPartyRPID(t *testing.T) {
 }
 
 // TestNewRelyingPartyTimeout checks the Timeout option handling: a
-// negative value is rejected, zero defaults to five minutes, and values
+// negative value is rejected, zero defaults to 24 hours, and values
 // above the WebIDL unsigned long range are rejected.
 func TestNewRelyingPartyTimeout(t *testing.T) {
 	if _, err := NewRelyingParty("example.com", "https://example.com",
@@ -262,8 +262,8 @@ func TestNewRelyingPartyTimeout(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if rp.timeout != 5*time.Minute {
-		t.Errorf("timeout = %v, want the 5 minute default", rp.timeout)
+	if rp.timeout != 24*time.Hour {
+		t.Errorf("timeout = %v, want the 24 hour default", rp.timeout)
 	}
 
 	rp, err = NewRelyingParty("example.com", "https://example.com",
