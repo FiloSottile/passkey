@@ -18,24 +18,95 @@ import (
 )
 
 type record struct {
+	recordMetadata
+	key crypto.PublicKey
+}
+
+type recordMetadata struct {
 	transports   []string
 	rpIDHash     [32]byte
 	flags        flags
 	aaguid       [16]byte
 	credentialID []byte
-	key          crypto.PublicKey
 }
 
 func parseRecord(r string) (*record, error) {
-	r, ok := strings.CutPrefix(r, "$webauthn$v=1$")
-	if !ok {
+	rr := &record{}
+	r, err := parseRecordParams(&rr.recordMetadata, r)
+	if err != nil {
+		return nil, err
+	}
+	ad, err := base64.RawStdEncoding.Strict().DecodeString(r)
+	if err != nil {
+		return nil, fmt.Errorf("passkey: invalid record: %w", err)
+	}
+	// The decoder skips newlines, which shortens the output.
+	if base64.RawStdEncoding.EncodedLen(len(ad)) != len(r) {
 		return nil, errors.New("passkey: invalid record")
 	}
-	rr := &record{}
+	if err := parseRegistrationAuthData(rr, ad); err != nil {
+		return nil, fmt.Errorf("passkey: invalid record: %w", err)
+	}
+	return rr, nil
+}
+
+// parseRecordMetadata is like parseRecord, but it skips the credential
+// public key, and decodes only the start of the authenticator data.
+// It may accept some records that parseRecord rejects.
+func parseRecordMetadata(r string) (*recordMetadata, error) {
+	m := &recordMetadata{}
+	r, err := parseRecordParams(m, r)
+	if err != nil {
+		return nil, err
+	}
+	ad, err := decodeRecordPrefix(r, authDataHeaderLen)
+	if err != nil {
+		return nil, err
+	}
+	if len(ad) >= authDataHeaderLen {
+		length := binary.BigEndian.Uint16(ad[authDataHeaderLen-2:])
+		ad, err = decodeRecordPrefix(r, authDataHeaderLen+int(length))
+		if err != nil {
+			return nil, err
+		}
+	}
+	if _, err := parseAuthDataMetadata(m, ad); err != nil {
+		return nil, fmt.Errorf("passkey: invalid record: %w", err)
+	}
+	return m, nil
+}
+
+// authDataHeaderLen is the length of the authenticator data
+// up to the credential ID.
+const authDataHeaderLen = 55
+
+// decodeRecordPrefix decodes at least the first n bytes of the base64
+// authenticator data r, or all of it if shorter.
+func decodeRecordPrefix(r string, n int) ([]byte, error) {
+	// The padded length is a whole number of 4-character quanta.
+	r = r[:min(base64.StdEncoding.EncodedLen(n), len(r))]
+	ad, err := base64.RawStdEncoding.Strict().DecodeString(r)
+	if err != nil {
+		return nil, fmt.Errorf("passkey: invalid record: %w", err)
+	}
+	// The decoder skips newlines, which shortens the output.
+	if base64.RawStdEncoding.EncodedLen(len(ad)) != len(r) {
+		return nil, errors.New("passkey: invalid record")
+	}
+	return ad, nil
+}
+
+// parseRecordParams parses the PHC String prefix and parameters of a
+// record into m, and returns the encoded authenticator data.
+func parseRecordParams(m *recordMetadata, r string) (string, error) {
+	r, ok := strings.CutPrefix(r, "$webauthn$v=1$")
+	if !ok {
+		return "", errors.New("passkey: invalid record")
+	}
 	var params string
 	if p, rest, ok := strings.Cut(r, "$"); ok {
 		if p == "" {
-			return nil, errors.New("passkey: invalid record: invalid parameters")
+			return "", errors.New("passkey: invalid record: invalid parameters")
 		}
 		params, r = p, rest
 	}
@@ -43,42 +114,32 @@ func parseRecord(r string) (*record, error) {
 		var kv string
 		kv, params, ok = strings.Cut(params, ",")
 		if ok && params == "" {
-			return nil, errors.New("passkey: invalid record: invalid parameters")
+			return "", errors.New("passkey: invalid record: invalid parameters")
 		}
 		k, v, ok := strings.Cut(kv, "=")
 		if !ok || !validParamName(k) || !validParamValue(v) {
-			return nil, errors.New("passkey: invalid record: invalid parameters")
+			return "", errors.New("passkey: invalid record: invalid parameters")
 		}
 		if k != "transports" {
 			continue
 		}
-		if rr.transports != nil {
-			return nil, errors.New("passkey: invalid record: duplicate transports parameter")
+		if m.transports != nil {
+			return "", errors.New("passkey: invalid record: duplicate transports parameter")
 		}
-		rr.transports = strings.Split(v, "+")
-		if len(rr.transports) > 32 {
-			return nil, errors.New("passkey: invalid record: too many transports")
+		m.transports = strings.Split(v, "+")
+		if len(m.transports) > 32 {
+			return "", errors.New("passkey: invalid record: too many transports")
 		}
-		for i, t := range rr.transports {
+		for i, t := range m.transports {
 			if !validTransport(t) {
-				return nil, fmt.Errorf("passkey: invalid record: invalid transport %q", t)
+				return "", fmt.Errorf("passkey: invalid record: invalid transport %q", t)
 			}
-			if i > 0 && rr.transports[i-1] >= t {
-				return nil, errors.New("passkey: invalid record: transports are not sorted and deduplicated")
+			if i > 0 && m.transports[i-1] >= t {
+				return "", errors.New("passkey: invalid record: transports are not sorted and deduplicated")
 			}
 		}
 	}
-	if strings.ContainsAny(r, "\r\n") {
-		return nil, errors.New("passkey: invalid record")
-	}
-	ad, err := base64.RawStdEncoding.Strict().DecodeString(r)
-	if err != nil {
-		return nil, fmt.Errorf("passkey: invalid record: %w", err)
-	}
-	if err := parseRegistrationAuthData(rr, ad); err != nil {
-		return nil, fmt.Errorf("passkey: invalid record: %w", err)
-	}
-	return rr, nil
+	return r, nil
 }
 
 // validParamName reports whether k is a PHC String parameter name:
@@ -123,40 +184,13 @@ func (f flags) attestedData() bool   { return f&(1<<6) != 0 }
 func (f flags) extensionData() bool  { return f&(1<<7) != 0 }
 
 func parseRegistrationAuthData(r *record, b []byte) error {
-	if len(b) < 55 {
-		return fmt.Errorf("authenticator data is %d bytes, expected at least 55", len(b))
-	}
 	if len(b) > 8192 {
 		return fmt.Errorf("authenticator data is %d bytes, expected at most 8192", len(b))
 	}
-
-	copy(r.rpIDHash[:], b[:32])
-	b = b[32:]
-
-	r.flags = flags(b[0])
-	if !r.flags.attestedData() {
-		return errors.New("authenticator data has no attested credential data")
+	b, err := parseAuthDataMetadata(&r.recordMetadata, b)
+	if err != nil {
+		return err
 	}
-	if r.flags.backupState() && !r.flags.backupEligible() {
-		return errors.New("credential is backed up but not backup eligible")
-	}
-	b = b[1:]
-
-	b = b[4:] // sign count
-
-	copy(r.aaguid[:], b[:16])
-	b = b[16:]
-
-	length := binary.BigEndian.Uint16(b[:2])
-	if length < 16 || length > 1023 {
-		return fmt.Errorf("credential ID is %d bytes, expected between %d and %d", length, 16, 1023)
-	}
-	b = b[2:]
-	if len(b) < int(length) {
-		return errors.New("authenticator data is too short for the credential ID")
-	}
-	r.credentialID = b[:length]
-	b = b[length:]
 
 	// The COSE key has no length prefix: its extent is discovered by
 	// parsing it, which leaves the cursor at the extension data, if any.
@@ -179,9 +213,44 @@ func parseRegistrationAuthData(r *record, b []byte) error {
 	return nil
 }
 
-// ErrUnsupportedAlgorithm is returned by [RelyingParty.Register] and by
-// [AAGUID] when a passkey record has a credential public key type that
-// this package does not support.
+// parseAuthDataMetadata parses the authenticator data up to the credential
+// public key into r, and returns the rest.
+func parseAuthDataMetadata(r *recordMetadata, b []byte) ([]byte, error) {
+	if len(b) < authDataHeaderLen {
+		return nil, fmt.Errorf("authenticator data is %d bytes, expected at least 55", len(b))
+	}
+
+	copy(r.rpIDHash[:], b[:32])
+	b = b[32:]
+
+	r.flags = flags(b[0])
+	if !r.flags.attestedData() {
+		return nil, errors.New("authenticator data has no attested credential data")
+	}
+	if r.flags.backupState() && !r.flags.backupEligible() {
+		return nil, errors.New("credential is backed up but not backup eligible")
+	}
+	b = b[1:]
+
+	b = b[4:] // sign count
+
+	copy(r.aaguid[:], b[:16])
+	b = b[16:]
+
+	length := binary.BigEndian.Uint16(b[:2])
+	if length < 16 || length > 1023 {
+		return nil, fmt.Errorf("credential ID is %d bytes, expected between %d and %d", length, 16, 1023)
+	}
+	b = b[2:]
+	if len(b) < int(length) {
+		return nil, errors.New("authenticator data is too short for the credential ID")
+	}
+	r.credentialID = b[:length]
+	return b[length:], nil
+}
+
+// ErrUnsupportedAlgorithm is returned by [RelyingParty.Register] when a
+// credential has a public key type that this package does not support.
 //
 // It is always wrapped, so callers must use [errors.Is].
 var ErrUnsupportedAlgorithm = errors.New("unsupported credential public key algorithm")
@@ -318,7 +387,7 @@ func encodeRecord(authenticatorData []byte, transports []string) string {
 // the community-maintained AAGUID lists). It is all zeroes if the
 // authenticator did not provide one.
 func AAGUID(passkey string) ([16]byte, error) {
-	r, err := parseRecord(passkey)
+	r, err := parseRecordMetadata(passkey)
 	if err != nil {
 		return [16]byte{}, err
 	}
@@ -374,7 +443,7 @@ type credentialDescriptor struct {
 func credentialDescriptors(passkeys []string) []credentialDescriptor {
 	out := make([]credentialDescriptor, 0, len(passkeys))
 	for _, p := range passkeys {
-		r, err := parseRecord(p)
+		r, err := parseRecordMetadata(p)
 		if err != nil {
 			// For excludeCredentials/allowCredentials it's ok to drop malformed records.
 			continue

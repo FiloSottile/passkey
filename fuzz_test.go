@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/binary"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -82,8 +83,8 @@ func validTransports(ts []string) bool {
 	return true
 }
 
-// FuzzParseRecord checks that the accessors and credentialDescriptors
-// accept exactly the records parseRecord does.
+// FuzzParseRecord checks that AAGUID and credentialDescriptors accept
+// exactly the records parseRecordMetadata does.
 func FuzzParseRecord(f *testing.F) {
 	for _, v := range loadRecordVectors(f) {
 		f.Add(v.Record)
@@ -97,17 +98,17 @@ func FuzzParseRecord(f *testing.F) {
 	f.Fuzz(func(t *testing.T, s string) {
 		r, err := parseRecord(s)
 
+		_, metadataErr := parseRecordMetadata(s)
+		if descriptors := credentialDescriptors([]string{s}); (metadataErr == nil) != (len(descriptors) == 1) {
+			t.Errorf("parseRecordMetadata() = %v, but credentialDescriptors() returned %d descriptors",
+				metadataErr, len(descriptors))
+		}
 		_, aaguidErr := AAGUID(s)
-		descriptors := credentialDescriptors([]string{s})
+		if (metadataErr == nil) != (aaguidErr == nil) {
+			t.Errorf("parseRecordMetadata() = %v, but AAGUID() = %v", metadataErr, aaguidErr)
+		}
+		checkWrapped(t, aaguidErr)
 		if err != nil {
-			if aaguidErr == nil {
-				t.Errorf("parseRecord() = %v, but AAGUID() = %v", err, aaguidErr)
-			}
-			if len(descriptors) != 0 {
-				t.Errorf("parseRecord() = %v, but credentialDescriptors() returned %d descriptors",
-					err, len(descriptors))
-			}
-			checkWrapped(t, aaguidErr)
 			return
 		}
 		checkRecord(t, s, r)
@@ -209,6 +210,12 @@ func checkRecord(t *testing.T, s string, r *record) {
 		again.flags != r.flags || again.rpIDHash != r.rpIDHash ||
 		!slices.Equal(again.transports, r.transports) {
 		t.Errorf("re-encoded record %q parses to different values", canonical)
+	}
+
+	if m, err := parseRecordMetadata(s); err != nil {
+		t.Errorf("parseRecordMetadata() = %v, but parseRecord() accepted the record", err)
+	} else if !reflect.DeepEqual(*m, r.recordMetadata) {
+		t.Errorf("parseRecordMetadata() = %+v, want %+v", *m, r.recordMetadata)
 	}
 
 	if len(r.credentialID) < 16 || len(r.credentialID) > 1023 {

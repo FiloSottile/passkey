@@ -94,7 +94,7 @@ func loadRecordVectors(t testing.TB) []recordVector {
 // TestRecordVectors runs the testdata/records.json vectors: the record
 // grammar (prefix, version, parameters, transports, base64 field), the
 // authenticator data constraints, and the COSE key grammar, all through
-// full records and the exported accessors. Valid vectors double as
+// full records. Valid vectors double as
 // round-trip tests, and vectors for algorithms this package does not
 // support must fail with ErrUnsupportedAlgorithm.
 //
@@ -105,20 +105,20 @@ func TestRecordVectors(t *testing.T) {
 	}
 	for _, v := range loadRecordVectors(t) {
 		t.Run(v.Name, func(t *testing.T) {
-			aaguid, err := AAGUID(v.Record)
+			r, err := parseRecord(v.Record)
 			if v.Error != "" {
 				errHas, ok := recordVectorErrors[v.Error]
 				if !ok {
 					t.Fatalf("unknown error reason %q", v.Error)
 				}
 				if err == nil {
-					t.Fatalf("AAGUID() succeeded, want %s error", v.Error)
+					t.Fatalf("parseRecord() succeeded, want %s error", v.Error)
 				}
 				if !strings.Contains(err.Error(), errHas) {
-					t.Errorf("AAGUID() = %v, want it to contain %q", err, errHas)
+					t.Errorf("parseRecord() = %v, want it to contain %q", err, errHas)
 				}
 				if v.Error == "unsupported-algorithm" && !errors.Is(err, ErrUnsupportedAlgorithm) {
-					t.Errorf("AAGUID() = %v, want errors.Is(err, ErrUnsupportedAlgorithm)", err)
+					t.Errorf("parseRecord() = %v, want errors.Is(err, ErrUnsupportedAlgorithm)", err)
 				}
 				return
 			}
@@ -129,21 +129,20 @@ func TestRecordVectors(t *testing.T) {
 			case algES256, algRS256, algMLDSA44:
 			default:
 				if !errors.Is(err, ErrUnsupportedAlgorithm) {
-					t.Errorf("AAGUID() = %v, want errors.Is(err, ErrUnsupportedAlgorithm)", err)
+					t.Errorf("parseRecord() = %v, want errors.Is(err, ErrUnsupportedAlgorithm)", err)
 				}
 				return
 			}
 
 			if err != nil {
-				t.Fatalf("AAGUID() = %v, want success", err)
+				t.Fatalf("parseRecord() = %v, want success", err)
 			}
 			if v.Transports == nil || v.Flags == nil {
 				t.Fatal("vector is missing expected fields")
 			}
-			if got := hex.EncodeToString(aaguid[:]); got != v.AAGUID {
-				t.Errorf("AAGUID() = %s, want %s", got, v.AAGUID)
+			if aaguid, err := AAGUID(v.Record); err != nil || hex.EncodeToString(aaguid[:]) != v.AAGUID {
+				t.Errorf("AAGUID() = %x, %v, want %s", aaguid, err, v.AAGUID)
 			}
-			r := mustParseRecord(t, v.Record)
 			if !slices.Equal(r.transports, *v.Transports) {
 				t.Errorf("transports = %q, want %q", r.transports, *v.Transports)
 			}

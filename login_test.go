@@ -949,6 +949,9 @@ func TestLoginLockouts(t *testing.T) {
 	// authA's credential registered under another RP ID.
 	otherRP := register(newTestRPFor(t, "other.example", testOrigin, Options{}), "other.example", authA)
 	malformed := "$webauthn$v=1$AAAA"
+	// authA's credential, with a truncated public key.
+	adA := authA.authData(testRPID, true, flagUP|flagUV)
+	malformedKey := encodeRecord(adA[:len(adA)-1], nil)
 
 	request, requestJSON, err := rp.NewLogin(LoginOptions{})
 	if err != nil {
@@ -1013,6 +1016,19 @@ func TestLoginLockouts(t *testing.T) {
 			records: []string{malformed, recA, recB},
 			resp:    respB,
 			matched: 2,
+		},
+		{
+			name:    "matching record with malformed key skipped",
+			records: []string{malformedKey, recA},
+			resp:    respA,
+			matched: 1,
+		},
+		{
+			name:    "only matching record with malformed key",
+			records: []string{malformedKey},
+			resp:    respA,
+			errIs:   ErrUnknownCredential,
+			errHas:  "malformed COSE key",
 		},
 		{
 			name:    "only malformed records",

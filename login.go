@@ -155,18 +155,23 @@ func (rp *RelyingParty) Login(response *Response, request []byte, passkeys []str
 
 	var skipped, signatureErrors []error
 	for i, p := range passkeys {
-		r, err := parseRecord(p)
+		m, err := parseRecordMetadata(p)
 		if err != nil {
 			// Continue iterating, to avoid locking out an account
 			// due to a single bad record.
 			skipped = append(skipped, fmt.Errorf("%w (record #%d)", err, i))
 			continue
 		}
-		if r.rpIDHash != rpIDHash {
+		if m.rpIDHash != rpIDHash {
 			skipped = append(skipped, fmt.Errorf("record for a different RP ID (record #%d)", i))
 			continue
 		}
-		if !bytes.Equal(r.credentialID, response.credentialID) {
+		if !bytes.Equal(m.credentialID, response.credentialID) {
+			continue
+		}
+		r, err := parseRecord(p)
+		if err != nil {
+			skipped = append(skipped, fmt.Errorf("%w (record #%d)", err, i))
 			continue
 		}
 		if verifySignature(r.key, message, response.signature) {
