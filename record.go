@@ -345,7 +345,7 @@ func parseCOSEKey(b []byte) (crypto.PublicKey, []byte, error) {
 		if pairs != 3 {
 			return nil, nil, errors.New("malformed COSE key: bad map length")
 		}
-		var params *mldsa.Parameters
+		var params mldsa.Parameters
 		switch alg {
 		case algMLDSA44:
 			params = mldsa.MLDSA44()

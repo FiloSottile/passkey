@@ -267,7 +267,7 @@ func writeRecordVectors(t *testing.T) {
 	rs256 := rsaKey(rsaN, []byte{0x01, 0x00, 0x01})
 
 	mldsaSeed := bytes.Repeat([]byte{0x42}, 32)
-	akpPub := func(params *mldsa.Parameters) []byte {
+	akpPub := func(params mldsa.Parameters) []byte {
 		key, err := mldsa.NewPrivateKey(params, mldsaSeed)
 		if err != nil {
 			t.Fatal(err)

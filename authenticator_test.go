@@ -111,7 +111,7 @@ func newAuthenticator(t testing.TB, alg int32) *authenticator {
 		}
 
 	case algMLDSA44, algMLDSA65, algMLDSA87:
-		params := map[int32]*mldsa.Parameters{
+		params := map[int32]mldsa.Parameters{
 			algMLDSA44: mldsa.MLDSA44(), algMLDSA65: mldsa.MLDSA65(), algMLDSA87: mldsa.MLDSA87(),
 		}[alg]
 		key, err := mldsa.GenerateKey(params)

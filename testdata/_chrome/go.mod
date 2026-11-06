@@ -9,7 +9,7 @@ require (
 )
 
 require (
-	filippo.io/mldsa v0.0.0-20260711112038-ff3f469cee29 // indirect
+	filippo.io/mldsa v1.0.0 // indirect
 	github.com/go-json-experiment/json v0.0.0-20260623181947-01eb4420fa68 // indirect
 )
 
